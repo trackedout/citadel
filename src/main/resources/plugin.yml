@@ -1,0 +1,13 @@
+name: Plugin
+version: ${project.version}
+main: org.trackedout.citadel.Citadel
+api-version: 1.20
+author: thewilloftheshadow
+depend: []
+load: POSTWORLD
+website: "https://github.com/user/repo"
+description: Plugin template
+commands:
+    test:
+        usage: /test
+        description: Test command

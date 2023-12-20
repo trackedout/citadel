@@ -1,0 +1,7 @@
+{
+	"cSpell.words": ["POSTWORLD", "trackedout"],
+	"java.configuration.updateBuildConfiguration": "automatic",
+	"yaml.schemas": {
+		"https://json.schemastore.org/bukkit-plugin.json": "file:///Users/shadow/Coding/citadel/src/main/resources/plugin.yml"
+	}
+}
