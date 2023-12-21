@@ -2,16 +2,24 @@ package org.trackedout.citadel;
 
 import java.io.File;
 import java.io.InputStream;
+import java.util.HashSet;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.trackedout.citadel.commands.TestCommand;
+import org.trackedout.citadel.classes.Party;
+import org.trackedout.citadel.commands.PartyCommand;
+
+import co.aikar.commands.PaperCommandManager;
 
 public final class Citadel extends JavaPlugin {
     public final Logger logger = this.getLogger();
     public final int currentConfig = 2;
+
+    PaperCommandManager manager = new PaperCommandManager(this);
+
+    public HashSet<Party> parties = new HashSet<Party>();
 
     @Override
     public void onEnable() {
@@ -20,7 +28,7 @@ public final class Citadel extends JavaPlugin {
             getConfig().options().copyDefaults();
             saveDefaultConfig();
 
-            getCommand("queue").setExecutor(new TestCommand(this));
+            manager.registerCommand(new PartyCommand());
         }
 
     }

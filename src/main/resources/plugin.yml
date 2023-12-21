@@ -1,13 +1,9 @@
-name: Plugin
+name: Citadel
 version: ${project.version}
 main: org.trackedout.citadel.Citadel
 api-version: 1.20
-author: thewilloftheshadow
+author: trackedout
 depend: []
 load: POSTWORLD
-website: "https://github.com/user/repo"
-description: Plugin template
-commands:
-    test:
-        usage: /test
-        description: Test command
+website: "https://github.com/trackedout/citadel"
+description: The Citadel plugin
