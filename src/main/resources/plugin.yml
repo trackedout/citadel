@@ -1,5 +1,5 @@
 name: Citadel
-version: ${project.version}
+version: '${version}'
 main: org.trackedout.citadel.Citadel
 api-version: 1.20
 author: trackedout

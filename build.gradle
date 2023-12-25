@@ -1,6 +1,8 @@
 plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.9.22'
     id "com.github.johnrengelman.shadow" version "7.1.2"
     id "java"
+    id("xyz.jpenilla.run-paper") version "2.2.2" // https://github.com/jpenilla/run-task
 }
 
 group = "org.trackedout"
@@ -16,16 +18,28 @@ repositories {
         name = "sonatype"
         url = "https://oss.sonatype.org/content/groups/public/"
     }
-    maven { 
-        url = "https://repo.aikar.co/content/groups/aikar/" 
+    maven {
+        url = "https://repo.aikar.co/content/groups/aikar/"
     }
-
 }
 
 dependencies {
-    compileOnly "io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT"
+    compileOnly "io.papermc.paper:paper-api:1.20.2-R0.1-SNAPSHOT"
     implementation "commons-io:commons-io:2.13.0"
-    implementation "co.aikar:acf-paper:0.5.3-SNAPSHOT"
+    implementation "co.aikar:acf-paper:0.5.1-SNAPSHOT"
+
+    implementation group: "org.apache.commons", name: "commons-lang3", version: "3.0"
+}
+
+//compileJava {
+//    options.compilerArgs += ["-parameters"]
+//    options.fork = true
+//    options.forkOptions.executable = 'javac'
+//}
+
+compileKotlin {
+    kotlinOptions.javaParameters = true
+    kotlinOptions.jvmTarget = '17'
 }
 
 shadowJar {
@@ -33,9 +47,7 @@ shadowJar {
     relocate "co.aikar.locales", "org.trackedout.citadel.locales"
 }
 
-compileKotlin {
-    kotlinOptions.javaParameters = true
-}
+build.dependsOn shadowJar
 
 def targetJavaVersion = 17
 java {
@@ -62,4 +74,11 @@ processResources {
     }
 }
 
-implementation group: "org.apache.commons", name: "commons-lang3", version: "3.0"
+tasks {
+    runServer {
+        // Configure the Minecraft version for our task.
+        // This is the only required configuration besides applying the plugin.
+        // Your plugin's jar (or shadowJar if present) will be used automatically.
+        minecraftVersion("1.20.1")
+    }
+}
