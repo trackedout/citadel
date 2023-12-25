@@ -29,6 +29,10 @@ dependencies {
     implementation "co.aikar:acf-paper:0.5.1-SNAPSHOT"
 
     implementation group: "org.apache.commons", name: "commons-lang3", version: "3.0"
+
+    implementation "com.squareup.moshi:moshi-kotlin:1.14.0"
+    implementation "com.squareup.moshi:moshi-adapters:1.14.0"
+    implementation "com.squareup.okhttp3:okhttp:4.11.0"
 }
 
 //compileJava {

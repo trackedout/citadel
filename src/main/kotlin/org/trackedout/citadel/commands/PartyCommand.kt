@@ -5,7 +5,7 @@ import co.aikar.commands.annotation.*
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 
-@CommandAlias("info|party")
+@CommandAlias("party")
 class PartyCommand : BaseCommand() {
     @Dependency
     private lateinit var plugin: Citadel
