@@ -15,7 +15,7 @@ class TakeShulkerCommand : BaseCommand() {
     @Dependency
     private lateinit var plugin: Citadel
 
-    private fun isDeckedOutShulker(it: ItemStack) = it.type == Material.SHULKER_BOX
+    private fun isDeckedOutShulker(it: ItemStack) = it.type == Material.SHULKER_BOX // TODO: Validate using NBT data; validate that this player owns it
 
     @Default
     @Description("Take Decked Out 2 shulker from player's inventory")
@@ -32,9 +32,14 @@ class TakeShulkerCommand : BaseCommand() {
             plugin.logger.info("Removing Decked Out shulker from ${player.name}'s inventory (contains=${player.inventory.contains(deckedOutShulker)})")
             player.sendMessage("Removing Decked Out shulker from your inventory")
             player.inventory.removeItemAnySlot(deckedOutShulker)
+            player.removeScoreboardTag(RECEIVED_SHULKER)
         } else {
             plugin.logger.info("${player.name}'s inventory does not contain a Decked Out Shulker")
             player.sendMessage("Your inventory does not contain a Decked Out Shulker")
         }
+    }
+
+    companion object {
+        const val RECEIVED_SHULKER = "do2.received_shulker"
     }
 }

@@ -5,12 +5,14 @@ import co.aikar.commands.annotation.CommandAlias
 import co.aikar.commands.annotation.Default
 import co.aikar.commands.annotation.Dependency
 import co.aikar.commands.annotation.Description
+import com.saicone.rtag.RtagItem
 import org.bukkit.Material
-import org.bukkit.NamespacedKey
+import org.bukkit.block.ShulkerBox
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-import org.bukkit.persistence.PersistentDataType
+import org.bukkit.inventory.meta.BlockStateMeta
 import org.trackedout.citadel.Citadel
+
 
 @CommandAlias("gief-shulker|give-shulker") // Spelling is intentional
 class GiveShulkerCommand : BaseCommand() {
@@ -36,11 +38,20 @@ class GiveShulkerCommand : BaseCommand() {
             return
         }
 
+        if (player.scoreboardTags.contains(TakeShulkerCommand.RECEIVED_SHULKER)) {
+            plugin.logger.info("${player.name} has already received a Decked Out shulker (has tag ${TakeShulkerCommand.RECEIVED_SHULKER})")
+            player.sendMessage("You have already been given your Decked Out shulker but it's not in your inventory. Hopefully you didn't drop it!?")
+            return
+        }
+
         plugin.logger.info("${player.name}'s inventory does not contain a Decked Out Shulker, pulling deck data from Dunga Dunga")
 
         if (player.inventory.addItem(createDeckedOutShulker(player)).size > 0) {
             plugin.logger.warning("Failed to give ${player.name} a Decked Out Shulker as their inventory is full")
+            return
         }
+
+        player.addScoreboardTag(TakeShulkerCommand.RECEIVED_SHULKER)
     }
 
     private fun createDeckedOutShulker(player: Player): ItemStack {
