@@ -1,6 +1,6 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.9.22'
-    id "com.github.johnrengelman.shadow" version "7.1.2"
+    id "com.github.johnrengelman.shadow" version "8.1.1"
     id "java"
     id("xyz.jpenilla.run-paper") version "2.2.2" // https://github.com/jpenilla/run-task
 }
@@ -21,6 +21,9 @@ repositories {
     maven {
         url = "https://repo.aikar.co/content/groups/aikar/"
     }
+    maven {
+        url = "https://jitpack.io"
+    }
 }
 
 dependencies {
@@ -30,9 +33,17 @@ dependencies {
 
     implementation group: "org.apache.commons", name: "commons-lang3", version: "3.0"
 
+    // Dunga Dunga API client libraries
     implementation "com.squareup.moshi:moshi-kotlin:1.14.0"
     implementation "com.squareup.moshi:moshi-adapters:1.14.0"
     implementation "com.squareup.okhttp3:okhttp:4.11.0"
+
+    // https://docs.saicone.com/rtag
+    implementation 'com.saicone.rtag:rtag:1.4.4'
+    // Other modules
+    implementation 'com.saicone.rtag:rtag-block:1.4.4'
+    implementation 'com.saicone.rtag:rtag-entity:1.4.4'
+    implementation 'com.saicone.rtag:rtag-item:1.4.4'
 }
 
 //compileJava {
@@ -49,6 +60,10 @@ compileKotlin {
 shadowJar {
     relocate "co.aikar.commands", "org.trackedout.citadel.acf"
     relocate "co.aikar.locales", "org.trackedout.citadel.locales"
+    relocate 'com.saicone.rtag', project.group + '.libs.rtag'
+
+    // Exclude unused classes (optional)
+    minimize()
 }
 
 build.dependsOn shadowJar

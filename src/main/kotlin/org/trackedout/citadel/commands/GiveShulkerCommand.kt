@@ -55,13 +55,30 @@ class GiveShulkerCommand : BaseCommand() {
     }
 
     private fun createDeckedOutShulker(player: Player): ItemStack {
-        val shulker = ItemStack(Material.SHULKER_BOX, 1)
-        val itemMeta = shulker.itemMeta
-        itemMeta.setCustomModelData(8)
-        itemMeta.setDisplayName("☠ ${player.name}'s Deck ☠")
-        itemMeta.persistentDataContainer.set(NamespacedKey(plugin, "owner"), PersistentDataType.STRING, player.name)
-        itemMeta.persistentDataContainer.set(NamespacedKey(plugin, "owner-id"), PersistentDataType.STRING, player.identity().uuid().toString())
-        shulker.setItemMeta(itemMeta)
+        var shulker = ItemStack(Material.SHULKER_BOX, 1)
+
+        val blockStateMeta = shulker.itemMeta as BlockStateMeta
+        val shulkerBoxState = blockStateMeta.blockState as ShulkerBox
+        val nugget = ItemStack(Material.IRON_NUGGET, 1)
+        val card = RtagItem.edit(nugget) { tag ->
+            tag.setCustomModelData(106)
+
+            tag.loadCopy()
+        }
+
+        shulkerBoxState.inventory.addItem(card)
+
+        blockStateMeta.blockState = shulkerBoxState
+        shulker.itemMeta = blockStateMeta
+
+        shulker = RtagItem.edit(shulker) { tag ->
+            tag.set("Custom Text", "display", "Name")
+            tag.set(player.name, "owner")
+            tag.set(player.identity().uuid().toString(), "owner-id")
+
+            tag.loadCopy();
+        }
+
         return shulker
     }
 }
