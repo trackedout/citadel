@@ -3,7 +3,9 @@ package org.trackedout.citadel
 import co.aikar.commands.PaperCommandManager
 import org.bukkit.Bukkit
 import org.bukkit.plugin.java.JavaPlugin
+import org.trackedout.citadel.commands.GiveShulkerCommand
 import org.trackedout.citadel.commands.PartyCommand
+import org.trackedout.citadel.commands.TakeShulkerCommand
 import org.trackedout.citadel.data.Party
 
 class Citadel : JavaPlugin() {
@@ -16,7 +18,9 @@ class Citadel : JavaPlugin() {
 
         // https://github.com/aikar/commands/wiki/Real-World-Examples
         manager.registerCommand(PartyCommand())
-        logger.info("Party Command registered")
+        manager.registerCommand(TakeShulkerCommand())
+        manager.registerCommand(GiveShulkerCommand())
+        logger.info("Citadel has been enabled")
     }
 
     override fun onDisable() {
