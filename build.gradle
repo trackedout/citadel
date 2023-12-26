@@ -44,6 +44,9 @@ dependencies {
     implementation 'com.saicone.rtag:rtag-block:1.4.4'
     implementation 'com.saicone.rtag:rtag-entity:1.4.4'
     implementation 'com.saicone.rtag:rtag-item:1.4.4'
+
+    implementation files('../agronet-fabric/build/libs/agronet-1.0.0.jar')
+    implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.22"
 }
 
 //compileJava {
@@ -60,10 +63,8 @@ compileKotlin {
 shadowJar {
     relocate "co.aikar.commands", "org.trackedout.citadel.acf"
     relocate "co.aikar.locales", "org.trackedout.citadel.locales"
-    relocate 'com.saicone.rtag', project.group + '.libs.rtag'
-
-    // Exclude unused classes (optional)
-    minimize()
+    relocate "com.saicone.rtag", project.group + ".libs.rtag"
+    relocate "org.trackedout.client", project.group + ".libs.dungadunga"
 }
 
 build.dependsOn shadowJar
