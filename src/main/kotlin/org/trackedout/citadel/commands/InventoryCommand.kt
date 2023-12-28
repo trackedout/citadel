@@ -38,11 +38,6 @@ class InventoryCommand(
     @CommandPermission("decked-out.inventory.admin")
     @Description("List the Decked Out 2 cards in a player's DB inventory")
     fun listCards(player: Player, args: Array<String>) {
-        if (!player.isOp) {
-            player.sendRedMessage("You need to be an operator to use this command")
-            return
-        }
-
         if (args.size != 1) {
             player.sendGreyMessage("Usage: /decked-out list-cards <Player>")
             return
@@ -63,10 +58,6 @@ class InventoryCommand(
     }
 
     private fun mutateInventory(action: String, player: Player, args: Array<String>) {
-        if (!player.isOp) {
-            player.sendRedMessage("You need to be an operator to use this command")
-            return
-        }
         if (args.size != 2) {
             player.sendGreyMessage("Usage: /decked-out $action-card <Player> <card-name>")
             return
