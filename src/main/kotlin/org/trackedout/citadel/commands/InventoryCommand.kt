@@ -9,7 +9,7 @@ import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Card
 
-@CommandAlias("decked-out|do") // Spelling is intentional
+@CommandAlias("decked-out|do")
 class InventoryCommand(
     private val eventsApi: EventsApi,
     private val inventoryApi: InventoryApi
@@ -85,7 +85,7 @@ class InventoryCommand(
 
         try {
             when (action) {
-                "add" -> {
+                "add" -> plugin.async {
                     inventoryApi.inventoryAddCardPost(
                         Card(
                             player = target,
@@ -98,7 +98,7 @@ class InventoryCommand(
                     player.sendGreenMessage("Added $cardName to $target's deck")
                 }
 
-                "remove" -> {
+                "remove" -> plugin.async {
                     inventoryApi.inventoryDeleteCardPost(
                         Card(
                             player = target,
