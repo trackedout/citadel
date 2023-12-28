@@ -7,6 +7,7 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.commands.GiveShulkerCommand
 import org.trackedout.citadel.commands.TakeShulkerCommand
+import org.trackedout.citadel.listeners.PlayedJoinedListener
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import java.net.InetAddress
@@ -42,6 +43,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(TakeShulkerCommand())
         manager.registerCommand(GiveShulkerCommand(eventsApi, inventoryApi))
 
+        server.pluginManager.registerEvents(PlayedJoinedListener(this, eventsApi), this)
         logger.info("Citadel has been enabled")
     }
 
