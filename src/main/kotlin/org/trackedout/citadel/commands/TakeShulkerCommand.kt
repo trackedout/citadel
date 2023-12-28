@@ -9,6 +9,9 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.sendGreenMessage
+import org.trackedout.citadel.sendGreyMessage
+import org.trackedout.citadel.sendRedMessage
 
 @CommandAlias("take-shulker")
 class TakeShulkerCommand : BaseCommand() {
@@ -30,12 +33,13 @@ class TakeShulkerCommand : BaseCommand() {
 
         if (deckedOutShulker != null) {
             plugin.logger.info("Removing Decked Out shulker from ${player.name}'s inventory (contains=${player.inventory.contains(deckedOutShulker)})")
-            player.sendMessage("Removing Decked Out shulker from your inventory")
+            player.sendGreyMessage("Removing Decked Out shulker from your inventory")
             player.inventory.removeItemAnySlot(deckedOutShulker)
             player.removeScoreboardTag(RECEIVED_SHULKER)
+            player.sendGreenMessage("Your Decked Out shulker has been removed your inventory and stored in Dunga Dunga")
         } else {
             plugin.logger.info("${player.name}'s inventory does not contain a Decked Out Shulker")
-            player.sendMessage("Your inventory does not contain a Decked Out Shulker")
+            player.sendRedMessage("Your inventory does not contain a Decked Out Shulker")
         }
     }
 
