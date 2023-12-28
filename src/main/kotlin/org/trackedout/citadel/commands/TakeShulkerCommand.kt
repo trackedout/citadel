@@ -1,10 +1,7 @@
 package org.trackedout.citadel.commands
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.annotation.CommandAlias
-import co.aikar.commands.annotation.Default
-import co.aikar.commands.annotation.Dependency
-import co.aikar.commands.annotation.Description
+import co.aikar.commands.annotation.*
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
@@ -21,6 +18,7 @@ class TakeShulkerCommand : BaseCommand() {
     private fun isDeckedOutShulker(it: ItemStack) = it.type == Material.SHULKER_BOX // TODO: Validate using NBT data; validate that this player owns it
 
     @Default
+    @CommandPermission("decked-out.inventory.return-shulker")
     @Description("Take Decked Out 2 shulker from player's inventory")
     fun takeShulker(player: Player) {
         val deckedOutShulker = player.inventory.storageContents.find { itemStack ->

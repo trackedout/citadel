@@ -1,10 +1,7 @@
 package org.trackedout.citadel.commands
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.annotation.CommandAlias
-import co.aikar.commands.annotation.Default
-import co.aikar.commands.annotation.Dependency
-import co.aikar.commands.annotation.Description
+import co.aikar.commands.annotation.*
 import com.saicone.rtag.RtagItem
 import org.bukkit.Material
 import org.bukkit.block.ShulkerBox
@@ -28,6 +25,7 @@ class GiveShulkerCommand(
     private fun isDeckedOutShulker(it: ItemStack) = it.type == Material.SHULKER_BOX
 
     @Default
+    @CommandPermission("decked-out.inventory.get-shulker")
     @Description("Add Decked Out 2 shulker into player's inventory")
     fun giveShulker(player: Player) {
         if (!playerMayReceiveShulker(player)) {
