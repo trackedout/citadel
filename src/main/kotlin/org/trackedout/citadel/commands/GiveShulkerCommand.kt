@@ -11,11 +11,17 @@ import org.bukkit.block.ShulkerBox
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.BlockStateMeta
-import org.trackedout.citadel.Citadel
-
+import org.trackedout.citadel.*
+import org.trackedout.citadel.data.Cards
+import org.trackedout.client.apis.EventsApi
+import org.trackedout.client.apis.InventoryApi
+import org.trackedout.client.models.Card
 
 @CommandAlias("gief-shulker|give-shulker") // Spelling is intentional
-class GiveShulkerCommand : BaseCommand() {
+class GiveShulkerCommand(
+    private val eventsApi: EventsApi,
+    private val inventoryApi: InventoryApi
+) : BaseCommand() {
     @Dependency
     private lateinit var plugin: Citadel
 
@@ -24,6 +30,33 @@ class GiveShulkerCommand : BaseCommand() {
     @Default
     @Description("Add Decked Out 2 shulker into player's inventory")
     fun giveShulker(player: Player) {
+        if (!playerMayReceiveShulker(player)) {
+            return
+        }
+
+        plugin.logger.info("${player.name}'s inventory does not contain a Decked Out Shulker, pulling deck data from Dunga Dunga")
+        player.sendGreyMessage("Fetching your Decked Out shulker from Dunga Dunga...")
+
+        plugin.async {
+            val playerCards = inventoryApi.inventoryCardsGet(player = player.name, limit = 200, deckId = "1").results!!
+
+            // Validate deck state a second time as the API call could take 10 seconds and the player could have run this command again
+            if (!playerMayReceiveShulker(player)) {
+                return@async
+            }
+
+            if (player.inventory.addItem(createDeckedOutShulker(player, playerCards)).size > 0) {
+                plugin.logger.warning("Failed to give ${player.name} a Decked Out Shulker as their inventory is full")
+                player.sendRedMessage("Failed to give you your Decked Out Shulker as your inventory is full")
+                return@async
+            }
+
+            player.addScoreboardTag(TakeShulkerCommand.RECEIVED_SHULKER)
+            player.sendGreenMessage("Your Decked Out shulker has been placed in your inventory")
+        }
+    }
+
+    private fun playerMayReceiveShulker(player: Player): Boolean {
         val deckedOutShulker = player.inventory.find { itemStack ->
             if (itemStack != null && isDeckedOutShulker(itemStack)) {
                 return@find true
@@ -34,39 +67,33 @@ class GiveShulkerCommand : BaseCommand() {
 
         if (deckedOutShulker != null) {
             plugin.logger.info("${player.name}'s inventory already contains a Decked Out shulker")
-            player.sendMessage("You already have your Decked Out shulker")
-            return
+            player.sendRedMessage("You already have your Decked Out shulker")
+            return false
         }
 
         if (player.scoreboardTags.contains(TakeShulkerCommand.RECEIVED_SHULKER)) {
             plugin.logger.info("${player.name} has already received a Decked Out shulker (has tag ${TakeShulkerCommand.RECEIVED_SHULKER})")
-            player.sendMessage("You have already been given your Decked Out shulker but it's not in your inventory. Hopefully you didn't drop it!?")
-            return
+            player.sendRedMessage("You have already been given your Decked Out shulker but it's not in your inventory. Hopefully you didn't drop it!?")
+            return false
         }
 
-        plugin.logger.info("${player.name}'s inventory does not contain a Decked Out Shulker, pulling deck data from Dunga Dunga")
-
-        if (player.inventory.addItem(createDeckedOutShulker(player)).size > 0) {
-            plugin.logger.warning("Failed to give ${player.name} a Decked Out Shulker as their inventory is full")
-            return
-        }
-
-        player.addScoreboardTag(TakeShulkerCommand.RECEIVED_SHULKER)
+        return true
     }
 
-    private fun createDeckedOutShulker(player: Player): ItemStack {
+    private fun createDeckedOutShulker(player: Player, playerCards: List<Card>): ItemStack {
         var shulker = ItemStack(Material.SHULKER_BOX, 1)
 
         val blockStateMeta = shulker.itemMeta as BlockStateMeta
         val shulkerBoxState = blockStateMeta.blockState as ShulkerBox
-        val nugget = ItemStack(Material.IRON_NUGGET, 1)
-        val card = RtagItem.edit(nugget) { tag ->
-            tag.setCustomModelData(106)
 
-            tag.loadCopy()
+        val cardCount = playerCards.groupingBy { it.name!! }.eachCount()
+        cardCount.forEach { (cardName, count) ->
+            plugin.logger.info("${player.name}'s shulker should contain ${count}x $cardName")
+
+            createCard(player, cardName, count)?.let {
+                shulkerBoxState.inventory.addItem(it)
+            }
         }
-
-        shulkerBoxState.inventory.addItem(card)
 
         blockStateMeta.blockState = shulkerBoxState
         shulker.itemMeta = blockStateMeta
@@ -80,5 +107,23 @@ class GiveShulkerCommand : BaseCommand() {
         }
 
         return shulker
+    }
+
+    private fun createCard(player: Player, cardName: String, count: Int): ItemStack? {
+        try {
+            val nugget = ItemStack(Material.IRON_NUGGET, count)
+            val cardModelData = Cards.cardModelData(cardName)
+            val card = RtagItem.edit(nugget) { tag ->
+                tag.setCustomModelData(cardModelData)
+
+                tag.loadCopy()
+            }
+            return card
+        } catch (e: Exception) {
+            player.sendRedMessage("Failed to add $cardName to your shulker, error: ${e.message}")
+            plugin.logger.warning("Failed to add $cardName to your shulker, error: ${e.message}")
+            e.printStackTrace()
+            return null
+        }
     }
 }
