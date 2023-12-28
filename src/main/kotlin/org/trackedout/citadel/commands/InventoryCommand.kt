@@ -3,11 +3,8 @@ package org.trackedout.citadel.commands
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
 import org.bukkit.entity.Player
-import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.*
 import org.trackedout.citadel.data.Cards
-import org.trackedout.citadel.sendGreenMessage
-import org.trackedout.citadel.sendGreyMessage
-import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Card
@@ -34,6 +31,35 @@ class InventoryCommand(
     @Description("Remove a Decked Out 2 card from player's DB inventory")
     fun removeCard(player: Player, args: Array<String>) {
         mutateInventory("remove", player, args)
+    }
+
+    @Subcommand("list-cards")
+    @Syntax("[player]")
+    @CommandPermission("decked-out.inventory.admin")
+    @Description("List the Decked Out 2 cards in a player's DB inventory")
+    fun listCards(player: Player, args: Array<String>) {
+        if (!player.isOp) {
+            player.sendRedMessage("You need to be an operator to use this command")
+            return
+        }
+
+        if (args.size != 1) {
+            player.sendGreyMessage("Usage: /decked-out list-cards <Player>")
+            return
+        }
+
+        val target = args[0]
+        plugin.async {
+            val cards = inventoryApi.inventoryCardsGet(
+                player = target,
+                limit = 200,
+                deckId = "1",
+            ).results!!
+
+            val cardCount = cards.sortedBy { it.name }.groupingBy { it.name!! }.eachCount()
+            player.sendGreyMessage("${player.name}'s shulker contains ${cards.size} cards:")
+            cardCount.forEach { (cardName, count) -> player.sendGreyMessage("${count}x $cardName") }
+        }
     }
 
     private fun mutateInventory(action: String, player: Player, args: Array<String>) {
