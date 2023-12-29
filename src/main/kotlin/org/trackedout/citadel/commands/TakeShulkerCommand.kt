@@ -2,27 +2,20 @@ package org.trackedout.citadel.commands
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
-import org.bukkit.Material
 import org.bukkit.entity.Player
-import org.bukkit.inventory.ItemStack
-import org.trackedout.citadel.Citadel
-import org.trackedout.citadel.sendGreenMessage
-import org.trackedout.citadel.sendGreyMessage
-import org.trackedout.citadel.sendRedMessage
+import org.trackedout.citadel.*
 
 @CommandAlias("take-shulker")
 class TakeShulkerCommand : BaseCommand() {
     @Dependency
     private lateinit var plugin: Citadel
 
-    private fun isDeckedOutShulker(it: ItemStack) = it.type == Material.SHULKER_BOX // TODO: Validate using NBT data; validate that this player owns it
-
     @Default
     @CommandPermission("decked-out.inventory.return-shulker")
     @Description("Take Decked Out 2 shulker from player's inventory")
     fun takeShulker(player: Player) {
         val deckedOutShulker = player.inventory.storageContents.find { itemStack ->
-            if (itemStack != null && isDeckedOutShulker(itemStack)) {
+            if (itemStack != null && itemStack.isDeckedOutShulker()) {
                 return@find true
             } else {
                 false

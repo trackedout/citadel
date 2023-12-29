@@ -22,8 +22,6 @@ class GiveShulkerCommand(
     @Dependency
     private lateinit var plugin: Citadel
 
-    private fun isDeckedOutShulker(it: ItemStack) = it.type == Material.SHULKER_BOX
-
     @Default
     @CommandPermission("decked-out.inventory.get-shulker")
     @Description("Add Decked Out 2 shulker into player's inventory")
@@ -56,7 +54,7 @@ class GiveShulkerCommand(
 
     private fun playerMayReceiveShulker(player: Player): Boolean {
         val deckedOutShulker = player.inventory.find { itemStack ->
-            if (itemStack != null && isDeckedOutShulker(itemStack)) {
+            if (itemStack != null && itemStack.isDeckedOutShulker()) {
                 return@find true
             } else {
                 false
@@ -79,7 +77,7 @@ class GiveShulkerCommand(
     }
 
     private fun createDeckedOutShulker(player: Player, playerCards: List<Card>): ItemStack {
-        var shulker = ItemStack(Material.SHULKER_BOX, 1)
+        var shulker = ItemStack(Material.CYAN_SHULKER_BOX, 1)
 
         val blockStateMeta = shulker.itemMeta as BlockStateMeta
         val shulkerBoxState = blockStateMeta.blockState as ShulkerBox
@@ -96,13 +94,14 @@ class GiveShulkerCommand(
         blockStateMeta.blockState = shulkerBoxState
         shulker.itemMeta = blockStateMeta
 
-        shulker = RtagItem.edit(shulker) { tag ->
-            tag.set("Custom Text", "display", "Name")
+        shulker = RtagItem.edit(shulker, fun(tag: RtagItem): ItemStack {
+            val nameJson = "{\"text\":\"❄☠ Frozen Assets ☠❄\"}"
+            tag.set(nameJson, "display", "Name")
             tag.set(player.name, "owner")
             tag.set(player.identity().uuid().toString(), "owner-id")
 
-            tag.loadCopy();
-        }
+            return tag.loadCopy();
+        })
 
         return shulker
     }
@@ -110,12 +109,24 @@ class GiveShulkerCommand(
     private fun createCard(player: Player, cardName: String, count: Int): ItemStack? {
         try {
             val nugget = ItemStack(Material.IRON_NUGGET, count)
-            val cardModelData = Cards.cardModelData(cardName)
-            val card = RtagItem.edit(nugget) { tag ->
-                tag.setCustomModelData(cardModelData)
+            val card = Cards.findCard(cardName)?.let {
+                return@let RtagItem.edit(nugget, fun(tag: RtagItem): ItemStack {
+                    tag.setCustomModelData(it.modelData)
+                    val nameJson = "{\"color\":\"${it.colour}\",\"text\":\"${it.displayName}\"}"
+                    tag.set(nameJson, "display", "Name")
+                    tag.set("{\"color\":\"${it.colour}\",\"OriginalName\":\"${nameJson}\"}", "display", "NameFormat");
+                    // NameFormat: {color: "gray", OriginalName: '{"color":"gray","text":"✲ Moment of Clarity ✲"}',
+                    // ModifiedName: '{"color":"gray","text":"✲ Moment of Clarity ✲"}'}
 
-                tag.loadCopy()
+                    return tag.loadCopy()
+                })
             }
+
+            if (card == null) {
+                player.sendRedMessage("Failed to add $cardName to your shulker as it's metadata is missing")
+                plugin.logger.warning("Failed to add $cardName to your shulker as card data for this card was not found")
+            }
+
             return card
         } catch (e: Exception) {
             player.sendRedMessage("Failed to add $cardName to your shulker, error: ${e.message}")
