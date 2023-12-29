@@ -52,8 +52,32 @@ class InventoryCommand(
             ).results!!
 
             val cardCount = cards.sortedBy { it.name }.groupingBy { it.name!! }.eachCount()
-            player.sendGreyMessage("${player.name}'s shulker contains ${cards.size} cards:")
+            player.sendGreyMessage("${target}'s shulker contains ${cards.size} cards:")
             cardCount.forEach { (cardName, count) -> player.sendGreyMessage("${count}x $cardName") }
+        }
+    }
+
+    @Subcommand("remove-all-cards")
+    @Syntax("[player]")
+    @CommandPermission("decked-out.inventory.admin")
+    @Description("Remove all Decked Out 2 cards from a player's DB inventory")
+    fun removeAllCards(player: Player, args: Array<String>) {
+        if (args.size != 1) {
+            player.sendGreyMessage("Usage: /decked-out remove-all-cards <Player>")
+            return
+        }
+
+        val target = args[0]
+        plugin.async {
+            val cards = inventoryApi.inventoryCardsGet(
+                player = target,
+                limit = 200,
+                deckId = "1",
+            ).results!!
+
+            player.sendGreyMessage("Deleting ${cards.size} cards from ${target}'s deck...")
+            cards.forEach(inventoryApi::inventoryDeleteCardPost)
+            player.sendGreenMessage("Deleted ${cards.size} cards from ${target}'s deck!")
         }
     }
 
