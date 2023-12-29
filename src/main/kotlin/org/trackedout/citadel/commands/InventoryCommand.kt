@@ -2,6 +2,9 @@ package org.trackedout.citadel.commands
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.*
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.format.TextColor
 import org.bukkit.entity.Player
 import org.trackedout.citadel.*
 import org.trackedout.client.apis.EventsApi
@@ -78,6 +81,25 @@ class InventoryCommand(
             player.sendGreyMessage("Deleting ${cards.size} cards from ${target}'s deck...")
             cards.forEach(inventoryApi::inventoryDeleteCardPost)
             player.sendGreenMessage("Deleted ${cards.size} cards from ${target}'s deck!")
+        }
+    }
+
+    @Subcommand("list-known-cards")
+    @Syntax("[player]")
+    @CommandPermission("decked-out.inventory.list-known")
+    @Description("Add a copy of every known card to a player's DB inventory")
+    fun listAllKnownCards(player: Player) {
+        val knownCards = Cards.Companion.Card.entries.sortedBy { it.colour }.reversed()
+        player.sendGreenMessage("Decked Out 2 has the following cards:")
+        knownCards.forEach {
+            var textColor = TextColor.fromHexString(it.colour)
+            if (textColor == null) {
+                textColor = NamedTextColor.NAMES.value(it.colour)
+            }
+            if (textColor == null) {
+                textColor = TextColor.color(NamedTextColor.GRAY)
+            }
+            player.sendMessage(Component.text().color(textColor).content("- ${it.displayName}").build())
         }
     }
 
