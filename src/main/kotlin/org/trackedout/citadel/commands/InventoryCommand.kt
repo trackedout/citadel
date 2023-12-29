@@ -103,6 +103,36 @@ class InventoryCommand(
         }
     }
 
+    @Subcommand("add-all-known-cards")
+    @Syntax("[player]")
+    @CommandPermission("decked-out.inventory.admin")
+    @Description("Add a copy of every known card to a player's DB inventory")
+    fun addAllKnownCards(player: Player, args: Array<String>) {
+        if (args.size != 1) {
+            player.sendGreyMessage("Usage: /decked-out add-all-known-cards <Player>")
+            return
+        }
+
+        val target = args[0]
+        plugin.async {
+            val knownCards = Cards.Companion.Card.entries
+            player.sendGreyMessage("Adding ${knownCards.size} cards to ${target}'s deck...")
+
+            knownCards.forEach {
+                inventoryApi.inventoryAddCardPost(
+                    Card(
+                        player = target,
+                        name = it.key,
+                        deckId = "1",
+                        server = plugin.serverName,
+                    )
+                )
+            }
+
+            player.sendGreenMessage("Added ${knownCards.size} cards to ${target}'s deck!")
+        }
+    }
+
     private fun mutateInventory(action: String, player: Player, args: Array<String>) {
         if (args.size != 2) {
             player.sendGreyMessage("Usage: /decked-out $action-card <Player> <card-name>")
