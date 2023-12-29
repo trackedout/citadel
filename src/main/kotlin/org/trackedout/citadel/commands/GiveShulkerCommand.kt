@@ -9,10 +9,10 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.BlockStateMeta
 import org.trackedout.citadel.*
-import org.trackedout.citadel.data.Cards
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Card
+import org.trackedout.data.Cards
 
 @CommandAlias("gief-shulker|give-shulker") // Spelling is intentional
 class GiveShulkerCommand(
