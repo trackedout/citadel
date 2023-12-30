@@ -3,18 +3,18 @@ package org.trackedout.citadel
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Material
-import org.bukkit.entity.Player
+import org.bukkit.command.CommandSender
 import org.bukkit.inventory.ItemStack
 
-fun Player.sendGreenMessage(message: String) {
+fun CommandSender.sendGreenMessage(message: String) {
     this.sendMessage(Component.text().color(NamedTextColor.GREEN).content(message).build())
 }
 
-fun Player.sendRedMessage(message: String) {
+fun CommandSender.sendRedMessage(message: String) {
     this.sendMessage(Component.text().color(NamedTextColor.RED).content(message).build())
 }
 
-fun Player.sendGreyMessage(message: String) {
+fun CommandSender.sendGreyMessage(message: String) {
     this.sendMessage(Component.text().color(NamedTextColor.GRAY).content(message).build())
 }
 

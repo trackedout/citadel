@@ -3,6 +3,8 @@ package org.trackedout.citadel
 import co.aikar.commands.PaperCommandManager
 import okhttp3.OkHttpClient
 import org.bukkit.Bukkit
+import org.bukkit.command.CommandSender
+import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.commands.GiveShulkerCommand
@@ -74,10 +76,27 @@ class Citadel : JavaPlugin() {
     }
 }
 
-fun Citadel.async(unit: () -> Unit) {
-    object : BukkitRunnable() {
-        override fun run() {
+fun Citadel.async(source: CommandSender, unit: () -> Unit) {
+    if (source is Player) {
+        object : BukkitRunnable() {
+            override fun run() {
+                try {
+                    unit()
+                } catch (e: Exception) {
+                    logger.severe("Error in async process: ${e.message}")
+                    source.sendRedMessage("${e.message}")
+                    e.printStackTrace()
+                }
+            }
+        }.runTaskAsynchronously(this)
+    } else {
+        // Command Block commands should be executed on the main thread
+        try {
             unit()
+        } catch (e: Exception) {
+            logger.severe("Error in command block process: ${e.message}")
+            source.sendRedMessage("${e.message}")
+            e.printStackTrace()
         }
-    }.runTaskAsynchronously(this)
+    }
 }

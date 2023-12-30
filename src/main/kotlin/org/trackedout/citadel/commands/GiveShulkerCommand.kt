@@ -33,7 +33,7 @@ class GiveShulkerCommand(
         plugin.logger.info("${player.name}'s inventory does not contain a Decked Out Shulker, pulling deck data from Dunga Dunga")
         player.sendGreyMessage("Fetching your Decked Out shulker from Dunga Dunga...")
 
-        plugin.async {
+        plugin.async(player) {
             val playerCards = inventoryApi.inventoryCardsGet(player = player.name, limit = 200, deckId = "1").results!!
 
             // Validate deck state a second time as the API call could take 10 seconds and the player could have run this command again

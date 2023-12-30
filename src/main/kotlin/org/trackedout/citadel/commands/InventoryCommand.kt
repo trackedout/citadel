@@ -5,6 +5,7 @@ import co.aikar.commands.annotation.*
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextColor
+import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.trackedout.citadel.*
 import org.trackedout.client.apis.EventsApi
@@ -24,30 +25,30 @@ class InventoryCommand(
     @Syntax("[player] [card-name]")
     @CommandPermission("decked-out.inventory.admin")
     @Description("Add Decked Out 2 card into player's DB inventory")
-    fun addCard(player: Player, args: Array<String>) {
-        mutateInventory("add", player, args)
+    fun addCard(sender: CommandSender, args: Array<String>) {
+        mutateInventory("add", sender, args)
     }
 
     @Subcommand("remove-card")
     @Syntax("[player] [card-name]")
     @CommandPermission("decked-out.inventory.admin")
     @Description("Remove a Decked Out 2 card from player's DB inventory")
-    fun removeCard(player: Player, args: Array<String>) {
-        mutateInventory("remove", player, args)
+    fun removeCard(source: CommandSender, args: Array<String>) {
+        mutateInventory("remove", source, args)
     }
 
     @Subcommand("list-cards")
     @Syntax("[player]")
     @CommandPermission("decked-out.inventory.admin")
     @Description("List the Decked Out 2 cards in a player's DB inventory")
-    fun listCards(player: Player, args: Array<String>) {
+    fun listCards(source: CommandSender, args: Array<String>) {
         if (args.size != 1) {
-            player.sendGreyMessage("Usage: /decked-out list-cards <Player>")
+            source.sendGreyMessage("Usage: /decked-out list-cards <Player>")
             return
         }
 
         val target = args[0]
-        plugin.async {
+        plugin.async(source) {
             val cards = inventoryApi.inventoryCardsGet(
                 player = target,
                 limit = 200,
@@ -55,8 +56,8 @@ class InventoryCommand(
             ).results!!
 
             val cardCount = cards.sortedBy { it.name }.groupingBy { it.name!! }.eachCount()
-            player.sendGreyMessage("${target}'s shulker contains ${cards.size} cards:")
-            cardCount.forEach { (cardName, count) -> player.sendGreyMessage("${count}x $cardName") }
+            source.sendGreyMessage("${target}'s shulker contains ${cards.size} cards:")
+            cardCount.forEach { (cardName, count) -> source.sendGreyMessage("${count}x $cardName") }
         }
     }
 
@@ -64,30 +65,30 @@ class InventoryCommand(
     @Syntax("[player]")
     @CommandPermission("decked-out.inventory.admin")
     @Description("Remove all Decked Out 2 cards from a player's DB inventory")
-    fun removeAllCards(player: Player, args: Array<String>) {
+    fun removeAllCards(source: CommandSender, args: Array<String>) {
         if (args.size != 1) {
-            player.sendGreyMessage("Usage: /decked-out remove-all-cards <Player>")
+            source.sendGreyMessage("Usage: /decked-out remove-all-cards <Player>")
             return
         }
 
         val target = args[0]
-        plugin.async {
+        plugin.async(source) {
             val cards = inventoryApi.inventoryCardsGet(
                 player = target,
                 limit = 200,
                 deckId = "1",
             ).results!!
 
-            player.sendGreyMessage("Deleting ${cards.size} cards from ${target}'s deck...")
+            source.sendGreyMessage("Deleting ${cards.size} cards from ${target}'s deck...")
             cards.forEach(inventoryApi::inventoryDeleteCardPost)
-            player.sendGreenMessage("Deleted ${cards.size} cards from ${target}'s deck!")
+            source.sendGreenMessage("Deleted ${cards.size} cards from ${target}'s deck!")
         }
     }
 
     @Subcommand("list-known-cards")
     @Syntax("[player]")
     @CommandPermission("decked-out.inventory.list-known")
-    @Description("Add a copy of every known card to a player's DB inventory")
+    @Description("List all known Decked Out 2 cards")
     fun listAllKnownCards(player: Player) {
         val knownCards = Cards.Companion.Card.entries.sortedBy { it.colour }.reversed()
         player.sendGreenMessage("Decked Out 2 has the following cards:")
@@ -107,16 +108,16 @@ class InventoryCommand(
     @Syntax("[player]")
     @CommandPermission("decked-out.inventory.admin")
     @Description("Add a copy of every known card to a player's DB inventory")
-    fun addAllKnownCards(player: Player, args: Array<String>) {
+    fun addAllKnownCards(source: CommandSender, args: Array<String>) {
         if (args.size != 1) {
-            player.sendGreyMessage("Usage: /decked-out add-all-known-cards <Player>")
+            source.sendGreyMessage("Usage: /decked-out add-all-known-cards <Player>")
             return
         }
 
         val target = args[0]
-        plugin.async {
+        plugin.async(source) {
             val knownCards = Cards.Companion.Card.entries
-            player.sendGreyMessage("Adding ${knownCards.size} cards to ${target}'s deck...")
+            source.sendGreyMessage("Adding ${knownCards.size} cards to ${target}'s deck...")
 
             knownCards.forEach {
                 inventoryApi.inventoryAddCardPost(
@@ -129,13 +130,13 @@ class InventoryCommand(
                 )
             }
 
-            player.sendGreenMessage("Added ${knownCards.size} cards to ${target}'s deck!")
+            source.sendGreenMessage("Added ${knownCards.size} cards to ${target}'s deck!")
         }
     }
 
-    private fun mutateInventory(action: String, player: Player, args: Array<String>) {
+    private fun mutateInventory(action: String, source: CommandSender, args: Array<String>) {
         if (args.size != 2) {
-            player.sendGreyMessage("Usage: /decked-out $action-card <Player> <card-name>")
+            source.sendGreyMessage("Usage: /decked-out $action-card <Player> <card-name>")
             return
         }
 
@@ -145,14 +146,14 @@ class InventoryCommand(
                 Cards.cardModelData(it)
                 it
             } catch (e: Exception) {
-                player.sendRedMessage("Unknown card: $it")
+                source.sendRedMessage("Unknown card: $it")
                 return
             }
         }
 
         try {
             when (action) {
-                "add" -> plugin.async {
+                "add" -> plugin.async(source) {
                     inventoryApi.inventoryAddCardPost(
                         Card(
                             player = target,
@@ -162,10 +163,10 @@ class InventoryCommand(
                         )
                     )
                     plugin.logger.info("Added $cardName to $target's deck")
-                    player.sendGreenMessage("Added $cardName to $target's deck")
+                    source.sendGreenMessage("Added $cardName to $target's deck")
                 }
 
-                "remove" -> plugin.async {
+                "remove" -> plugin.async(source) {
                     inventoryApi.inventoryDeleteCardPost(
                         Card(
                             player = target,
@@ -175,14 +176,14 @@ class InventoryCommand(
                         )
                     )
                     plugin.logger.info("Removed $cardName from $target's deck")
-                    player.sendGreenMessage("Removed $cardName from $target's deck")
+                    source.sendGreenMessage("Removed $cardName from $target's deck")
                 }
             }
 
         } catch (e: Exception) {
             e.printStackTrace()
             plugin.logger.severe("Failed to $action $cardName to/from $target's deck. Exception: $e")
-            player.sendRedMessage("Failed to $action $cardName to $target's deck. Exception: $e")
+            source.sendRedMessage("Failed to $action $cardName to $target's deck. Exception: $e")
         }
     }
 }

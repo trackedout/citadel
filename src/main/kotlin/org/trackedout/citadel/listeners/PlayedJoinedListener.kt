@@ -15,7 +15,7 @@ class PlayedJoinedListener(
     @EventHandler(ignoreCancelled = true)
     fun onPlayerJoin(event: PlayerJoinEvent) {
         val player = event.player
-        plugin.async {
+        plugin.async(player) {
             eventsApi.eventsPost(
                 EventsPostRequest(
                     player = player.name,
