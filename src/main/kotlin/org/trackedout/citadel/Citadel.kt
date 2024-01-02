@@ -14,9 +14,11 @@ import org.trackedout.citadel.commands.TakeShulkerCommand
 import org.trackedout.citadel.listeners.PlayedJoinedListener
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
+import org.trackedout.client.apis.TasksApi
 import java.net.InetAddress
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
+
 
 class Citadel : JavaPlugin() {
     private val manager: PaperCommandManager by lazy { PaperCommandManager(this) }
@@ -43,6 +45,14 @@ class Citadel : JavaPlugin() {
                 .build()
         )
 
+        val tasksApi = TasksApi(
+            basePath = dungaAPIPath,
+            client = OkHttpClient.Builder()
+                .connectTimeout(5.seconds.toJavaDuration())
+                .callTimeout(60.seconds.toJavaDuration())
+                .build()
+        )
+
         // https://github.com/aikar/commands/wiki/Real-World-Examples
         manager.registerCommand(TakeShulkerCommand())
         manager.registerCommand(GiveShulkerCommand(eventsApi, inventoryApi))
@@ -54,8 +64,13 @@ class Citadel : JavaPlugin() {
             true
         }
 
+        server.messenger.registerOutgoingPluginChannel(this, "BungeeCord");
+
+        val scheduledTaskRunner = ScheduledTaskRunner(this, tasksApi)
+        scheduledTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 60) // Repeat every 60 ticks (3 seconds)
+
         server.pluginManager.registerEvents(PlayedJoinedListener(this, eventsApi), this)
-        logger.info("Citadel has been enabled")
+        logger.info("Citadel has been enabled. Server name: $serverName")
     }
 
     override fun onDisable() {

@@ -27,7 +27,7 @@ class TakeShulkerCommand : BaseCommand() {
             player.sendGreyMessage("Removing Decked Out shulker from your inventory")
             player.inventory.removeItemAnySlot(deckedOutShulker)
             player.removeScoreboardTag(RECEIVED_SHULKER)
-            player.sendGreenMessage("Your Decked Out shulker has been removed your inventory (it's stored in Dunga Dunga)")
+            player.sendGreenMessage("Your Decked Out shulker has been removed from your inventory (it's stored in Dunga Dunga)")
         } else {
             plugin.logger.info("${player.name}'s inventory does not contain a Decked Out Shulker")
             player.sendRedMessage("Your inventory does not contain a Decked Out Shulker")
