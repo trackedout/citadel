@@ -14,6 +14,8 @@ import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Card
 import org.trackedout.data.Cards
 
+const val TAG_CARD_KEY = "decked-out-card-key"
+const val DECK_NAME = "{\"text\":\"❄☠ Frozen Assets ☠❄\"}"
 @CommandAlias("gief-shulker|give-shulker") // Spelling is intentional
 class GiveShulkerCommand(
     private val eventsApi: EventsApi,
@@ -95,11 +97,9 @@ class GiveShulkerCommand(
         shulker.itemMeta = blockStateMeta
 
         shulker = RtagItem.edit(shulker, fun(tag: RtagItem): ItemStack {
-            val nameJson = "{\"text\":\"❄☠ Frozen Assets ☠❄\"}"
-            tag.set(nameJson, "display", "Name")
+            tag.set(DECK_NAME, "display", "Name")
             tag.set(player.name, "owner")
             tag.set(player.identity().uuid().toString(), "owner-id")
-
             return tag.loadCopy();
         })
 
@@ -115,8 +115,7 @@ class GiveShulkerCommand(
                     val nameJson = "{\"color\":\"${it.colour}\",\"text\":\"${it.displayName}\"}"
                     tag.set(nameJson, "display", "Name")
                     tag.set("{\"color\":\"${it.colour}\",\"OriginalName\":\"${nameJson}\"}", "display", "NameFormat");
-                    // NameFormat: {color: "gray", OriginalName: '{"color":"gray","text":"✲ Moment of Clarity ✲"}',
-                    // ModifiedName: '{"color":"gray","text":"✲ Moment of Clarity ✲"}'}
+                    tag.set(it.key, TAG_CARD_KEY)
 
                     return tag.loadCopy()
                 })
