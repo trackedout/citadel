@@ -115,7 +115,6 @@ class GiveShulkerCommand(
                     val nameJson = "{\"color\":\"${it.colour}\",\"text\":\"${it.displayName}\"}"
                     tag.set(nameJson, "display", "Name")
                     tag.set("{\"color\":\"${it.colour}\",\"OriginalName\":\"${nameJson}\"}", "display", "NameFormat");
-                    tag.set(it.key, TAG_CARD_KEY)
 
                     return tag.loadCopy()
                 })

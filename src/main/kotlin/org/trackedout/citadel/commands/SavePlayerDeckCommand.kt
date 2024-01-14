@@ -9,6 +9,7 @@ import net.kyori.adventure.text.TextComponent
 import org.bukkit.block.ShulkerBox
 import org.bukkit.entity.Player
 import org.bukkit.inventory.meta.BlockStateMeta
+import org.trackedout.citadel.getCard
 import org.trackedout.citadel.isDeckedOutCard
 import org.trackedout.citadel.isDeckedOutShulker
 import org.trackedout.client.apis.InventoryApi
@@ -39,18 +40,16 @@ class SavePlayerDeckCommand(
             .filterNotNull()
             .filter { item -> item.isDeckedOutCard() }
             .flatMap { item ->
-                val text = item.itemMeta.displayName() as TextComponent
-                val cardDisplayName = text.content()
-                val card = Cards.findCard(cardDisplayName)
-                val cards = mutableListOf<String>()
-                repeat(item.amount) {
-                    if (card != null) {
-                        cards.add(card.key)
+                val cards = mutableListOf<Cards.Companion.Card>()
+                val card = item.getCard()
+                if (card !== null) {
+                    repeat(item.amount) {
+                        cards.add(card)
                     }
                 }
                 cards
             }
-            .map { item -> item }
+            .map { item -> item.name }
             .toTypedArray()
 
         inventoryAPI.inventoryOverwritePlayersDeck(player = player.name, deckId = "1", cards = cards)
