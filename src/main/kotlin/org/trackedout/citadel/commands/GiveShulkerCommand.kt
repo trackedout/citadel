@@ -14,7 +14,6 @@ import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Card
 import org.trackedout.data.Cards
 
-const val TAG_CARD_KEY = "decked-out-card-key"
 const val DECK_NAME = "{\"text\":\"❄☠ Frozen Assets ☠❄\"}"
 @CommandAlias("gief-shulker|give-shulker") // Spelling is intentional
 class GiveShulkerCommand(
