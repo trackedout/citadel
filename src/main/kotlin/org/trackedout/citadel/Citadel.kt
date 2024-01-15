@@ -7,10 +7,7 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
-import org.trackedout.citadel.commands.GiveShulkerCommand
-import org.trackedout.citadel.commands.InventoryCommand
-import org.trackedout.citadel.commands.LogEventCommand
-import org.trackedout.citadel.commands.TakeShulkerCommand
+import org.trackedout.citadel.commands.*
 import org.trackedout.citadel.listeners.PlayedJoinedListener
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
@@ -58,6 +55,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(GiveShulkerCommand(eventsApi, inventoryApi))
         manager.registerCommand(InventoryCommand(eventsApi, inventoryApi))
         manager.registerCommand(LogEventCommand(eventsApi))
+        manager.registerCommand(SavePlayerDeckCommand(inventoryApi))
         manager.setDefaultExceptionHandler { _, _, sender, _, throwable ->
             sender.sendMessage("Error executing command: ${throwable.message}")
 
