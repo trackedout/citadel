@@ -12,11 +12,11 @@ import org.trackedout.citadel.listeners.PlayedJoinedListener
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.TasksApi
+import org.trackedout.client.infrastructure.ClientError
+import org.trackedout.client.infrastructure.ClientException
 import java.net.InetAddress
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
-
-
 class Citadel : JavaPlugin() {
     private val manager: PaperCommandManager by lazy { PaperCommandManager(this) }
     val serverName by lazy { getEnvOrDefault("SERVER_NAME", InetAddress.getLocalHost().hostName) }
@@ -62,7 +62,7 @@ class Citadel : JavaPlugin() {
             true
         }
 
-        server.messenger.registerOutgoingPluginChannel(this, "BungeeCord");
+        server.messenger.registerOutgoingPluginChannel(this, "BungeeCord")
 
         val scheduledTaskRunner = ScheduledTaskRunner(this, tasksApi)
         scheduledTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 60) // Repeat every 60 ticks (3 seconds)
@@ -98,19 +98,28 @@ fun Citadel.async(source: CommandSender, unit: () -> Unit) {
                 try {
                     unit()
                 } catch (e: Exception) {
-                    logger.severe("Error in async process: ${e.message}")
-                    source.sendRedMessage("${e.message}")
+                    var message = e.message
+                    if (e is ClientException && e.response is ClientError<*>) {
+                        message = ((e.response as ClientError<*>).body as String).ifEmpty { e.message }
+                    }
+                    logger.severe("Error in async process: $message")
+                    source.sendRedMessage("$message")
                     e.printStackTrace()
                 }
             }
         }.runTaskAsynchronously(this)
     } else {
-        // Command Block commands should be executed on the main thread
+        // Command Block commands must be executed on the main thread
         try {
             unit()
         } catch (e: Exception) {
-            logger.severe("Error in command block process: ${e.message}")
-            source.sendRedMessage("${e.message}")
+            var message = e.message
+            if (e is ClientException && e.response is ClientError<*>) {
+                message = ((e.response as ClientError<*>).body as String).ifEmpty { e.message }
+            }
+            logger.severe("Error in command block process: $message")
+            source.sendRedMessage("$message")
+            e.printStackTrace()
             e.printStackTrace()
         }
     }
