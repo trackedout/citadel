@@ -172,7 +172,6 @@ class InventoryCommand(
                             player = target,
                             name = cardName,
                             deckId = "1",
-                            server = plugin.serverName,
                         )
                     )
                     plugin.logger.info("Removed $cardName from $target's deck")
