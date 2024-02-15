@@ -35,15 +35,21 @@ class ScheduledTaskRunner(
                     plugin.logger.info("Handling task: $task")
                     when (task.type) {
                         "bungee-message" -> {
-                            val targetPlayer = plugin.server.worlds.find { it.name == "world" }?.players?.find { it.name == task.targetPlayer }
-                            if (targetPlayer != null) {
+                            if (task.targetPlayer != null) {
+                                val targetPlayer = plugin.server.worlds.find { it.name == "world" }?.players?.find { it.name == task.targetPlayer }
+                                if (targetPlayer != null) {
+                                    val out = ByteStreams.newDataOutput();
+                                    task.arguments?.forEach(out::writeUTF)
+                                    targetPlayer.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
+                                } else {
+                                    val message = "Task type is '${task.type}' and targets a player, but the player was not found"
+                                    plugin.logger.warning(message)
+                                    throw Exception(message)
+                                }
+                            } else {
                                 val out = ByteStreams.newDataOutput();
                                 task.arguments?.forEach(out::writeUTF)
-                                targetPlayer.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
-                            } else {
-                                val message = "Task type is '${task.type}' which targets a player, but the player was not found"
-                                plugin.logger.warning(message)
-                                throw Exception(message)
+                                plugin.server.worlds.find { it.name == "world" }!!.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
                             }
                         }
 
