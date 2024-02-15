@@ -38,18 +38,29 @@ class ScheduledTaskRunner(
                             if (task.targetPlayer != null) {
                                 val targetPlayer = plugin.server.worlds.find { it.name == "world" }?.players?.find { it.name == task.targetPlayer }
                                 if (targetPlayer != null) {
-                                    val out = ByteStreams.newDataOutput();
+                                    val out = ByteStreams.newDataOutput()
                                     task.arguments?.forEach(out::writeUTF)
-                                    targetPlayer.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
+                                    targetPlayer.sendPluginMessage(plugin, "BungeeCord", out.toByteArray())
                                 } else {
                                     val message = "Task type is '${task.type}' and targets a player, but the player was not found"
                                     plugin.logger.warning(message)
                                     throw Exception(message)
                                 }
                             } else {
-                                val out = ByteStreams.newDataOutput();
+                                val out = ByteStreams.newDataOutput()
                                 task.arguments?.forEach(out::writeUTF)
-                                plugin.server.worlds.find { it.name == "world" }!!.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
+                                plugin.server.sendPluginMessage(plugin, "BungeeCord", out.toByteArray())
+                            }
+                        }
+
+                        "message-player"-> {
+                            val targetPlayer = plugin.server.worlds.find { it.name == "world" }?.players?.find { it.name == task.targetPlayer }
+                            if (targetPlayer != null) {
+                                task.arguments?.forEach(targetPlayer::sendMessage)
+                            } else {
+                                val message = "Task type is '${task.type}' which targets a player, but the player was not found"
+                                plugin.logger.warning(message)
+                                throw Exception(message)
                             }
                         }
 

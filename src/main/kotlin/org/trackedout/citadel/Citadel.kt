@@ -74,6 +74,8 @@ class Citadel : JavaPlugin() {
     override fun onDisable() {
         logger.info("Citadel has been disabled")
         Bukkit.getScheduler().cancelTasks(this)
+
+        server.messenger.unregisterIncomingPluginChannel(this)
     }
 
     fun debug(message: String?) {
