@@ -1,24 +1,35 @@
 package org.trackedout.citadel
 
 import co.aikar.commands.PaperCommandManager
+import net.megavex.scoreboardlibrary.api.ScoreboardLibrary
+import net.megavex.scoreboardlibrary.api.exception.NoPacketAdapterAvailableException
+import net.megavex.scoreboardlibrary.api.noop.NoopScoreboardLibrary
 import okhttp3.OkHttpClient
 import org.bukkit.Bukkit
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
-import org.trackedout.citadel.commands.*
+import org.trackedout.citadel.commands.GiveShulkerCommand
+import org.trackedout.citadel.commands.InventoryCommand
+import org.trackedout.citadel.commands.LogEventCommand
+import org.trackedout.citadel.commands.SavePlayerDeckCommand
+import org.trackedout.citadel.commands.StatusCommand
+import org.trackedout.citadel.commands.TakeShulkerCommand
 import org.trackedout.citadel.listeners.PlayedJoinedListener
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
+import org.trackedout.client.apis.StatusApi
 import org.trackedout.client.apis.TasksApi
 import org.trackedout.client.infrastructure.ClientError
 import org.trackedout.client.infrastructure.ClientException
 import java.net.InetAddress
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
+
 class Citadel : JavaPlugin() {
     private val manager: PaperCommandManager by lazy { PaperCommandManager(this) }
+    private lateinit var scoreboardLibrary: ScoreboardLibrary
     val serverName by lazy { getEnvOrDefault("SERVER_NAME", InetAddress.getLocalHost().hostName) }
     val dungaAPIPath by lazy { getEnvOrDefault("DUNGA_API", "http://localhost:3000/v1") }
 
@@ -50,12 +61,21 @@ class Citadel : JavaPlugin() {
                 .build()
         )
 
+        val statusApi = StatusApi(
+            basePath = dungaAPIPath,
+            client = OkHttpClient.Builder()
+                .connectTimeout(5.seconds.toJavaDuration())
+                .callTimeout(60.seconds.toJavaDuration())
+                .build()
+        )
+
         // https://github.com/aikar/commands/wiki/Real-World-Examples
         manager.registerCommand(TakeShulkerCommand())
         manager.registerCommand(GiveShulkerCommand(eventsApi, inventoryApi))
         manager.registerCommand(InventoryCommand(eventsApi, inventoryApi))
         manager.registerCommand(LogEventCommand(eventsApi))
         manager.registerCommand(SavePlayerDeckCommand(inventoryApi))
+        manager.registerCommand(StatusCommand())
         manager.setDefaultExceptionHandler { _, _, sender, _, throwable ->
             sender.sendMessage("Error executing command: ${throwable.message}")
 
@@ -67,6 +87,18 @@ class Citadel : JavaPlugin() {
         val scheduledTaskRunner = ScheduledTaskRunner(this, tasksApi)
         scheduledTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 60) // Repeat every 60 ticks (3 seconds)
 
+        try {
+            scoreboardLibrary = ScoreboardLibrary.loadScoreboardLibrary(this)
+        } catch (e: NoPacketAdapterAvailableException) {
+            // If no packet adapter was found, fall back to the no-op implementation
+            scoreboardLibrary = NoopScoreboardLibrary()
+            logger.warning("No scoreboard packet adapter available!")
+        }
+
+        val sidebar = scoreboardLibrary.createSidebar()
+        val statusTaskRunner = StatusTaskRunner(this, statusApi, sidebar)
+        statusTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 60) // Repeat every 60 ticks (3 seconds)
+
         server.pluginManager.registerEvents(PlayedJoinedListener(this, eventsApi), this)
         logger.info("Citadel has been enabled. Server name: $serverName")
     }
@@ -74,8 +106,8 @@ class Citadel : JavaPlugin() {
     override fun onDisable() {
         logger.info("Citadel has been disabled")
         Bukkit.getScheduler().cancelTasks(this)
-
         server.messenger.unregisterIncomingPluginChannel(this)
+        scoreboardLibrary.close()
     }
 
     fun debug(message: String?) {

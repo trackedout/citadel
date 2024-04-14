@@ -5,7 +5,6 @@ import co.aikar.commands.annotation.CommandAlias
 import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Default
 import co.aikar.commands.annotation.Description
-import net.kyori.adventure.text.TextComponent
 import org.bukkit.block.ShulkerBox
 import org.bukkit.entity.Player
 import org.bukkit.inventory.meta.BlockStateMeta
@@ -17,8 +16,8 @@ import org.trackedout.data.Cards
 
 @CommandAlias("save-shulker")
 class SavePlayerDeckCommand(
-    private val inventoryAPI: InventoryApi
-): BaseCommand() {
+    private val inventoryAPI: InventoryApi,
+) : BaseCommand() {
 
     @Default
     @CommandPermission("decked-out.inventory.save-player-deck")
@@ -50,8 +49,7 @@ class SavePlayerDeckCommand(
                 cards
             }
             .map { item -> item.name }
-            .toTypedArray()
 
-        inventoryAPI.inventoryOverwritePlayersDeck(player = player.name, deckId = "1", cards = cards)
+        inventoryAPI.inventoryOverwritePlayerDeckPut(player = player.name, deckId = "1", requestBody = cards)
     }
 }

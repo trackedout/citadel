@@ -10,6 +10,8 @@ import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.commands.DECK_NAME
 import org.trackedout.data.Cards
 
+val debugTag = "debug"
+
 fun CommandSender.sendGreenMessage(message: String) {
     this.sendMessage(Component.text().color(NamedTextColor.GREEN).content(message).build())
 }
