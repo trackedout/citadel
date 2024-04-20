@@ -1,7 +1,13 @@
 package org.trackedout.citadel.commands
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.annotation.*
+import co.aikar.commands.annotation.CommandAlias
+import co.aikar.commands.annotation.CommandPermission
+import co.aikar.commands.annotation.Default
+import co.aikar.commands.annotation.Dependency
+import co.aikar.commands.annotation.Description
+import co.aikar.commands.annotation.Optional
+import co.aikar.commands.annotation.Syntax
 import co.aikar.commands.bukkit.contexts.OnlinePlayer
 import org.bukkit.command.BlockCommandSender
 import org.bukkit.command.CommandSender
@@ -25,7 +31,7 @@ class LogEventCommand(
     @Default
     @Syntax("[event] [count] [player]")
     @CommandPermission("decked-out.log-event")
-    @Description("Add Decked Out 2 card into player's DB inventory")
+    @Description("Send an event to Dunga Dunga")
     fun logEvent(sender: CommandSender, eventName: String, @Default("1") count: Int, @Optional target: OnlinePlayer?) {
         var player = target?.player
         if (player == null && sender is OnlinePlayer) {

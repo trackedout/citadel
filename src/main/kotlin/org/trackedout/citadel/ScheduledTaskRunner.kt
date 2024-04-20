@@ -64,6 +64,13 @@ class ScheduledTaskRunner(
                             }
                         }
 
+                        "message-ops"-> {
+                            val targetPlayers = plugin.server.worlds.find { it.name == "world" }?.players?.filter { it.scoreboardTags.contains("debug") }
+                            targetPlayers?.forEach {
+                                task.arguments?.forEach(it::sendGreyMessage)
+                            }
+                        }
+
                         else -> throw Exception("Unknown command type '${task.type}'")
                     }
 
