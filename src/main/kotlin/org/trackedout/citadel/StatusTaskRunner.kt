@@ -3,6 +3,7 @@ package org.trackedout.citadel
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.TextComponent
 import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.minimessage.MiniMessage
 import net.megavex.scoreboardlibrary.api.sidebar.Sidebar
 import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.client.apis.StatusApi
@@ -18,6 +19,7 @@ class StatusTaskRunner(
         plugin.debug("[Async task ${this.taskId}] Fetching network status from Dunga Dunga")
 
         val statusSections = statusApi.getStatus()
+        val mm = MiniMessage.miniMessage();
 
         sidebar.clearLines()
         sidebar.title(Component.text("Network Status"))
@@ -27,11 +29,13 @@ class StatusTaskRunner(
             if (lines > 0) {
                 sidebar.line(lines++, Component.empty())
             }
-            sidebar.line(lines++, Component.text(statusSection.header!!))
+            sidebar.line(lines++, mm.deserialize(statusSection.header!!).asComponent())
 
             statusSection.lines?.forEach {
+                val parsed = mm.deserialize(it.key!!)
+
                 val textComponent: TextComponent = Component.text()
-                    .append(Component.text(it.key!!))
+                    .append(parsed)
                     .append(Component.text(": "))
                     .append(Component.text("${it.value!!}").colorIfAbsent(NamedTextColor.AQUA))
                     .build()
