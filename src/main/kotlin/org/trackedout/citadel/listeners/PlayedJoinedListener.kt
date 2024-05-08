@@ -34,7 +34,7 @@ class PlayedJoinedListener(
 
     @EventHandler(ignoreCancelled = true)
     fun onPlayerSeen(event: ServerTickStartEvent) {
-        if (event.tickNumber % 20 == 0) { // Every second
+        if (event.tickNumber % 300 == 0) { // Every 15 seconds
             plugin.server.onlinePlayers.forEach { player ->
                 plugin.async(player) {
                     eventsApi.eventsPost(
