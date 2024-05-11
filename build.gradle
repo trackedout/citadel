@@ -48,6 +48,19 @@ dependencies {
     implementation files('../agronet-fabric/build/libs/agronet-1.0.0.jar')
     implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.22"
 
+//    implementation 'me.devnatan:inventory-framework:3.0.10'
+//    implementation 'me.devnatan:inventory-framework-platform-bukkit:3.0.8'
+    compileOnly 'me.devnatan:inventory-framework-platform-bukkit:3.0.8'
+    runtimeOnly 'me.devnatan:inventory-framework-platform-bukkit:3.0.8'
+
+//    implementation 'me.devnatan:inventory-framework-platform-paper:3.0.8'
+//    compileOnly 'me.devnatan:inventory-framework-platform-bukkit:3.1.0-rc'
+//    runtimeOnly 'me.devnatan:inventory-framework-platform-bukkit:3.1.0-rc'
+//    compileOnly 'me.devnatan:inventory-framework-platform-bukkit:3.0.10'
+//    runtimeOnly 'me.devnatan:inventory-framework-platform-bukkit:3.0.10'
+//    compileOnly 'me.devnatan:inventory-framework-platform-paper:3.0.10'
+//    runtimeOnly 'me.devnatan:inventory-framework-platform-paper:3.0.10'
+
     // https://github.com/MegavexNetwork/scoreboard-library/blob/main/INSTALLATION.md
     var scoreboardLibraryVersion = "2.1.6"
     implementation "net.megavex:scoreboard-library-api:$scoreboardLibraryVersion"
@@ -58,33 +71,46 @@ dependencies {
     runtimeOnly "net.megavex:scoreboard-library-modern:$scoreboardLibraryVersion" // 1.17+
 //    runtimeOnly "net.megavex:scoreboard-library-packetevents:$scoreboardLibraryVersion" // 1.8+
 //    runtimeOnly "net.megavex:scoreboard-library-v1_8_R3:$scoreboardLibraryVersion" // 1.8
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
 }
 
-//compileJava {
-//    options.compilerArgs += ["-parameters"]
-//    options.fork = true
-//    options.forkOptions.executable = 'javac'
-//}
+test {
+    useJUnitPlatform()
+
+    if (System.properties['test.profile'] != 'integration') {
+        exclude 'org/trackedout/citadel/integration'
+    }
+    outputs.upToDateWhen { false }
+}
+
+tasks.register('test2', Test) {
+    exclude 'org/trackedout/citadel/integration'
+}
+
+tasks.register('testInteg', Test) {
+    outputs.upToDateWhen { false }
+
+    include 'org/trackedout/citadel/integration'
+}
+
+def targetJavaVersion = 17
 
 compileKotlin {
     kotlinOptions.javaParameters = true
-    kotlinOptions.jvmTarget = '17'
+    kotlinOptions.jvmTarget = targetJavaVersion
 }
 
-shadowJar {
-    relocate "co.aikar.commands", "org.trackedout.citadel.acf"
-    relocate "co.aikar.locales", "org.trackedout.citadel.locales"
-    relocate "com.saicone.rtag", project.group + ".libs.rtag"
-    relocate "org.trackedout.client", project.group + ".libs.dungadunga"
+kotlin {
+    jvmToolchain(targetJavaVersion)
 }
 
-build.dependsOn shadowJar
-
-def targetJavaVersion = 17
 java {
     def javaVersion = JavaVersion.toVersion(targetJavaVersion)
     sourceCompatibility = javaVersion
     targetCompatibility = javaVersion
+    toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+
     if (JavaVersion.current() < javaVersion) {
         toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
     }
@@ -95,6 +121,15 @@ tasks.withType(JavaCompile).configureEach {
         options.release.set(targetJavaVersion)
     }
 }
+
+shadowJar {
+    relocate "co.aikar.commands", "org.trackedout.citadel.acf"
+    relocate "co.aikar.locales", "org.trackedout.citadel.locales"
+    relocate "com.saicone.rtag", project.group + ".libs.rtag"
+    relocate "org.trackedout.client", project.group + ".libs.dungadunga"
+}
+
+build.dependsOn shadowJar
 
 processResources {
     def props = [version: version]

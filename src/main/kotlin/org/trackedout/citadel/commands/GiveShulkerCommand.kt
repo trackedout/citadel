@@ -1,14 +1,23 @@
 package org.trackedout.citadel.commands
 
 import co.aikar.commands.BaseCommand
-import co.aikar.commands.annotation.*
+import co.aikar.commands.annotation.CommandAlias
+import co.aikar.commands.annotation.CommandPermission
+import co.aikar.commands.annotation.Default
+import co.aikar.commands.annotation.Dependency
+import co.aikar.commands.annotation.Description
 import com.saicone.rtag.RtagItem
 import org.bukkit.Material
 import org.bukkit.block.ShulkerBox
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.BlockStateMeta
-import org.trackedout.citadel.*
+import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.async
+import org.trackedout.citadel.isDeckedOutShulker
+import org.trackedout.citadel.sendGreenMessage
+import org.trackedout.citadel.sendGreyMessage
+import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Card
@@ -87,7 +96,7 @@ class GiveShulkerCommand(
         cardCount.forEach { (cardName, count) ->
             plugin.logger.info("${player.name}'s shulker should contain ${count}x $cardName")
 
-            createCard(player, cardName, count)?.let {
+            createCard(plugin, player, cardName, count)?.let {
                 shulkerBoxState.inventory.addItem(it)
             }
         }
@@ -105,31 +114,33 @@ class GiveShulkerCommand(
         return shulker
     }
 
-    private fun createCard(player: Player, cardName: String, count: Int): ItemStack? {
-        try {
-            val nugget = ItemStack(Material.IRON_NUGGET, count)
-            val card = Cards.findCard(cardName)?.let {
-                return@let RtagItem.edit(nugget, fun(tag: RtagItem): ItemStack {
-                    tag.setCustomModelData(it.modelData)
-                    val nameJson = "{\"color\":\"${it.colour}\",\"text\":\"${it.displayName}\"}"
-                    tag.set(nameJson, "display", "Name")
-                    tag.set("{\"color\":\"${it.colour}\",\"OriginalName\":\"${nameJson}\"}", "display", "NameFormat");
+    companion object {
+        fun createCard(plugin: Citadel?, player: Player?, cardName: String, count: Int): ItemStack? {
+            try {
+                val nugget = ItemStack(Material.IRON_NUGGET, count)
+                val card = Cards.findCard(cardName)?.let {
+                    return@let RtagItem.edit(nugget, fun(tag: RtagItem): ItemStack {
+                        tag.setCustomModelData(it.modelData)
+                        val nameJson = "{\"color\":\"${it.colour}\",\"text\":\"${it.displayName}\"}"
+                        tag.set(nameJson, "display", "Name")
+                        tag.set("{\"color\":\"${it.colour}\",\"OriginalName\":\"${nameJson}\"}", "display", "NameFormat");
 
-                    return tag.loadCopy()
-                })
+                        return tag.loadCopy()
+                    })
+                }
+
+                if (card == null) {
+                    player?.sendRedMessage("Failed to add $cardName to your shulker as it's metadata is missing")
+                    plugin?.logger?.warning("Failed to add $cardName to your shulker as card data for this card was not found")
+                }
+
+                return card
+            } catch (e: Exception) {
+                player?.sendRedMessage("Failed to add $cardName to your shulker, error: ${e.message}")
+                plugin?.logger?.warning("Failed to add $cardName to your shulker, error: ${e.message}")
+                e.printStackTrace()
+                return null
             }
-
-            if (card == null) {
-                player.sendRedMessage("Failed to add $cardName to your shulker as it's metadata is missing")
-                plugin.logger.warning("Failed to add $cardName to your shulker as card data for this card was not found")
-            }
-
-            return card
-        } catch (e: Exception) {
-            player.sendRedMessage("Failed to add $cardName to your shulker, error: ${e.message}")
-            plugin.logger.warning("Failed to add $cardName to your shulker, error: ${e.message}")
-            e.printStackTrace()
-            return null
         }
     }
 }

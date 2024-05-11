@@ -1,6 +1,7 @@
 package org.trackedout.citadel
 
 import co.aikar.commands.PaperCommandManager
+import me.devnatan.inventoryframework.ViewFrame
 import net.megavex.scoreboardlibrary.api.ScoreboardLibrary
 import net.megavex.scoreboardlibrary.api.exception.NoPacketAdapterAvailableException
 import net.megavex.scoreboardlibrary.api.noop.NoopScoreboardLibrary
@@ -13,9 +14,14 @@ import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.commands.GiveShulkerCommand
 import org.trackedout.citadel.commands.InventoryCommand
 import org.trackedout.citadel.commands.LogEventCommand
+import org.trackedout.citadel.commands.ManageDeckCommand
 import org.trackedout.citadel.commands.SavePlayerDeckCommand
 import org.trackedout.citadel.commands.StatusCommand
 import org.trackedout.citadel.commands.TakeShulkerCommand
+import org.trackedout.citadel.inventory.AddACardView
+import org.trackedout.citadel.inventory.CardActionView
+import org.trackedout.citadel.inventory.DeckInventoryView
+import org.trackedout.citadel.inventory.DeckManagementView
 import org.trackedout.citadel.listeners.PlayedJoinedListener
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
@@ -100,6 +106,17 @@ class Citadel : JavaPlugin() {
         statusTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 60) // Repeat every 60 ticks (3 seconds)
 
         server.pluginManager.registerEvents(PlayedJoinedListener(this, eventsApi), this)
+
+        val viewFrame: ViewFrame = ViewFrame.create(this)
+            .with(
+                AddACardView(),
+                CardActionView(),
+                DeckInventoryView(),
+                DeckManagementView()
+            )
+            .register()
+        manager.registerCommand(ManageDeckCommand(this, inventoryApi, viewFrame))
+
         logger.info("Citadel has been enabled. Server name: $serverName")
     }
 

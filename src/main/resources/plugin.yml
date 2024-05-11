@@ -3,7 +3,7 @@ version: '${version}'
 main: org.trackedout.citadel.Citadel
 api-version: 1.20
 author: trackedout
-depend: []
+depend: [ InventoryFramework ]
 load: POSTWORLD
 website: "https://github.com/trackedout/citadel"
 description: The Citadel plugin
