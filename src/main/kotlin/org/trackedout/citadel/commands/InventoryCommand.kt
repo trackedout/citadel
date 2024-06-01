@@ -89,7 +89,15 @@ class InventoryCommand(
             ).results!!
 
             source.sendGreyMessage("Deleting ${cards.size} cards from ${target}'s deck...")
-            cards.forEach(inventoryApi::inventoryDeleteCardPost)
+            cards.forEach {
+                inventoryApi.inventoryDeleteCardPost(
+                    Card(
+                        player = it.player,
+                        name = it.name,
+                        deckId = it.deckId,
+                    )
+                )
+            }
             source.sendGreenMessage("Deleted ${cards.size} cards from ${target}'s deck!")
         }
     }
