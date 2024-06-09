@@ -1,36 +1,59 @@
-name: build
+name: build-and-release
 on: [ pull_request, push ]
+permissions:
+  contents: write
 
 jobs:
   build:
     strategy:
       matrix:
-        # Use these Java versions
         java: [
           17,    # Current Java LTS & minimum supported by Minecraft
-          21,    # Current Java LTS
         ]
-        # and run on both Linux and Windows
         os: [ ubuntu-22.04 ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
+
       - name: validate gradle wrapper
         uses: gradle/wrapper-validation-action@v1
+
       - name: setup jdk ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
           distribution: 'microsoft'
+
       - name: make gradle wrapper executable
         if: ${{ runner.os != 'Windows' }}
         run: chmod +x ./gradlew
+
+      - name: download latest agronet jar
+        uses: robinraju/release-downloader@v1.10
+        with:
+          repository: 'trackedout/agronet-fabric'
+          latest: true
+          fileName: 'agronet-*'
+          out-file-path: 'agronet-jar'
+
       - name: build
+        env:
+          ORG_GRADLE_PROJECT_agronet_jar: agronet-fabric/agronet-1.0.0.jar
         run: ./gradlew build
+
       - name: capture build artifacts
-        if: ${{ runner.os == 'Linux' && matrix.java == '21' }} # Only upload artifacts built from latest java on one OS
+        if: ${{ runner.os == 'Linux' && matrix.java == '17' }} # Only upload artifacts built from latest java on one OS
         uses: actions/upload-artifact@v3
         with:
           name: Artifacts
           path: build/libs/
+
+      - name: release
+        uses: softprops/action-gh-release@v2
+        if: ${{ startsWith(github.ref, 'refs/tags/') && runner.os == 'Linux' && matrix.java == '17' }}
+        with:
+          make_latest: true
+          files: |
+            build/libs/citadel-*
+            LICENSE
