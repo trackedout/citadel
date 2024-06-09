@@ -26,6 +26,8 @@ repositories {
     }
 }
 
+println "Agronet jar: ${property('agronet_jar')}"
+
 dependencies {
     compileOnly "io.papermc.paper:paper-api:1.20.2-R0.1-SNAPSHOT"
     implementation "commons-io:commons-io:2.13.0"
@@ -45,7 +47,7 @@ dependencies {
     implementation 'com.saicone.rtag:rtag-entity:1.4.4'
     implementation 'com.saicone.rtag:rtag-item:1.4.4'
 
-    implementation files('../agronet-fabric/build/libs/agronet-1.0.0.jar')
+    implementation files(property('agronet_jar'))
     implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.22"
 
 //    implementation 'me.devnatan:inventory-framework:3.0.10'
