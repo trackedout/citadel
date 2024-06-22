@@ -11,6 +11,7 @@ import org.trackedout.client.models.Card
 import kotlin.math.max
 
 class CardActionView : DeckManagementView() {
+    val deckId: State<String> = initialState(SELECTED_DECK)
     val selectedCard: State<Card> = initialState(SELECTED_CARD)
 
 
@@ -18,15 +19,15 @@ class CardActionView : DeckManagementView() {
         config.title("Viewing Card")
             .cancelOnClick()
             .layout(
-                "         ",
-                "  - # +  ",
-                "         ",
+                "    #    ",
+                "  -   +  ",
+                "    M    ",
                 "        X"
             )
     }
 
     override fun onFirstRender(render: RenderContext) {
-        val cards = playerCards[render]
+        val cards = getCards(render, deckId[render])
         val card = selectedCard[render]
 
         val count = max(cards.count { it.name == card.name }, 1)
@@ -38,12 +39,19 @@ class CardActionView : DeckManagementView() {
         // Decrement button
         render.layoutSlot('-')
             .withItem(namedItem(Material.RED_WOOL, "Click to DELETE one copy", NamedTextColor.RED))
-            .onClick { _: StateValueHost? -> deleteCardAndShowUpdatedDeck(render, card, cards) }
+            .onClick { _: StateValueHost? -> deleteCardAndShowUpdatedDeck(render, deckId[render], card) }
 
         // Increment button
         render.layoutSlot('+')
             .withItem(namedItem(Material.GREEN_WOOL, "Click to add a copy", NamedTextColor.GREEN))
-            .onClick { _: StateValueHost? -> addCardAndShowUpdatedDeck(render, card, cards) }
+            .onClick { _: StateValueHost? -> addCardAndShowUpdatedDeck(render, deckId[render], card) }
+
+        // Move button
+        render.layoutSlot('M')
+            .withItem(namedItem(Material.SEA_LANTERN, "Move to another deck", NamedTextColor.GRAY))
+            .onClick { _: StateValueHost? ->
+                render.openForPlayer(MoveCardView::class.java, getContext(render))
+            }
 
         render.layoutSlot('X')
             .withItem(namedItem(Material.GOLD_INGOT, "Go back"))
