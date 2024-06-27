@@ -22,7 +22,9 @@ import org.trackedout.citadel.inventory.AddACardView
 import org.trackedout.citadel.inventory.CardActionView
 import org.trackedout.citadel.inventory.DeckInventoryView
 import org.trackedout.citadel.inventory.DeckManagementView
+import org.trackedout.citadel.inventory.EnterQueueView
 import org.trackedout.citadel.inventory.MoveCardView
+import org.trackedout.citadel.listeners.EchoShardListener
 import org.trackedout.citadel.listeners.PlayedJoinedListener
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
@@ -114,10 +116,14 @@ class Citadel : JavaPlugin() {
                 CardActionView(),
                 MoveCardView(),
                 DeckInventoryView(),
-                DeckManagementView()
+                DeckManagementView(),
+                EnterQueueView(),
             )
             .register()
         manager.registerCommand(ManageDeckCommand(this, inventoryApi, eventsApi, viewFrame))
+
+        val echoShardListener = EchoShardListener(this, inventoryApi, eventsApi, viewFrame)
+        server.pluginManager.registerEvents(echoShardListener, this)
 
         logger.info("Citadel has been enabled. Server name: $serverName")
     }
