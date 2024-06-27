@@ -7,7 +7,7 @@ import org.bukkit.event.player.PlayerJoinEvent
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
 import org.trackedout.client.apis.EventsApi
-import org.trackedout.client.models.EventsPostRequest
+import org.trackedout.client.models.Event
 
 class PlayedJoinedListener(
     private val plugin: Citadel,
@@ -18,7 +18,7 @@ class PlayedJoinedListener(
         val player = event.player
         plugin.async(player) {
             eventsApi.eventsPost(
-                EventsPostRequest(
+                Event(
                     player = player.name,
                     server = plugin.serverName,
                     name = "joined-network",
@@ -38,7 +38,7 @@ class PlayedJoinedListener(
             plugin.server.onlinePlayers.forEach { player ->
                 plugin.async(player) {
                     eventsApi.eventsPost(
-                        EventsPostRequest(
+                        Event(
                             player = player.name,
                             server = plugin.serverName,
                             name = "player-seen",

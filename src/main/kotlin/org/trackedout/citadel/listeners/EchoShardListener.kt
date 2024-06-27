@@ -16,7 +16,7 @@ import org.trackedout.citadel.inventory.EnterQueueView
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
-import org.trackedout.client.models.EventsPostRequest
+import org.trackedout.client.models.Event
 import java.util.function.Consumer
 
 class EchoShardListener(
@@ -54,7 +54,7 @@ class EchoShardListener(
         val joinQueueFunc = Consumer<String> { deckId ->
             plugin.async(player) {
                 eventsApi.eventsPost(
-                    EventsPostRequest(
+                    Event(
                         name = "joined-queue",
                         server = plugin.serverName,
                         player = player.name,

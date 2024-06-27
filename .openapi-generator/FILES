@@ -6,7 +6,7 @@ docs/Error.md
 docs/Event.md
 docs/EventsApi.md
 docs/EventsGet200Response.md
-docs/EventsPostRequest.md
+docs/Event.md
 docs/InventoryApi.md
 docs/InventoryCardsGet200Response.md
 gradle/wrapper/gradle-wrapper.jar
@@ -37,5 +37,5 @@ src/main/kotlin/org/trackedout/client/models/Card.kt
 src/main/kotlin/org/trackedout/client/models/Error.kt
 src/main/kotlin/org/trackedout/client/models/Event.kt
 src/main/kotlin/org/trackedout/client/models/EventsGet200Response.kt
-src/main/kotlin/org/trackedout/client/models/EventsPostRequest.kt
+src/main/kotlin/org/trackedout/client/models/Event.kt
 src/main/kotlin/org/trackedout/client/models/InventoryCardsGet200Response.kt

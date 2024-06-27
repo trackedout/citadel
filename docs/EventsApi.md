@@ -69,7 +69,7 @@ Configure bearerAuth:
 
 <a id="eventsPost"></a>
 # **eventsPost**
-> Event eventsPost(eventsPostRequest)
+> Event eventsPost(Event)
 
 Create an event
 
@@ -82,9 +82,9 @@ Log a dungeon event from one of the Decked Out 2 instances.
 //import org.trackedout.client.models.*
 
 val apiInstance = EventsApi()
-val eventsPostRequest : EventsPostRequest =  // EventsPostRequest | 
+val Event : Event =  // Event | 
 try {
-    val result : Event = apiInstance.eventsPost(eventsPostRequest)
+    val result : Event = apiInstance.eventsPost(Event)
     println(result)
 } catch (e: ClientException) {
     println("4xx response calling EventsApi#eventsPost")
@@ -99,7 +99,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **eventsPostRequest** | [**EventsPostRequest**](EventsPostRequest.md)|  |
+ **Event** | [**Event**](Event.md)|  |
 
 ### Return type
 

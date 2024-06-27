@@ -16,7 +16,7 @@ import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
 import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.client.apis.EventsApi
-import org.trackedout.client.models.EventsPostRequest
+import org.trackedout.client.models.Event
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -55,7 +55,7 @@ class LogEventCommand(
         plugin.async(sender) {
             val playerName = player?.name ?: sender.name
             eventsApi.eventsPost(
-                EventsPostRequest(
+                Event(
                     name = eventName,
                     server = plugin.serverName,
                     player = playerName,
