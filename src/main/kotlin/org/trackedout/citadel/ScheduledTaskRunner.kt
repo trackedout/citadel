@@ -10,7 +10,7 @@ import org.trackedout.client.models.TasksIdPatchRequest
 // must go through a sync task scheduler
 class ScheduledTaskRunner(
     private val plugin: Citadel,
-    private val tasksApi: TasksApi
+    private val tasksApi: TasksApi,
 ) : BukkitRunnable() {
     override fun run() {
         plugin.debug("[Async task ${this.taskId}] Fetching scheduled commands from Dunga Dunga")
@@ -53,7 +53,14 @@ class ScheduledTaskRunner(
                             }
                         }
 
-                        "message-player"-> {
+                        "execute-command" -> {
+                            task.arguments?.forEach {
+                                plugin.logger.info("Executing command from dunga-dunga: $it")
+                                plugin.server.dispatchCommand(plugin.server.consoleSender, it)
+                            }
+                        }
+
+                        "message-player" -> {
                             val targetPlayer = plugin.server.worlds.find { it.name == "world" }?.players?.find { it.name == task.targetPlayer }
                             if (targetPlayer != null) {
                                 task.arguments?.forEach(targetPlayer::sendMessage)
@@ -64,7 +71,7 @@ class ScheduledTaskRunner(
                             }
                         }
 
-                        "message-ops"-> {
+                        "message-ops" -> {
                             val targetPlayers = plugin.server.worlds.find { it.name == "world" }?.players?.filter { it.scoreboardTags.contains("debug") }
                             targetPlayers?.forEach {
                                 task.arguments?.forEach(it::sendGreyMessage)
