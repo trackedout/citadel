@@ -54,10 +54,7 @@ class ScheduledTaskRunner(
                         }
 
                         "execute-command" -> {
-                            task.arguments?.forEach {
-                                plugin.logger.info("Executing command from dunga-dunga: $it")
-                                plugin.server.dispatchCommand(plugin.server.consoleSender, it)
-                            }
+                            runCommandsOnSubsequentTicks(ArrayDeque(task.arguments!!))
                         }
 
                         "message-player" -> {
@@ -87,6 +84,27 @@ class ScheduledTaskRunner(
                     plugin.logger.severe("Failed to handle task: $task")
                     e.printStackTrace()
                     task.updateStateAsync(plugin, tasksApi, "FAILED")
+                }
+            }
+        }.runTask(plugin)
+    }
+
+    private fun runCommandsOnSubsequentTicks(commands: ArrayDeque<String>) {
+        object : BukkitRunnable() {
+            override fun run() {
+                if (commands.isEmpty()) {
+                    return
+                }
+
+                val command = commands.removeFirst()
+                try {
+                    plugin.logger.info("Dispatching command: $command")
+                    plugin.server.dispatchCommand(plugin.server.consoleSender, command)
+
+                    runCommandsOnSubsequentTicks(commands)
+                } catch (e: Exception) {
+                    plugin.logger.severe("Failed to execute command: $command")
+                    e.printStackTrace()
                 }
             }
         }.runTask(plugin)
