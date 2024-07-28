@@ -38,3 +38,7 @@ fun ItemStack.getCard(): Cards.Companion.Card? {
     val name = text.content()
     return Cards.findCard(name)
 }
+
+fun ItemStack.name(): String? {
+    return (this.itemMeta?.displayName() as TextComponent?)?.content()
+}

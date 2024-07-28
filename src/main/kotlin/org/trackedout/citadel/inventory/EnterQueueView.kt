@@ -9,9 +9,7 @@ import me.devnatan.inventoryframework.context.RenderContext
 import me.devnatan.inventoryframework.context.SlotClickContext
 import me.devnatan.inventoryframework.state.State
 import me.devnatan.inventoryframework.state.StateValueHost
-import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
-import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.JOIN_QUEUE_FUNC
 import org.trackedout.citadel.sendRedMessage
@@ -95,15 +93,4 @@ class EnterQueueView : View() {
         "Click me to join the queue!",
         NamedTextColor.AQUA,
     )
-
-    private fun dungeonShard(name: String, textColor: NamedTextColor = NamedTextColor.AQUA, itemCount: Int = 1): ItemStack {
-        val itemStack = ItemStack(Material.IRON_NUGGET, itemCount)
-        val meta = itemStack.itemMeta
-        meta.displayName(Component.text(name, textColor))
-        meta.setCustomModelData(7)
-
-        itemStack.itemMeta = meta
-
-        return itemStack
-    }
 }
