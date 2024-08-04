@@ -24,10 +24,12 @@ import org.trackedout.citadel.inventory.DeckInventoryView
 import org.trackedout.citadel.inventory.DeckManagementView
 import org.trackedout.citadel.inventory.EnterQueueView
 import org.trackedout.citadel.inventory.MoveCardView
+import org.trackedout.citadel.inventory.ShopView
 import org.trackedout.citadel.listeners.EchoShardListener
 import org.trackedout.citadel.listeners.PlayedJoinedListener
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
+import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.apis.StatusApi
 import org.trackedout.client.apis.TasksApi
 import org.trackedout.client.infrastructure.ClientError
@@ -63,6 +65,14 @@ class Citadel : JavaPlugin() {
         )
 
         val tasksApi = TasksApi(
+            basePath = dungaAPIPath,
+            client = OkHttpClient.Builder()
+                .connectTimeout(5.seconds.toJavaDuration())
+                .callTimeout(60.seconds.toJavaDuration())
+                .build()
+        )
+
+        val scoreApi = ScoreApi(
             basePath = dungaAPIPath,
             client = OkHttpClient.Builder()
                 .connectTimeout(5.seconds.toJavaDuration())
@@ -108,7 +118,8 @@ class Citadel : JavaPlugin() {
         val statusTaskRunner = StatusTaskRunner(this, statusApi, sidebar)
         statusTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 60) // Repeat every 60 ticks (3 seconds)
 
-        server.pluginManager.registerEvents(PlayedJoinedListener(this, eventsApi), this)
+        val inventoryManager = InventoryManager(this, scoreApi)
+        server.pluginManager.registerEvents(PlayedJoinedListener(this, eventsApi, scoreApi, inventoryManager), this)
 
         val viewFrame: ViewFrame = ViewFrame.create(this)
             .with(
@@ -118,11 +129,12 @@ class Citadel : JavaPlugin() {
                 DeckInventoryView(),
                 DeckManagementView(),
                 EnterQueueView(),
+                ShopView(),
             )
             .register()
         manager.registerCommand(ManageDeckCommand(this, inventoryApi, eventsApi, viewFrame))
 
-        val echoShardListener = EchoShardListener(this, inventoryApi, eventsApi, viewFrame)
+        val echoShardListener = EchoShardListener(this, inventoryApi, eventsApi, viewFrame, inventoryManager)
         server.pluginManager.registerEvents(echoShardListener, this)
 
         logger.info("Citadel has been enabled. Server name: $serverName")

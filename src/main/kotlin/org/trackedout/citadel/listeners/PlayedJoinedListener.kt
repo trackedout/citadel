@@ -7,13 +7,17 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerJoinEvent
 import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
 import org.trackedout.client.apis.EventsApi
+import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Event
 
 class PlayedJoinedListener(
     private val plugin: Citadel,
     private val eventsApi: EventsApi,
+    private val scoreApi: ScoreApi,
+    private val inventoryManager: InventoryManager,
 ) : Listener {
     @EventHandler(ignoreCancelled = true)
     fun onPlayerJoin(event: PlayerJoinEvent) {
@@ -38,6 +42,8 @@ class PlayedJoinedListener(
 
             plugin.logger.info("${player.name} joined the server. Dunga Dunga has been notified")
         }
+
+        inventoryManager.updateInventoryBasedOnScore(player)
     }
 
     private fun insideDungeonEntrance(player: Player): Boolean {

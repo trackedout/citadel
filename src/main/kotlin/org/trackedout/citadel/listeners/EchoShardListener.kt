@@ -3,8 +3,9 @@ package org.trackedout.citadel.listeners
 import co.aikar.commands.BaseCommand
 import me.devnatan.inventoryframework.ViewFrame
 import net.kyori.adventure.text.TextComponent
+import org.bukkit.Nameable
 import org.bukkit.block.Barrel
-import org.bukkit.entity.HumanEntity
+import org.bukkit.block.ShulkerBox
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
@@ -15,17 +16,30 @@ import org.bukkit.event.inventory.InventoryOpenEvent
 import org.bukkit.event.inventory.InventoryType
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.inventory.Inventory
+import org.bukkit.inventory.InventoryView
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
+import org.trackedout.citadel.debug
+import org.trackedout.citadel.inventory.DeckManagementView.Companion.ADD_CARD_FUNC
+import org.trackedout.citadel.inventory.DeckManagementView.Companion.DELETE_CARD_FUNC
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.JOIN_QUEUE_FUNC
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.PLUGIN
 import org.trackedout.citadel.inventory.EnterQueueView
+import org.trackedout.citadel.inventory.ShopView
+import org.trackedout.citadel.inventory.ShopView.Companion.SHOP_NAME
+import org.trackedout.citadel.inventory.ShopView.Companion.SHOP_RULES
+import org.trackedout.citadel.inventory.ShopView.Companion.SHOP_RULES_REGEX
+import org.trackedout.citadel.inventory.ShopView.Companion.TRADE_FUNC
+import org.trackedout.citadel.inventory.ShopView.Companion.UPDATE_INVENTORY_FUNC
+import org.trackedout.citadel.inventory.Trade
 import org.trackedout.citadel.sendGreenMessage
-import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
+import org.trackedout.client.models.Card
 import org.trackedout.client.models.Event
+import java.util.function.BiConsumer
 import java.util.function.Consumer
 
 class EchoShardListener(
@@ -33,6 +47,7 @@ class EchoShardListener(
     private val inventoryApi: InventoryApi,
     private val eventsApi: EventsApi,
     private val viewFrame: ViewFrame,
+    private val inventoryManager: InventoryManager,
 ) : BaseCommand(), Listener {
 
     @EventHandler(ignoreCancelled = true)
@@ -46,15 +61,21 @@ class EchoShardListener(
         // TODO: Get available shards from backend
 
         event.inventory.location?.let { location ->
-            if (location.block.state is Barrel) {
-                val barrel = (location.block.state as Barrel)
-                barrel.customName()?.let { customName ->
+            if (location.block.state is Barrel || location.block.state is ShulkerBox) {
+                val block = (location.block.state as Nameable)
+                block.customName()?.let { customName ->
                     val title = (customName as TextComponent).content()
 
                     // Should be at -538 112 1980
                     if (title == "Enter Queue") {
                         event.isCancelled = true
                         showQueueBarrel(event.player as Player)
+                    } else if (title.startsWith("Shop ")) {
+                        event.isCancelled = true
+                        val titleComponents = title.removePrefix("Shop ").split(" ")
+                        val shopName = titleComponents.filter { !it.matches(SHOP_RULES_REGEX) }.joinToString(" ")
+                        val shopRules = titleComponents.filter { it.matches(SHOP_RULES_REGEX) }
+                        showShopView(event.player as Player, shopName, shopRules)
                     }
                 }
             }
@@ -87,6 +108,77 @@ class EchoShardListener(
         viewFrame.open(EnterQueueView::class.java, player, context)
     }
 
+    private fun showShopView(player: Player, shopName: String, shopRules: List<String>) {
+        player.debug("Shop rules: $shopRules")
+
+        val performTradeFunc = BiConsumer<Trade, () -> Unit> { trade, successFunc ->
+            plugin.async(player) {
+                eventsApi.eventsPost(
+                    Event(
+                        name = "trade-requested",
+                        server = plugin.serverName,
+                        player = player.name,
+                        count = 1,
+                        x = player.x,
+                        y = player.y,
+                        z = player.z,
+                        metadata = mapOf(
+                            "run-type" to trade.runType,
+                            "source-scoreboard" to trade.sourceScoreboardName(),
+                            "source-inversion-scoreboard" to trade.sourceInversionScoreboardName(),
+                            "source-count" to trade.sourceItemCount.toString(),
+                            "target-scoreboard" to trade.targetScoreboardName(),
+                            "target-count" to trade.targetItemCount.toString(),
+                        )
+                    )
+                )
+
+                successFunc()
+            }
+        }
+
+        val addCardFunc = BiConsumer<String, Card> { deckId, card ->
+            plugin.async(player) {
+                inventoryApi.inventoryAddCardPost(
+                    Card(
+                        player = card.player,
+                        name = card.name,
+                        deckId = deckId,
+                        server = plugin.serverName,
+                    )
+                )
+            }
+        }
+
+        val deleteCardFunc = BiConsumer<String, Card> { deckId, card ->
+            plugin.async(player) {
+                inventoryApi.inventoryDeleteCardPost(
+                    Card(
+                        player = card.player,
+                        name = card.name,
+                        deckId = deckId,
+                        server = plugin.serverName,
+                    )
+                )
+            }
+        }
+
+        val updateInventoryFunc = Consumer<Player> {
+            inventoryManager.updateInventoryBasedOnScore(it)
+        }
+
+        val context = mutableMapOf(
+            PLUGIN to plugin,
+            SHOP_NAME to shopName,
+            SHOP_RULES to shopRules,
+            TRADE_FUNC to performTradeFunc,
+            ADD_CARD_FUNC to addCardFunc,
+            DELETE_CARD_FUNC to deleteCardFunc,
+            UPDATE_INVENTORY_FUNC to updateInventoryFunc,
+        )
+        viewFrame.open(ShopView::class.java, player, context)
+    }
+
     @EventHandler(ignoreCancelled = true)
     fun onDropItem(event: PlayerDropItemEvent) {
         val player = event.player
@@ -115,10 +207,10 @@ class EchoShardListener(
 
         // Allow all slots if the target inventory is the player's inventory.
         // Otherwise, block any of the non-player inventory slots from being involved.
-        val blockSlotsBelow = if (event.inventory.type == InventoryType.PLAYER) 0 else event.inventory.size
+        val blockSlotsBelow = if (isPlayerInventory(event.inventory, event.view)) 0 else event.inventory.size
         player.debug("Blocking slots < $blockSlotsBelow")
 
-        if ((!isPlayerInventory(event.inventory)) && isRestrictedItem(event.oldCursor) && event.rawSlots.any { it < blockSlotsBelow }) {
+        if ((!isPlayerInventory(event.inventory, event.view)) && isRestrictedItem(event.oldCursor) && event.rawSlots.any { it < blockSlotsBelow }) {
             player.debug("Blocking drag event")
             event.isCancelled = true
         }
@@ -181,8 +273,8 @@ class EchoShardListener(
             InventoryAction.DROP_ALL_CURSOR,
         )
         if (event.action !in actionsToBlockRegardlessOfInventoryType
-            && isPlayerInventory(event.clickedInventory)
-            && isPlayerInventory(event.inventory)
+            && isPlayerInventory(event.clickedInventory, event.view)
+            && isPlayerInventory(event.inventory, event.view)
         ) {
             return
         }
@@ -199,10 +291,10 @@ class EchoShardListener(
             InventoryAction.PLACE_SOME,
             InventoryAction.PLACE_ONE,
         )
-        if (!(event.action in allowForPlayerInventory && isPlayerInventory(event.clickedInventory))) {
+        if (!(event.action in allowForPlayerInventory && isPlayerInventory(event.clickedInventory, event.view))) {
             event.currentItem?.let { itemsToCheck.add(it) }
         }
-        if (!(event.action in allowForPlayerInventory && isPlayerInventory(event.clickedInventory))) {
+        if (!(event.action in allowForPlayerInventory && isPlayerInventory(event.clickedInventory, event.view))) {
             itemsToCheck.add(event.cursor)
         }
 
@@ -223,13 +315,18 @@ class EchoShardListener(
         }
     }
 
-    private fun isPlayerInventory(inventory: Inventory?) = inventory?.type == InventoryType.PLAYER || inventory?.type == InventoryType.CRAFTING
+    private fun isPlayerInventory(inventory: Inventory?, view: InventoryView): Boolean {
+        return inventory?.type == InventoryType.PLAYER || inventory?.type == InventoryType.CRAFTING || isTradeInventory(view)
+    }
+
+    private fun isTradeInventory(view: InventoryView): Boolean {
+        if (view.type != InventoryType.CHEST) {
+            return false
+        }
+
+        val title = (view.title() as TextComponent).content()
+        return title.contains("Citadel: ")
+    }
 
     private fun isRestrictedItem(it: ItemStack) = it.itemMeta != null && it.itemMeta.hasCustomModelData()
-}
-
-private fun HumanEntity.debug(message: String) {
-    if (this.scoreboardTags.contains("debug.click")) {
-        this.sendGreyMessage(message)
-    }
 }

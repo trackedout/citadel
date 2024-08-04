@@ -6,6 +6,7 @@ import net.kyori.adventure.text.TextComponent
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Material
 import org.bukkit.command.CommandSender
+import org.bukkit.entity.HumanEntity
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.commands.DECK_NAME
 import org.trackedout.data.Cards
@@ -22,6 +23,12 @@ fun CommandSender.sendRedMessage(message: String) {
 
 fun CommandSender.sendGreyMessage(message: String) {
     this.sendMessage(Component.text().color(NamedTextColor.GRAY).content(message).build())
+}
+
+fun HumanEntity.debug(message: String, tag: String = "debug.click") {
+    if (this.scoreboardTags.contains(tag)) {
+        this.sendGreyMessage(message)
+    }
 }
 
 fun ItemStack.isDeckedOutShulker() =
