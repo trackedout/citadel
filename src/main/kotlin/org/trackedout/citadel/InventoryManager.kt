@@ -3,12 +3,15 @@ package org.trackedout.citadel
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import org.trackedout.citadel.inventory.competitiveCrown
 import org.trackedout.citadel.inventory.competitiveDeck
 import org.trackedout.citadel.inventory.competitiveShard
-import org.trackedout.citadel.inventory.dungeonCrown
+import org.trackedout.citadel.inventory.competitiveTome
 import org.trackedout.citadel.inventory.dungeonShard
+import org.trackedout.citadel.inventory.practiceCrown
 import org.trackedout.citadel.inventory.practiceDeck
 import org.trackedout.citadel.inventory.practiceShard
+import org.trackedout.citadel.inventory.practiceTome
 import org.trackedout.client.apis.ScoreApi
 
 class InventoryManager(
@@ -47,12 +50,23 @@ class InventoryManager(
             // Crowns
             "practice-do2.lifetime.escaped.crowns" -> {
                 val itemCount = value - scores.getOrDefault("practice-do2.lifetime.spent.crowns", 0)
-                player.ensureInventoryContains(dungeonCrown("Practice", NamedTextColor.GREEN, itemCount = itemCount))
+                player.ensureInventoryContains(practiceCrown(itemCount))
             }
 
             "competitive-do2.lifetime.escaped.crowns" -> {
                 val itemCount = value - scores.getOrDefault("competitive-do2.lifetime.spent.crowns", 0)
-                player.ensureInventoryContains(dungeonCrown("Competitive", itemCount = itemCount))
+                player.ensureInventoryContains(competitiveCrown(itemCount))
+            }
+
+            // Tomes
+            "practice-do2.lifetime.escaped.tomes" -> {
+                val itemCount = value - scores.getOrDefault("practice-do2.lifetime.spent.tomes", 0)
+                player.ensureInventoryContains(practiceTome(itemCount))
+            }
+
+            "competitive-do2.lifetime.escaped.tomes" -> {
+                val itemCount = value - scores.getOrDefault("competitive-do2.lifetime.spent.tomes", 0)
+                player.ensureInventoryContains(competitiveTome(itemCount))
             }
         }
     }

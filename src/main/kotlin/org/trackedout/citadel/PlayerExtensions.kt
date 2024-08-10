@@ -24,6 +24,10 @@ fun CommandSender.sendGreyMessage(message: String) {
     this.sendMessage(Component.text().color(NamedTextColor.GRAY).content(message).build())
 }
 
+fun CommandSender.sendMessage(message: String, namedTextColor: NamedTextColor) {
+    this.sendMessage(Component.text().color(namedTextColor).content(message).build())
+}
+
 fun HumanEntity.debug(message: String, tag: String = "debug.click") {
     if (this.scoreboardTags.contains(tag)) {
         this.sendGreyMessage(message)
