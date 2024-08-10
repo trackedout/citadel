@@ -16,11 +16,25 @@ fun dungeonShard(
     itemCount: Int = 1,
 ) = dungeonItem(name, 7, textColor, itemCount = itemCount)
 
+fun practiceCrown(itemCount: Int) = dungeonCrown("Practice", NamedTextColor.GREEN, itemCount = itemCount)
+
+fun competitiveCrown(itemCount: Int) = dungeonCrown("Competitive", itemCount = itemCount)
+
 fun dungeonCrown(
     crownType: String,
     textColor: NamedTextColor = NamedTextColor.AQUA,
     itemCount: Int = 1,
 ) = dungeonItem("❄☠ Decked Out Crown (${crownType}) ☠❄", 2, textColor, itemCount = itemCount)
+
+fun practiceTome(itemCount: Int) = dungeonTome("Practice", NamedTextColor.GREEN, itemCount = itemCount)
+
+fun competitiveTome(itemCount: Int) = dungeonTome("Competitive", itemCount = itemCount)
+
+fun dungeonTome(
+    tomeType: String,
+    textColor: NamedTextColor = NamedTextColor.AQUA,
+    itemCount: Int = 1,
+) = dungeonItem("❄☠ Victory Tome (${tomeType}) ☠❄", 6, textColor, itemCount = itemCount)
 
 fun practiceDeck() = dungeonDeck(
     "❄☠ Frozen Assets (Practice Deck #1) ☠❄",
