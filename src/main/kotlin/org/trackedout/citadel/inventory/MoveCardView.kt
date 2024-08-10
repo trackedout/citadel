@@ -39,7 +39,7 @@ open class MoveCardView : DeckManagementView() {
         render.layoutSlot('X')
             .withItem(namedItem(Material.GOLD_INGOT, "Go back"))
             .onClick { _: StateValueHost? ->
-                render.openForPlayer(DeckInventoryView::class.java, getContext(render))
+                render.openForPlayer(DeckInventoryViewWithoutBack::class.java, getContext(render))
             }
     }
 

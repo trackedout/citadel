@@ -4,9 +4,11 @@ import co.aikar.commands.BaseCommand
 import me.devnatan.inventoryframework.ViewFrame
 import net.kyori.adventure.text.TextComponent
 import org.apache.logging.log4j.util.TriConsumer
+import org.bukkit.Material
 import org.bukkit.Nameable
 import org.bukkit.Sound
 import org.bukkit.block.Barrel
+import org.bukkit.block.BlockState
 import org.bukkit.block.ShulkerBox
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -26,7 +28,9 @@ import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
 import org.trackedout.citadel.debug
+import org.trackedout.citadel.getCard
 import org.trackedout.citadel.getDeckId
+import org.trackedout.citadel.inventory.DeckId
 import org.trackedout.citadel.inventory.DeckInventoryViewWithoutBack
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.ADD_CARD_FUNC
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.DECK_MAP
@@ -35,6 +39,7 @@ import org.trackedout.citadel.inventory.DeckManagementView.Companion.JOIN_QUEUE_
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.PLAYER_NAME
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.PLUGIN
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.SELECTED_DECK
+import org.trackedout.citadel.inventory.DeckManagementView.Companion.UPDATE_CARD_VISIBILITY_FUNC
 import org.trackedout.citadel.inventory.EnterQueueView
 import org.trackedout.citadel.inventory.ShopView
 import org.trackedout.citadel.inventory.ShopView.Companion.SHOP_NAME
@@ -43,6 +48,9 @@ import org.trackedout.citadel.inventory.ShopView.Companion.SHOP_RULES_REGEX
 import org.trackedout.citadel.inventory.ShopView.Companion.TRADE_FUNC
 import org.trackedout.citadel.inventory.ShopView.Companion.UPDATE_INVENTORY_FUNC
 import org.trackedout.citadel.inventory.Trade
+import org.trackedout.citadel.inventory.isPractice
+import org.trackedout.citadel.inventory.shortRunType
+import org.trackedout.citadel.isDeckedOutCard
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Card
@@ -60,7 +68,8 @@ class EchoShardListener(
 
     @EventHandler(ignoreCancelled = true)
     fun onInventoryOpen(event: InventoryOpenEvent) {
-        if (event.player !is Player) {
+        val player = event.player
+        if (player !is Player) {
             plugin.logger.info("Not a player")
             return
         }
@@ -74,15 +83,35 @@ class EchoShardListener(
                     // Should be at -538 112 1980
                     if (title == "Enter Queue") {
                         event.isCancelled = true
-                        showQueueBarrel(event.player as Player)
+                        playSoundForOpeningBlock(location.block.state, player)
+
+                        showQueueBarrel(player)
                     } else if (title.startsWith("Shop ")) {
                         event.isCancelled = true
+                        playSoundForOpeningBlock(location.block.state, player)
+
                         val titleComponents = title.removePrefix("Shop ").split(" ")
                         val shopName = titleComponents.filter { !it.matches(SHOP_RULES_REGEX) }.joinToString(" ")
                         val shopRules = titleComponents.filter { it.matches(SHOP_RULES_REGEX) }
-                        showShopView(event.player as Player, shopName, shopRules)
+                        showShopView(player, shopName, shopRules)
                     }
                 }
+            }
+        }
+    }
+
+    private fun playSoundForOpeningBlock(state: BlockState, player: Player) {
+        when (state) {
+            is Barrel -> {
+                player.playSound(player.location, Sound.BLOCK_BARREL_OPEN, 1f, 1f)
+            }
+
+            is ShulkerBox -> {
+                player.playSound(player.location, Sound.BLOCK_SHULKER_BOX_OPEN, 1f, 1f)
+            }
+
+            else -> {
+                player.playSound(player.location, Sound.BLOCK_CHEST_OPEN, 1f, 1f)
             }
         }
     }
@@ -184,7 +213,14 @@ class EchoShardListener(
             "Drop item event: ${event.eventName} - inventoryType=${event.itemDrop.type}, " +
                 "cursorItem=${event.itemDrop.type.name}"
         )
-        if (isRestrictedItem(event.itemDrop.itemStack)) {
+
+        val item = event.itemDrop.itemStack
+        if (isPracticeCard(item)) {
+            event.isCancelled = true
+            player.debug("Replacing item drop event with card delete (for practice card)")
+            deleteCard(player, item)
+            item.amount = 0
+        } else if (isRestrictedItem(item)) {
             player.debug("Blocking item drop event")
             event.isCancelled = true
         }
@@ -239,11 +275,58 @@ class EchoShardListener(
                 // TODO: Make this async
                 val allCards = inventoryApi.inventoryCardsGet(player = player.name, limit = 200).results!!
 
+                val updateCardVisibility = BiConsumer<DeckId, Map<String, Number>> { deckIdToUpdate, cardsToHide ->
+                    eventsApi.eventsPost(
+                        Event(
+                            name = "card-visibility-updated",
+                            server = plugin.serverName,
+                            player = player.name,
+                            count = 1,
+                            x = player.x,
+                            y = player.y,
+                            z = player.z,
+                            metadata = mapOf(
+                                "run-type" to deckIdToUpdate.shortRunType(),
+                                "deck-id" to deckIdToUpdate,
+                            ).plus(cardsToHide.map { "hide-card-${it.key}" to it.value.toString() })
+                        )
+                    )
+                }
+
+                val addCardFunc = BiConsumer<DeckId, Card> { deckId, card ->
+                    plugin.async(player) {
+                        inventoryApi.inventoryAddCardPost(
+                            Card(
+                                player = card.player,
+                                name = card.name,
+                                deckType = deckId[0].toString(),
+                                server = plugin.serverName,
+                            )
+                        )
+                    }
+                }
+
+                val deleteCardFunc = BiConsumer<DeckId, Card> { deckId, card ->
+                    plugin.async(player) {
+                        inventoryApi.inventoryDeleteCardPost(
+                            Card(
+                                player = card.player,
+                                name = card.name,
+                                deckType = deckId[0].toString(),
+                                server = plugin.serverName,
+                            )
+                        )
+                    }
+                }
+
                 val context = mutableMapOf(
                     PLUGIN to plugin,
                     PLAYER_NAME to player.name,
                     DECK_MAP to allCards.groupBy { it.deckType!! },
                     SELECTED_DECK to deckId,
+                    UPDATE_CARD_VISIBILITY_FUNC to updateCardVisibility,
+                    ADD_CARD_FUNC to addCardFunc,
+                    DELETE_CARD_FUNC to deleteCardFunc,
                 )
 
                 player.playSound(player.location, Sound.BLOCK_SHULKER_BOX_OPEN, 1f, 1f)
@@ -343,11 +426,42 @@ class EchoShardListener(
             }
         }
 
+        itemsToCheck.removeIf { it.type == Material.AIR }
+
         val anyItemMatches = itemsToCheck.any { isRestrictedItem(it) }
         if (anyItemMatches) {
-            player.debug("Blocking click action ${event.action}")
-            event.isCancelled = true
+            if (event.action in actionsToBlockRegardlessOfInventoryType && itemsToCheck.all { isPracticeCard(it) }) {
+                // Allow players to drop practice cards, but just delete it
+                player.debug("Allowing click action ${event.action} for practice card")
+                itemsToCheck.forEach {
+                    player.inventory.removeItemAnySlot(it)
+                    deleteCard(player, it)
+                }
+            } else {
+                player.debug("Blocking click action ${event.action}")
+                event.isCancelled = true
+            }
+        }
+    }
+
+    private fun deleteCard(player: Player, it: ItemStack) {
+        val deckType = it.getDeckId()?.shortRunType()
+        val card = it.getCard()
+
+        if (deckType == null || card == null) {
+            System.err.println("Cannot delete card for item stack: $it (either deckType or resolved Card type is null)")
             return
+        }
+
+        plugin.async(player) {
+            inventoryApi.inventoryDeleteCardPost(
+                Card(
+                    player = player.name,
+                    name = card.key,
+                    deckType = deckType,
+                    server = plugin.serverName,
+                )
+            )
         }
     }
 
@@ -360,9 +474,14 @@ class EchoShardListener(
             return false
         }
 
-        val title = (view.title() as TextComponent).content()
-        return title.contains("Citadel: ")
+        if (view.title() is TextComponent) {
+            val title = (view.title() as TextComponent?)?.content() ?: return false
+            return title.contains("Citadel: ") || title.contains("Frozen Assets")
+        }
+        return false
     }
 
     private fun isRestrictedItem(it: ItemStack) = it.itemMeta != null && it.itemMeta.hasCustomModelData()
+
+    private fun isPracticeCard(it: ItemStack) = isRestrictedItem(it) && it.isDeckedOutCard() && it.getDeckId()?.isPractice() == true
 }

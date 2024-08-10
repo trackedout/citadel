@@ -24,10 +24,11 @@ import org.trackedout.client.models.Card
 import org.trackedout.data.Cards
 
 const val DECK_NAME = "{\"text\":\"❄☠ Frozen Assets ☠❄\"}"
+
 @CommandAlias("gief-shulker|give-shulker") // Spelling is intentional
 class GiveShulkerCommand(
     private val eventsApi: EventsApi,
-    private val inventoryApi: InventoryApi
+    private val inventoryApi: InventoryApi,
 ) : BaseCommand() {
     @Dependency
     private lateinit var plugin: Citadel
@@ -115,7 +116,7 @@ class GiveShulkerCommand(
     }
 
     companion object {
-        fun createCard(plugin: Citadel?, player: Player?, cardName: String, count: Int): ItemStack? {
+        fun createCard(plugin: Citadel?, player: Player?, cardName: String, count: Int, deckId: String? = null): ItemStack? {
             try {
                 val nugget = ItemStack(Material.IRON_NUGGET, count)
                 val card = Cards.findCard(cardName)?.let {
@@ -124,6 +125,7 @@ class GiveShulkerCommand(
                         val nameJson = "{\"color\":\"${it.colour}\",\"text\":\"${it.displayName}\"}"
                         tag.set(nameJson, "display", "Name")
                         tag.set("{\"color\":\"${it.colour}\",\"OriginalName\":\"${nameJson}\"}", "display", "NameFormat");
+                        deckId?.let { deckIdValue -> tag.set(deckIdValue, "deckId") }
 
                         return tag.loadCopy()
                     })

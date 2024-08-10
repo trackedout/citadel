@@ -25,7 +25,7 @@ class AddACardView : DeckManagementView() {
         render.slot(6, 1)
             .withItem(namedItem(Material.GOLD_INGOT, "Go back"))
             .onClick { _: StateValueHost? ->
-                render.openForPlayer(DeckInventoryView::class.java, getContext(render))
+                render.openForPlayer(DeckInventoryViewWithoutBack::class.java, getContext(render))
             }
 
         Cards.Companion.Card.entries.sortedBy { it.colour + it.key }.forEachIndexed { index, card ->

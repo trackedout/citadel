@@ -12,6 +12,7 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.withTags
 import org.trackedout.client.models.Card
 import java.util.function.BiConsumer
 import java.util.function.Consumer
@@ -125,7 +126,7 @@ open class DeckManagementView : View() {
         meta.displayName(Component.text(name, textColor))
         itemStack.itemMeta = meta
 
-        return itemStack
+        return itemStack.withTags(mapOf("prevent-removal" to "1"))
     }
 
     internal fun getCards(render: RenderContext, deckId: DeckId): List<Card> {
@@ -144,7 +145,7 @@ open class DeckManagementView : View() {
         deleteCardFunc[render].accept(deckId, card)
         val deckMap = deckMapWithCardRemoved(render, deckMap[render], deckId, card)
         val context = getContext(render).plus(DECK_MAP to deckMap)
-        render.openForPlayer(DeckInventoryView::class.java, context)
+        render.openForPlayer(DeckInventoryViewWithoutBack::class.java, context)
     }
 
     internal fun addCardAndShowUpdatedDeck(
@@ -155,7 +156,7 @@ open class DeckManagementView : View() {
         addCardFunc[render].accept(deckId, card)
         val deckMap = deckMapWithCardAdded(render, deckMap[render], deckId, card)
         val context = getContext(render).plus(DECK_MAP to deckMap)
-        render.openForPlayer(DeckInventoryView::class.java, context)
+        render.openForPlayer(DeckInventoryViewWithoutBack::class.java, context)
     }
 
     internal fun moveCardAndShowUpdatedDeck(
@@ -169,7 +170,7 @@ open class DeckManagementView : View() {
         deckMap = deckMapWithCardAdded(render, deckMap, targetDeckId, card)
 
         val context = getContext(render).plus(DECK_MAP to deckMap)
-        render.openForPlayer(DeckInventoryView::class.java, context.plus(SELECTED_DECK to targetDeckId))
+        render.openForPlayer(DeckInventoryViewWithoutBack::class.java, context.plus(SELECTED_DECK to targetDeckId))
     }
 
     private fun deckMapWithCardRemoved(
@@ -218,6 +219,8 @@ open class DeckManagementView : View() {
         val DELETE_CARD_FUNC: String = "delete-card-func"
         val MOVE_CARD_FUNC: String = "move-card-func"
         val JOIN_QUEUE_FUNC: String = "join-queue-func"
+
+        val UPDATE_CARD_VISIBILITY_FUNC: String = "update-card-visibility-func"
 
 
         fun createContext(

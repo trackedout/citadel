@@ -8,6 +8,7 @@ import org.bukkit.Material
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.HumanEntity
 import org.bukkit.inventory.ItemStack
+import org.trackedout.citadel.inventory.DeckId
 import org.trackedout.data.Cards
 
 val debugTag = "debug"
@@ -38,10 +39,24 @@ fun ItemStack.isDeckedOutShulker() = this.type == Material.CYAN_SHULKER_BOX && g
 
 fun ItemStack.getDeckId(): String? = RtagItem(this).get<String>("deckId")
 
+fun ItemStack.withDeckId(deckId: DeckId): ItemStack {
+    return this.withTags(mapOf("deckId" to deckId))
+}
+
+fun ItemStack.withTags(tags: Map<String, String>): ItemStack {
+    return RtagItem.edit(this) { tag ->
+        tags.forEach { (key, value) ->
+            tag.set(value, key)
+        }
+    }
+}
+
+fun ItemStack.preventRemoval(): Boolean = RtagItem(this).get<String>("prevent-removal") == "1"
+
 fun ItemStack.isDeckedOutCard(): Boolean {
-    val text = this.itemMeta.displayName() as TextComponent
-    val name = text.content()
-    return Cards.findCard(name) !== null
+    val text = this.itemMeta?.displayName() as TextComponent?
+    val name = text?.content()
+    return Cards.findCard(name ?: "") !== null
 }
 
 fun ItemStack.getCard(): Cards.Companion.Card? {
