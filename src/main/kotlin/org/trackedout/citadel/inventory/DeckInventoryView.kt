@@ -10,14 +10,13 @@ import org.trackedout.citadel.commands.GiveShulkerCommand.Companion.createCard
 import org.trackedout.client.models.Card
 import org.trackedout.data.Cards
 
-class DeckInventoryView : DeckManagementView() {
+open class DeckInventoryView : DeckManagementView() {
     val deckIdState: State<DeckId> = initialState(SELECTED_DECK)
 
 
     override fun onInit(config: ViewConfigBuilder) {
         config.title("❄☠ Frozen Assets ☠❄")
             .cancelOnClick()
-            .size(6)
     }
 
     override fun onOpen(context: OpenContext) {
@@ -25,20 +24,23 @@ class DeckInventoryView : DeckManagementView() {
         context
             .modifyConfig()
             .title("Hi, ${player.name}! Editing ${playerName[context]}'s Deck")
+            .size(rowCount())
     }
 
     override fun onFirstRender(render: RenderContext) {
         val deckId = deckIdState[render]
         val cards = getCards(render, deckId)
 
-        render.slot(6, 1)
-            .withItem(namedItem(Material.GOLD_INGOT, "Go back"))
-            .onClick { _: StateValueHost? ->
-                render.openForPlayer(DeckManagementView::class.java, getContext(render))
-            }
+        if (showBackButton()) {
+            render.slot(rowCount(), 1)
+                .withItem(namedItem(Material.GOLD_INGOT, "Go back"))
+                .onClick { _: StateValueHost? ->
+                    render.openForPlayer(DeckManagementView::class.java, getContext(render))
+                }
+        }
 
-        if (deckId.shortRunType() == "p") {
-            render.slot(6, 9)
+        if (deckId.shortRunType() == "p" && showBackButton()) {
+            render.slot(rowCount(), 9)
                 .withItem(namedItem(Material.SLIME_BLOCK, "Add a card"))
                 .onClick { _: StateValueHost? -> render.openForPlayer(AddACardView::class.java, getContext(render)) }
         }
@@ -74,5 +76,17 @@ class DeckInventoryView : DeckManagementView() {
                 }
             }
         }
+    }
+
+    open fun showBackButton(): Boolean {
+        return true
+    }
+
+    private fun rowCount() = if (showBackButton()) 6 else 3
+}
+
+class DeckInventoryViewWithoutBack : DeckInventoryView() {
+    override fun showBackButton(): Boolean {
+        return false
     }
 }

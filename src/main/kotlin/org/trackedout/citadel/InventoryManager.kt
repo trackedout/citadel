@@ -3,9 +3,11 @@ package org.trackedout.citadel
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import org.trackedout.citadel.inventory.competitiveDeck
 import org.trackedout.citadel.inventory.competitiveShard
 import org.trackedout.citadel.inventory.dungeonCrown
 import org.trackedout.citadel.inventory.dungeonShard
+import org.trackedout.citadel.inventory.practiceDeck
 import org.trackedout.citadel.inventory.practiceShard
 import org.trackedout.client.apis.ScoreApi
 
@@ -18,8 +20,7 @@ class InventoryManager(
             plugin.logger.info("Fetching scores for ${player.name}")
             val scores = scoreApi.scoresGet(player = player.name).results!!
 
-            scores
-                .filter { it.key!!.startsWith("do2.inventory") || it.key!!.contains("do2.lifetime.escaped.crowns") }
+            scores.filter { it.key!!.startsWith("do2.inventory") || it.key!!.contains("do2.lifetime.escaped.crowns") }
                 .forEach { score -> updatePlayerInventoryForState(player, scores.associate { it.key!! to it.value!!.toInt() }, score.key!!, score.value!!.toInt()) }
         }
     }
@@ -31,10 +32,12 @@ class InventoryManager(
             // Shards
             "do2.inventory.shards.practice" -> {
                 player.ensureInventoryContains(practiceShard(value))
+                player.ensureInventoryContains(practiceDeck())
             }
 
             "do2.inventory.shards.competitive" -> {
                 player.ensureInventoryContains(competitiveShard(value))
+                player.ensureInventoryContains(competitiveDeck())
             }
 
             "do2.inventory.shards.hardcore" -> {
@@ -55,10 +58,11 @@ class InventoryManager(
     }
 
     private fun Player.ensureInventoryContains(itemStack: ItemStack) {
-        plugin.logger.info("Ensuring ${this.name} has ${itemStack.amount}x ${itemStack.type.name} (name: ${itemStack.name()})")
+        val targetAmount = if (itemStack.amount == 999) 0 else itemStack.amount
+        plugin.logger.info("Ensuring ${this.name} has ${targetAmount}x ${itemStack.type.name} (name: ${itemStack.name()})")
 
         var attempts = 0
-        while (inventory.containsAtLeast(itemStack, 1)) {
+        while (inventory.containsAtLeast(itemStack, targetAmount + 1)) {
             plugin.logger.fine("Removing item $itemStack")
             inventory.removeItemAnySlot(itemStack.clone().apply { amount = 1 })
             attempts++
@@ -68,10 +72,19 @@ class InventoryManager(
             }
         }
 
-        plugin.logger.info("Adding item $itemStack")
-        val failedItems = inventory.addItem(itemStack)
-        if (failedItems.isNotEmpty()) {
-            plugin.logger.warning("$failedItems items failed to be added to ${this.name}'s inventory")
+        if (inventory.containsAtLeast(itemStack, targetAmount)) {
+            return
+        }
+
+        for (i in targetAmount - 1 downTo 0) {
+            if (inventory.containsAtLeast(itemStack, i) || i == 0) {
+                plugin.logger.info("Adding item ${itemStack}x${targetAmount - i}")
+                val failedItems = inventory.addItem(itemStack.clone().apply { amount = targetAmount - i })
+                if (failedItems.isNotEmpty()) {
+                    plugin.logger.warning("$failedItems items failed to be added to ${this.name}'s inventory")
+                }
+                break
+            }
         }
     }
 }

@@ -5,17 +5,20 @@ import me.devnatan.inventoryframework.ViewFrame
 import net.kyori.adventure.text.TextComponent
 import org.apache.logging.log4j.util.TriConsumer
 import org.bukkit.Nameable
+import org.bukkit.Sound
 import org.bukkit.block.Barrel
 import org.bukkit.block.ShulkerBox
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
+import org.bukkit.event.block.Action
 import org.bukkit.event.inventory.InventoryAction
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryDragEvent
 import org.bukkit.event.inventory.InventoryOpenEvent
 import org.bukkit.event.inventory.InventoryType
 import org.bukkit.event.player.PlayerDropItemEvent
+import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryView
 import org.bukkit.inventory.ItemStack
@@ -23,10 +26,15 @@ import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
 import org.trackedout.citadel.debug
+import org.trackedout.citadel.getDeckId
+import org.trackedout.citadel.inventory.DeckInventoryViewWithoutBack
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.ADD_CARD_FUNC
+import org.trackedout.citadel.inventory.DeckManagementView.Companion.DECK_MAP
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.DELETE_CARD_FUNC
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.JOIN_QUEUE_FUNC
+import org.trackedout.citadel.inventory.DeckManagementView.Companion.PLAYER_NAME
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.PLUGIN
+import org.trackedout.citadel.inventory.DeckManagementView.Companion.SELECTED_DECK
 import org.trackedout.citadel.inventory.EnterQueueView
 import org.trackedout.citadel.inventory.ShopView
 import org.trackedout.citadel.inventory.ShopView.Companion.SHOP_NAME
@@ -56,9 +64,6 @@ class EchoShardListener(
             plugin.logger.info("Not a player")
             return
         }
-
-        // TODO: Check if player is already queued
-        // TODO: Get available shards from backend
 
         event.inventory.location?.let { location ->
             if (location.block.state is Barrel || location.block.state is ShulkerBox) {
@@ -93,7 +98,7 @@ class EchoShardListener(
     }
 
     private fun showShopView(player: Player, shopName: String, shopRules: List<String>) {
-        player.debug("Shop rules: $shopRules")
+        player.debug("Shop rules: $shopRules", "debug.shop")
 
         val performTradeFunc = TriConsumer<Trade, () -> Unit, () -> Unit> { trade, doneFunc, successFunc ->
             plugin.async(player) {
@@ -206,6 +211,44 @@ class EchoShardListener(
         if ((!isPlayerInventory(event.inventory, event.view)) && isRestrictedItem(event.oldCursor) && event.rawSlots.any { it < blockSlotsBelow }) {
             player.debug("Blocking drag event")
             event.isCancelled = true
+        }
+    }
+
+    @EventHandler(ignoreCancelled = false)
+    fun onRightClickShulker(event: PlayerInteractEvent) {
+        val player = event.player
+
+        val item = event.item
+        player.debug(
+            "Interact event: { " +
+                "eventType=${event.action}, " +
+                "openInventoryType=${player.openInventory.type}, " +
+                "currentItem=${item?.type?.name}, " +
+                "offHandItem=${player.inventory.itemInOffHand.type.name} }",
+            "debug.interact"
+        )
+
+        if (item == null) {
+            return
+        }
+
+        if (event.action == Action.RIGHT_CLICK_AIR) {
+            item.getDeckId()?.let { deckId ->
+                event.isCancelled = true
+
+                // TODO: Make this async
+                val allCards = inventoryApi.inventoryCardsGet(player = player.name, limit = 200).results!!
+
+                val context = mutableMapOf(
+                    PLUGIN to plugin,
+                    PLAYER_NAME to player.name,
+                    DECK_MAP to allCards.groupBy { it.deckType!! },
+                    SELECTED_DECK to deckId,
+                )
+
+                player.playSound(player.location, Sound.BLOCK_SHULKER_BOX_OPEN, 1f, 1f)
+                viewFrame.open(DeckInventoryViewWithoutBack::class.java, player, context)
+            }
         }
     }
 

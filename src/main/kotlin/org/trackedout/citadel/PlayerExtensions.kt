@@ -8,7 +8,6 @@ import org.bukkit.Material
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.HumanEntity
 import org.bukkit.inventory.ItemStack
-import org.trackedout.citadel.commands.DECK_NAME
 import org.trackedout.data.Cards
 
 val debugTag = "debug"
@@ -31,8 +30,9 @@ fun HumanEntity.debug(message: String, tag: String = "debug.click") {
     }
 }
 
-fun ItemStack.isDeckedOutShulker() =
-    RtagItem(this).get<String>("display", "Name") == DECK_NAME && this.type == Material.CYAN_SHULKER_BOX
+fun ItemStack.isDeckedOutShulker() = this.type == Material.CYAN_SHULKER_BOX && getDeckId() != null
+
+fun ItemStack.getDeckId(): String? = RtagItem(this).get<String>("deckId")
 
 fun ItemStack.isDeckedOutCard(): Boolean {
     val text = this.itemMeta.displayName() as TextComponent

@@ -23,6 +23,7 @@ import org.trackedout.citadel.commands.TakeShulkerCommand
 import org.trackedout.citadel.inventory.AddACardView
 import org.trackedout.citadel.inventory.CardActionView
 import org.trackedout.citadel.inventory.DeckInventoryView
+import org.trackedout.citadel.inventory.DeckInventoryViewWithoutBack
 import org.trackedout.citadel.inventory.DeckManagementView
 import org.trackedout.citadel.inventory.EnterQueueView
 import org.trackedout.citadel.inventory.MoveCardView
@@ -130,6 +131,7 @@ class Citadel : JavaPlugin() {
                 CardActionView(),
                 MoveCardView(),
                 DeckInventoryView(),
+                DeckInventoryViewWithoutBack(),
                 DeckManagementView(),
                 EnterQueueView(),
                 ShopView(),
