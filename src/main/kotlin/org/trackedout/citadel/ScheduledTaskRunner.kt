@@ -11,6 +11,7 @@ import org.trackedout.client.models.TasksIdPatchRequest
 class ScheduledTaskRunner(
     private val plugin: Citadel,
     private val tasksApi: TasksApi,
+    private val inventoryManager: InventoryManager,
 ) : BukkitRunnable() {
     override fun run() {
         plugin.debug("[Async task ${this.taskId}] Fetching scheduled commands from Dunga Dunga")
@@ -61,6 +62,17 @@ class ScheduledTaskRunner(
                             val targetPlayer = plugin.server.worlds.find { it.name == "world" }?.players?.find { it.name == task.targetPlayer }
                             if (targetPlayer != null) {
                                 task.arguments?.forEach(targetPlayer::sendMessage)
+                            } else {
+                                val message = "Task type is '${task.type}' which targets a player, but the player was not found"
+                                plugin.logger.warning(message)
+                                throw Exception(message)
+                            }
+                        }
+
+                        "update-inventory" -> {
+                            val targetPlayer = plugin.server.worlds.find { it.name == "world" }?.players?.find { it.name == task.targetPlayer }
+                            if (targetPlayer != null) {
+                                inventoryManager.updateInventoryBasedOnScore(targetPlayer)
                             } else {
                                 val message = "Task type is '${task.type}' which targets a player, but the player was not found"
                                 plugin.logger.warning(message)

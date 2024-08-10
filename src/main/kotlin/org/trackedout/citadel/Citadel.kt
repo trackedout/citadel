@@ -105,7 +105,7 @@ class Citadel : JavaPlugin() {
 
         server.messenger.registerOutgoingPluginChannel(this, "BungeeCord")
 
-        val scheduledTaskRunner = ScheduledTaskRunner(this, tasksApi)
+        val scheduledTaskRunner = ScheduledTaskRunner(this, tasksApi, inventoryManager)
         scheduledTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 60) // Repeat every 60 ticks (3 seconds)
 
         try {
