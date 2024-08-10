@@ -40,7 +40,8 @@ class EnterQueueView : View() {
     override fun onClose(close: CloseContext) {
         removeShard(close)
         if (readyForQueue[close]) {
-            joinQueueFunc[close].accept("1")
+            // TODO: Set deckID based on user selection / shard type
+            joinQueueFunc[close].accept("p1")
         }
     }
 

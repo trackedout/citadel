@@ -10,7 +10,7 @@ import org.trackedout.client.models.Card
 import org.trackedout.data.Cards
 
 class AddACardView : DeckManagementView() {
-    val deckId: State<String> = initialState(SELECTED_DECK)
+    val deckId: State<DeckId> = initialState(SELECTED_DECK)
 
 
     override fun onInit(config: ViewConfigBuilder) {
@@ -34,10 +34,11 @@ class AddACardView : DeckManagementView() {
             itemStack?.let {
                 render.slot(index, it)
                     .onClick { _: StateValueHost? ->
+                        val runType = getRunType(render)
                         val newCard = Card(
                             player = playerName[render],
                             name = card.key,
-                            deckId = deckId[render],
+                            deckType = runType,
                             server = plugin[render].serverName,
                         )
 
@@ -46,4 +47,6 @@ class AddACardView : DeckManagementView() {
             }
         }
     }
+
+    private fun getRunType(render: RenderContext) = deckId[render][0].toString()
 }

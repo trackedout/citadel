@@ -11,7 +11,7 @@ import org.trackedout.client.models.Card
 import kotlin.math.max
 
 class CardActionView : DeckManagementView() {
-    val deckId: State<String> = initialState(SELECTED_DECK)
+    val deckId: State<DeckId> = initialState(SELECTED_DECK)
     val selectedCard: State<Card> = initialState(SELECTED_CARD)
 
 
@@ -22,7 +22,7 @@ class CardActionView : DeckManagementView() {
                 "    #    ",
                 "  -   +  ",
                 "    M    ",
-                "        X"
+                "X        "
             )
     }
 
@@ -46,12 +46,12 @@ class CardActionView : DeckManagementView() {
             .withItem(namedItem(Material.GREEN_WOOL, "Click to add a copy", NamedTextColor.GREEN))
             .onClick { _: StateValueHost? -> addCardAndShowUpdatedDeck(render, deckId[render], card) }
 
-        // Move button
-        render.layoutSlot('M')
-            .withItem(namedItem(Material.SEA_LANTERN, "Move to another deck", NamedTextColor.GRAY))
-            .onClick { _: StateValueHost? ->
-                render.openForPlayer(MoveCardView::class.java, getContext(render))
-            }
+        // Move button - disabled until I rewrite card visibility
+//        render.layoutSlot('M')
+//            .withItem(namedItem(Material.SEA_LANTERN, "Move to another deck", NamedTextColor.GRAY))
+//            .onClick { _: StateValueHost? ->
+//                render.openForPlayer(MoveCardView::class.java, getContext(render))
+//            }
 
         render.layoutSlot('X')
             .withItem(namedItem(Material.GOLD_INGOT, "Go back"))

@@ -11,7 +11,7 @@ import org.trackedout.client.models.Card
 import org.trackedout.data.Cards
 
 class DeckInventoryView : DeckManagementView() {
-    val deckId: State<String> = initialState(SELECTED_DECK)
+    val deckIdState: State<DeckId> = initialState(SELECTED_DECK)
 
 
     override fun onInit(config: ViewConfigBuilder) {
@@ -28,7 +28,8 @@ class DeckInventoryView : DeckManagementView() {
     }
 
     override fun onFirstRender(render: RenderContext) {
-        val cards = getCards(render, deckId[render])
+        val deckId = deckIdState[render]
+        val cards = getCards(render, deckId)
 
         render.slot(6, 1)
             .withItem(namedItem(Material.GOLD_INGOT, "Go back"))
@@ -36,15 +37,17 @@ class DeckInventoryView : DeckManagementView() {
                 render.openForPlayer(DeckManagementView::class.java, getContext(render))
             }
 
-        render.slot(6, 9)
-            .withItem(namedItem(Material.SLIME_BLOCK, "Add a card"))
-            .onClick { _: StateValueHost? -> render.openForPlayer(AddACardView::class.java, getContext(render)) }
-
-        if (cards.isNotEmpty()) {
-            render.slot(6, 5)
-                .withItem(namedItem(Material.ECHO_SHARD, "QUEUE"))
-                .onClick { _: StateValueHost? -> joinQueue(render, deckId[render]) }
+        if (deckId.shortRunType() == "p") {
+            render.slot(6, 9)
+                .withItem(namedItem(Material.SLIME_BLOCK, "Add a card"))
+                .onClick { _: StateValueHost? -> render.openForPlayer(AddACardView::class.java, getContext(render)) }
         }
+
+//        if (cards.isNotEmpty()) {
+//            render.slot(6, 5)
+//                .withItem(namedItem(Material.ECHO_SHARD, "QUEUE"))
+//                .onClick { _: StateValueHost? -> joinQueue(render, deckId) }
+//        }
 
         Cards.Companion.Card.entries.sortedBy { it.colour + it.key }.forEach { cardDefinition ->
             val count = cards.count { it.name == cardDefinition.key }
@@ -55,17 +58,20 @@ class DeckInventoryView : DeckManagementView() {
             val itemStack = createCard(null, null, cardDefinition.key, count)
 
             itemStack?.let {
-                render.availableSlot(it)
-                    .onClick { _: StateValueHost? ->
+                val slot = render.availableSlot(it)
+
+                if (deckId.shortRunType() == "p") {
+                    slot.onClick { _: StateValueHost? ->
                         val newCard = Card(
                             player = playerName[render],
                             name = cardDefinition.key,
-                            deckId = "1",
+                            deckType = deckId.shortRunType(),
                             server = plugin[render].serverName,
                         )
 
                         render.openForPlayer(CardActionView::class.java, getContext(render).plus(SELECTED_CARD to newCard))
                     }
+                }
             }
         }
     }

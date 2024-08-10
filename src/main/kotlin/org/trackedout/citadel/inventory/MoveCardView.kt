@@ -9,7 +9,7 @@ import org.bukkit.Material
 import org.trackedout.client.models.Card
 
 open class MoveCardView : DeckManagementView() {
-    val sourceDeckId: State<String> = initialState(SELECTED_DECK)
+    val sourceDeckId: State<DeckId> = initialState(SELECTED_DECK)
     val selectedCard: State<Card> = initialState(SELECTED_CARD)
 
 
@@ -33,7 +33,8 @@ open class MoveCardView : DeckManagementView() {
             maxDeckId++
         }
 
-        (1..maxDeckId).toList().forEach(renderDeckLink(decks, render))
+        // TODO: Support different deck types
+        (1..maxDeckId).toList().forEach { deckId -> renderDeckLink(decks, render)("p${deckId}") }
 
         render.layoutSlot('X')
             .withItem(namedItem(Material.GOLD_INGOT, "Go back"))
@@ -45,25 +46,25 @@ open class MoveCardView : DeckManagementView() {
     private fun renderDeckLink(
         decks: Map<String, List<Card>>,
         render: RenderContext,
-    ) = { deckId: Int ->
-        val knownDeck = decks[deckId.toString()]
+    ) = { deckId: String ->
+        val knownDeck = decks[deckId]
         var cardCount = 0
         knownDeck?.let { cards ->
             cardCount = cards.size
         }
 
-        if (deckId.toString() == sourceDeckId[render]) {
+        if (deckId == sourceDeckId[render]) {
             showDisabledDeckLink(
                 render,
                 "You're moving this card from Deck #${deckId}! Choose another",
-                deckId.toString(),
+                deckId,
                 Material.GRAY_SHULKER_BOX
             )
         } else {
             showDeckLink(
                 render,
                 "Move to Deck #${deckId} (contains $cardCount cards)",
-                deckId.toString(),
+                deckId,
                 Material.CYAN_SHULKER_BOX
             )
         }
