@@ -217,8 +217,8 @@ class EchoShardListener(
         val item = event.itemDrop.itemStack
         if (isPracticeCard(item)) {
             event.isCancelled = true
-            player.debug("Replacing item drop event with card delete (for practice card)")
-            deleteCard(player, item)
+            player.debug("Replacing item drop event with card delete (for ${item.amount}x practice card)")
+            deleteCard(player, item.clone())
             item.amount = 0
         } else if (isRestrictedItem(item)) {
             player.debug("Blocking item drop event")
@@ -433,10 +433,6 @@ class EchoShardListener(
             if (event.action in actionsToBlockRegardlessOfInventoryType && itemsToCheck.all { isPracticeCard(it) }) {
                 // Allow players to drop practice cards, but just delete it
                 player.debug("Allowing click action ${event.action} for practice card")
-                itemsToCheck.forEach {
-                    player.inventory.removeItemAnySlot(it)
-                    deleteCard(player, it)
-                }
             } else {
                 player.debug("Blocking click action ${event.action}")
                 event.isCancelled = true
@@ -454,14 +450,17 @@ class EchoShardListener(
         }
 
         plugin.async(player) {
-            inventoryApi.inventoryDeleteCardPost(
-                Card(
-                    player = player.name,
-                    name = card.key,
-                    deckType = deckType,
-                    server = plugin.serverName,
+            for (i in 1..it.amount) {
+                println("Deleting ${card.key} (loop iteration ${i})")
+                inventoryApi.inventoryDeleteCardPost(
+                    Card(
+                        player = player.name,
+                        name = card.key,
+                        deckType = deckType,
+                        server = plugin.serverName,
+                    )
                 )
-            )
+            }
         }
     }
 

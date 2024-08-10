@@ -15,6 +15,7 @@ import org.trackedout.citadel.getCard
 import org.trackedout.citadel.getDeckId
 import org.trackedout.citadel.isDeckedOutCard
 import org.trackedout.citadel.preventRemoval
+import org.trackedout.client.models.Card
 import org.trackedout.data.Cards
 import java.util.function.BiConsumer
 
@@ -28,11 +29,12 @@ open class DeckInventoryView : DeckManagementView() {
     }
 
     override fun onOpen(context: OpenContext) {
-        val player = context.player
+        val deckId = deckIdState[context]
+        val cards = getCards(context, deckId)
+
         context
             .modifyConfig()
-            .title("Hi, ${player.name}! Editing ${playerName[context]}'s Deck")
-            .size(rowCount())
+            .size(rowCount(cards))
     }
 
     override fun onClose(event: CloseContext) {
@@ -50,28 +52,26 @@ open class DeckInventoryView : DeckManagementView() {
                 player.inventory.addItem(item)
             }
 
+        if (player.itemOnCursor.isDeckedOutCard()) {
+            player.itemOnCursor.amount = 0
+        }
+
         // For each card in the player's inventory, hide it from the deck
         val cardsToHide = (0 until player.inventory.size).asSequence()
             .map(player.inventory::getItem)
             .filter { it != null && it.isDeckedOutCard() && it.getDeckId() == deckId }
-            .map { it!!.getCard()!! to it.amount }
+            // Count the total number of cards in the player's inventory across all stacks
+            .map { it!!.getCard()!! to player.inventory.filter { p -> p?.getCard()?.name == it.getCard()?.name }.sumOf { p -> p.amount } }
             .onEach { pair: Pair<Cards.Companion.Card, Int> ->
                 val card = pair.first
                 val amount = pair.second
                 println("Player's inventory contains ${amount}x${card.name} - hiding it from Deck $deckId")
             }
             .associate {
-//                val card = Card(
-//                    player = player.name,
-//                    name = it.first.key,
-//                    deckType = deckId.shortRunType(),
-//                    server = plugin[event].serverName,
-//                )
                 it.first.key to it.second
             }
 
         println("Updating deck visibility for Deck ID #${deckId}, hiding: ${cardsToHide.map { "${it.value}x${it.key.uppercase()}" }}")
-
         updateCardVisibilityFunc[event].accept(deckId, cardsToHide)
     }
 
@@ -80,7 +80,7 @@ open class DeckInventoryView : DeckManagementView() {
         val cards = getCards(render, deckId)
 
         if (showBackButton()) {
-            render.slot(rowCount(), 1)
+            render.slot(rowCount(cards), 1)
                 .cancelOnClick()
                 .withItem(namedItem(Material.GOLD_INGOT, "Go back"))
                 .onClick { _: StateValueHost? ->
@@ -89,7 +89,7 @@ open class DeckInventoryView : DeckManagementView() {
         }
 
         if (deckId.shortRunType() == "p") {
-            render.slot(rowCount(), 9)
+            render.slot(rowCount(cards), 9)
                 .cancelOnClick()
                 .withItem(namedItem(Material.SLIME_BLOCK, "Add a card"))
                 .onClick { _: StateValueHost? -> render.openForPlayer(AddACardView::class.java, getContext(render)) }
@@ -133,7 +133,14 @@ open class DeckInventoryView : DeckManagementView() {
         return true
     }
 
-    private fun rowCount() = if (showBackButton()) 6 else 3
+    private fun rowCount(cards: List<Card>): Int {
+        val uniqueCardCount = cards.distinctBy { it.name }.size
+        return if (uniqueCardCount > 25 || showBackButton()) {
+            6
+        } else {
+            3
+        }
+    }
 }
 
 class DeckInventoryViewWithoutBack : DeckInventoryView() {

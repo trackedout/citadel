@@ -54,15 +54,22 @@ fun ItemStack.withTags(tags: Map<String, String>): ItemStack {
 fun ItemStack.preventRemoval(): Boolean = RtagItem(this).get<String>("prevent-removal") == "1"
 
 fun ItemStack.isDeckedOutCard(): Boolean {
-    val text = this.itemMeta?.displayName() as TextComponent?
-    val name = text?.content()
-    return Cards.findCard(name ?: "") !== null
+    if (this.itemMeta?.displayName() is TextComponent?) {
+        val text = this.itemMeta?.displayName() as TextComponent?
+        val name = text?.content()
+        return Cards.findCard(name ?: "") !== null
+    }
+
+    return false
 }
 
 fun ItemStack.getCard(): Cards.Companion.Card? {
-    val text = this.itemMeta.displayName() as TextComponent
-    val name = text.content()
-    return Cards.findCard(name)
+    if (this.itemMeta?.displayName() is TextComponent?) {
+        val text = this.itemMeta?.displayName() as TextComponent?
+        return text?.content()?.let { Cards.findCard(it) }
+    }
+
+    return null
 }
 
 fun ItemStack.name(): String? {

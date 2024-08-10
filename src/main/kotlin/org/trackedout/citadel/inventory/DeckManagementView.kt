@@ -2,6 +2,7 @@ package org.trackedout.citadel.inventory
 
 import me.devnatan.inventoryframework.View
 import me.devnatan.inventoryframework.ViewConfigBuilder
+import me.devnatan.inventoryframework.context.Context
 import me.devnatan.inventoryframework.context.RenderContext
 import me.devnatan.inventoryframework.state.State
 import me.devnatan.inventoryframework.state.StateValueHost
@@ -129,7 +130,7 @@ open class DeckManagementView : View() {
         return itemStack.withTags(mapOf("prevent-removal" to "1"))
     }
 
-    internal fun getCards(render: RenderContext, deckId: DeckId): List<Card> {
+    internal fun getCards(render: Context, deckId: DeckId): List<Card> {
         var cards = deckMap[render][deckId.shortRunType()]
         if (cards == null) {
             cards = emptyList()

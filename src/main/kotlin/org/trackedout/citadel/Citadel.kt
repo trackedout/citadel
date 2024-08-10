@@ -19,6 +19,7 @@ import org.trackedout.citadel.commands.ListScoresCommand
 import org.trackedout.citadel.commands.LogEventCommand
 import org.trackedout.citadel.commands.ManageDeckCommand
 import org.trackedout.citadel.commands.SavePlayerDeckCommand
+import org.trackedout.citadel.commands.ShutdownDungeonsCommand
 import org.trackedout.citadel.commands.StatusCommand
 import org.trackedout.citadel.commands.TakeShulkerCommand
 import org.trackedout.citadel.inventory.AddACardView
@@ -102,6 +103,8 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(SavePlayerDeckCommand(inventoryApi))
         manager.registerCommand(StatusCommand())
         manager.registerCommand(ListScoresCommand(this, scoreApi))
+        manager.registerCommand(ShutdownDungeonsCommand(this, eventsApi))
+
         manager.setDefaultExceptionHandler { _, _, sender, _, throwable ->
             sender.sendMessage("Error executing command: ${throwable.message}")
 
