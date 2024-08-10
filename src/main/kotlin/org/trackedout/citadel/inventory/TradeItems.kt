@@ -18,6 +18,12 @@ val tradeItems: Map<String, ScoreboardDescriber> = mapOf(
         override fun itemStack(runType: String, count: Int): ItemStack = ItemStack(Material.STICK)
     },
 
+    "QUEUE" to object : ScoreboardDescriber {
+        override fun sourceScoreboardName(trade: Trade): String = "queue"
+
+        override fun itemStack(runType: String, count: Int): ItemStack = ItemStack(Material.STICK)
+    },
+
     "CROWN" to object : ScoreboardDescriber {
         override fun sourceScoreboardName(trade: Trade): String {
             return "${trade.runType}-do2.lifetime.escaped.crowns"
@@ -37,8 +43,8 @@ val tradeItems: Map<String, ScoreboardDescriber> = mapOf(
 
         override fun itemStack(runType: String, count: Int): ItemStack {
             return when (runType) {
-                "competitive" -> dungeonShard(runType[0].uppercase() + runType.substring(1), itemCount = count)
-                else -> dungeonShard("Practice runs (infinite!?)", itemCount = count)
+                "competitive" -> competitiveShard(count)
+                else -> practiceShard(count)
             }
         }
     }

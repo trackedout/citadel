@@ -90,10 +90,12 @@ class Citadel : JavaPlugin() {
                 .build()
         )
 
+        val inventoryManager = InventoryManager(this, scoreApi)
+
         // https://github.com/aikar/commands/wiki/Real-World-Examples
         manager.registerCommand(TakeShulkerCommand())
         manager.registerCommand(GiveShulkerCommand(eventsApi, inventoryApi))
-        manager.registerCommand(InventoryCommand(eventsApi, inventoryApi))
+        manager.registerCommand(InventoryCommand(eventsApi, inventoryApi, inventoryManager))
         manager.registerCommand(LogEventCommand(eventsApi))
         manager.registerCommand(SavePlayerDeckCommand(inventoryApi))
         manager.registerCommand(StatusCommand())
@@ -120,7 +122,6 @@ class Citadel : JavaPlugin() {
         val statusTaskRunner = StatusTaskRunner(this, statusApi, sidebar)
         statusTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 60) // Repeat every 60 ticks (3 seconds)
 
-        val inventoryManager = InventoryManager(this, scoreApi)
         server.pluginManager.registerEvents(PlayedJoinedListener(this, eventsApi, scoreApi, inventoryManager), this)
 
         val viewFrame: ViewFrame = ViewFrame.create(this)

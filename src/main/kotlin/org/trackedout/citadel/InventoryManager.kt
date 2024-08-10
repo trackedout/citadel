@@ -3,8 +3,10 @@ package org.trackedout.citadel
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import org.trackedout.citadel.inventory.competitiveShard
 import org.trackedout.citadel.inventory.dungeonCrown
 import org.trackedout.citadel.inventory.dungeonShard
+import org.trackedout.citadel.inventory.practiceShard
 import org.trackedout.client.apis.ScoreApi
 
 class InventoryManager(
@@ -28,11 +30,11 @@ class InventoryManager(
         when (key) {
             // Shards
             "do2.inventory.shards.practice" -> {
-                player.ensureInventoryContains(dungeonShard("Practice runs (infinite!?)", itemCount = value))
+                player.ensureInventoryContains(practiceShard(value))
             }
 
             "do2.inventory.shards.competitive" -> {
-                player.ensureInventoryContains(dungeonShard("Competitive runs", itemCount = value))
+                player.ensureInventoryContains(competitiveShard(value))
             }
 
             "do2.inventory.shards.hardcore" -> {
@@ -42,7 +44,7 @@ class InventoryManager(
             // Crowns
             "practice-do2.lifetime.escaped.crowns" -> {
                 val itemCount = value - scores.getOrDefault("practice-do2.lifetime.spent.crowns", 0)
-                player.ensureInventoryContains(dungeonCrown("Practice", itemCount = itemCount))
+                player.ensureInventoryContains(dungeonCrown("Practice", NamedTextColor.GREEN, itemCount = itemCount))
             }
 
             "competitive-do2.lifetime.escaped.crowns" -> {

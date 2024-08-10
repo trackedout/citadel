@@ -13,6 +13,7 @@ import net.kyori.adventure.text.format.TextColor
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
@@ -25,10 +26,26 @@ import org.trackedout.data.Cards
 @CommandAlias("decked-out|do")
 class InventoryCommand(
     private val eventsApi: EventsApi,
-    private val inventoryApi: InventoryApi
+    private val inventoryApi: InventoryApi,
+    private val inventoryManager: InventoryManager,
 ) : BaseCommand() {
     @Dependency
     private lateinit var plugin: Citadel
+
+    @Subcommand("update-inventory")
+    @Syntax("[player]")
+    @CommandPermission("decked-out.inventory.admin")
+    @Description("Update a player's inventory using DB state")
+    fun updateInventory(source: CommandSender, args: Array<String>) {
+        if (args.size != 1) {
+            source.sendGreyMessage("Usage: /decked-out update-inventory <Player>")
+            return
+        }
+
+        plugin.server.onlinePlayers.find { it.name == args[0] }?.let { player ->
+            inventoryManager.updateInventoryBasedOnScore(player)
+        }
+    }
 
     @Subcommand("add-card")
     @Syntax("[player] [card-name]")
@@ -75,17 +92,18 @@ class InventoryCommand(
     @CommandPermission("decked-out.inventory.admin")
     @Description("Remove all Decked Out 2 cards from a player's DB inventory")
     fun removeAllCards(source: CommandSender, args: Array<String>) {
-        if (args.size != 1) {
-            source.sendGreyMessage("Usage: /decked-out remove-all-cards <Player>")
+        if (args.size != 2) {
+            source.sendGreyMessage("Usage: /decked-out remove-all-cards <Player> <deckType (p/c)>")
             return
         }
 
         val target = args[0]
+        val deckType = args[1]
         plugin.async(source) {
             val cards = inventoryApi.inventoryCardsGet(
                 player = target,
                 limit = 200,
-                deckId = "1",
+                deckType = deckType,
             ).results!!
 
             source.sendGreyMessage("Deleting ${cards.size} cards from ${target}'s deck...")
@@ -94,7 +112,7 @@ class InventoryCommand(
                     Card(
                         player = it.player,
                         name = it.name,
-                        deckId = it.deckId,
+                        deckType = deckType,
                     )
                 )
             }
@@ -126,12 +144,13 @@ class InventoryCommand(
     @CommandPermission("decked-out.inventory.admin")
     @Description("Add a copy of every known card to a player's DB inventory")
     fun addAllKnownCards(source: CommandSender, args: Array<String>) {
-        if (args.size != 1) {
-            source.sendGreyMessage("Usage: /decked-out add-all-known-cards <Player>")
+        if (args.size != 2) {
+            source.sendGreyMessage("Usage: /decked-out add-all-known-cards <Player> <deckType (p/c)>")
             return
         }
 
         val target = args[0]
+        val deckType = args[1]
         plugin.async(source) {
             val knownCards = Cards.Companion.Card.entries
             source.sendGreyMessage("Adding ${knownCards.size} cards to ${target}'s deck...")
@@ -141,7 +160,7 @@ class InventoryCommand(
                     Card(
                         player = target,
                         name = it.key,
-                        deckId = "1",
+                        deckType = deckType,
                         server = plugin.serverName,
                     )
                 )
@@ -152,8 +171,8 @@ class InventoryCommand(
     }
 
     private fun mutateInventory(action: String, source: CommandSender, args: Array<String>) {
-        if (args.size != 2) {
-            source.sendGreyMessage("Usage: /decked-out $action-card <Player> <card-name>")
+        if (args.size != 3) {
+            source.sendGreyMessage("Usage: /decked-out $action-card <Player> <card-name> <deckType (p/c)>")
             return
         }
 
@@ -167,6 +186,7 @@ class InventoryCommand(
                 return
             }
         }
+        val deckType = args[1]
 
         try {
             when (action) {
@@ -175,7 +195,7 @@ class InventoryCommand(
                         Card(
                             player = target,
                             name = cardName,
-                            deckId = "1",
+                            deckType = deckType,
                             server = plugin.serverName,
                         )
                     )
@@ -188,7 +208,7 @@ class InventoryCommand(
                         Card(
                             player = target,
                             name = cardName,
-                            deckId = "1",
+                            deckType = deckType,
                         )
                     )
                     plugin.logger.info("Removed $cardName from $target's deck")

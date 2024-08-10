@@ -5,6 +5,10 @@ import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 
+fun practiceShard(value: Int) = dungeonShard("Practice runs", NamedTextColor.GREEN, itemCount = value)
+
+fun competitiveShard(value: Int) = dungeonShard("Competitive runs", itemCount = value)
+
 fun dungeonShard(
     name: String,
     textColor: NamedTextColor = NamedTextColor.AQUA,

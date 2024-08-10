@@ -7,12 +7,14 @@ import me.devnatan.inventoryframework.context.CloseContext
 import me.devnatan.inventoryframework.context.OpenContext
 import me.devnatan.inventoryframework.state.MutableIntState
 import me.devnatan.inventoryframework.state.State
+import org.apache.logging.log4j.util.TriConsumer
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.ADD_CARD_FUNC
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.DELETE_CARD_FUNC
+import org.trackedout.citadel.inventory.DeckManagementView.Companion.JOIN_QUEUE_FUNC
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.client.models.Card
 import org.trackedout.data.Cards
@@ -50,8 +52,9 @@ data class Trade(
 class ShopView : View() {
     private val shopName: State<String> = initialState(SHOP_NAME)
     private val shopRules: State<List<String>> = initialState(SHOP_RULES)
-    private val tradeFunc: State<BiConsumer<Trade, () -> Unit>> = initialState(TRADE_FUNC)
+    private val tradeFunc: State<TriConsumer<Trade, () -> Unit, () -> Unit>> = initialState(TRADE_FUNC)
     private val updateInventoryFunc: State<Consumer<Player>> = initialState(UPDATE_INVENTORY_FUNC)
+    private val joinQueueFunc: State<Consumer<String>> = initialState(JOIN_QUEUE_FUNC)
     private val addCardFunc: State<BiConsumer<String, Card>> = initialState(ADD_CARD_FUNC)
     private val deleteCardFunc: State<BiConsumer<String, Card>> = initialState(DELETE_CARD_FUNC)
     private val successfulTrades: MutableIntState = mutableState(0)
@@ -89,7 +92,8 @@ class ShopView : View() {
             shopRules[event].forEach { rule ->
                 SHOP_RULES_REGEX.matchEntire(rule)?.let { matchResult ->
                     val groups = matchResult.groups
-                    val type = when (groups["type"]?.value) {
+                    val shortType = groups["type"]
+                    val longType = when (shortType?.value) {
                         "p" -> "practice"
                         "c" -> "competitive"
                         else -> null
@@ -100,12 +104,13 @@ class ShopView : View() {
                     val targetType = groups["targetType"]?.value
                     val targetCount = groups["targetCount"]?.value
 
-                    println("Rule: Convert { type=$type, fromType=$sourceType, fromCount=$sourceCount, resultType=$targetType, resultCount=$targetCount)")
-                    if (type == null || sourceType == null || sourceCount == null || targetType == null || targetCount == null) {
+                    println("Rule: Convert { type=$longType, fromType=$sourceType, fromCount=$sourceCount, resultType=$targetType, resultCount=$targetCount)")
+                    if (longType == null || sourceType == null || sourceCount == null || targetType == null || targetCount == null) {
                         System.err.println("An expected regex group is missing from match, skipping rule: $rule")
                         return@let
                     }
 
+                    var sendTradeMessage = false
                     var sendToDummy = false
                     var eventToSend: () -> Unit = {}
                     if (Cards.Companion.Card.entries.map { it.key.lowercase() }.contains(targetType.lowercase())) {
@@ -121,39 +126,50 @@ class ShopView : View() {
                                     name = targetCard.replace("-", "_"),
                                 )
 
-                                // TODO: Change Deck ID based on run type
-                                addCardFunc[event].accept("1", newCard)
+                                addCardFunc[event].accept(longType[0].toString(), newCard)
                             }
+                        }
+                    } else if (targetType.equals("QUEUE", ignoreCase = true)) {
+                        sendTradeMessage = false
+                        eventToSend = {
+                            println("Placing ${player.name} in queue with Deck ID #${longType}1")
+                            joinQueueFunc[event].accept("${shortType?.value ?: throw Exception("Shop type not defined")}1")
                         }
                     }
 
-                    itemStackForSource(type, sourceType, sourceCount.toInt())?.let { itemsToRemove ->
+                    val updateInventoryHandler: () -> Unit = {
+                        // This is fired asynchronously, and we may have multiple copies running in parallel.
+                        // The counter is incremented for each attempt, and when we complete the final trade
+                        // we trigger an inventory update.
+                        if (successfulTrades.decrement(event) == 0) {
+                            println("Trade succeeded, refreshing inventory")
+                            updateInventoryFunc[event].accept(player)
+                        } else {
+                            println("Not last trade, skipping inventory update")
+                        }
+                    }
+
+                    itemStackForSource(longType, sourceType, sourceCount.toInt())?.let { itemsToRemove ->
                         inventory.removeIfPresent(itemsToRemove) {
                             // Submit trade
                             println("Successfully removed ${sourceCount.toInt()}x$sourceType from trade view, submitting trade")
                             successfulTrades.increment(event)
                             tradeFunc[event].accept(
                                 Trade(
-                                    runType = type,
+                                    runType = longType,
                                     sourceType = sourceType,
                                     sourceItemCount = sourceCount.toInt(),
                                     targetType = if (sendToDummy) "dummy" else targetType,
                                     targetItemCount = if (sendToDummy) 0 else targetCount.toInt(),
-                                )
+                                ),
+                                updateInventoryHandler, // This is fired for both success and fail
                             ) {
+                                // Success handler
                                 eventToSend()
 
-                                // This is fired asynchronously, and we may have multiple copies running in parallel.
-                                // The counter is incremented for each attempt, and when we complete the final trade
-                                // we trigger an inventory update.
-                                if (successfulTrades.decrement(event) == 0) {
-                                    println("Trade succeeded, refreshing inventory")
-                                    updateInventoryFunc[event].accept(player)
-                                } else {
-                                    println("Not last trade, skipping inventory update")
+                                if (sendTradeMessage) {
+                                    player.sendGreenMessage("Successfully traded ${sourceCount.toInt()}x${sourceType} for ${targetCount}x${targetType}")
                                 }
-
-                                player.sendGreenMessage("Successfully traded ${sourceCount.toInt()}x${sourceType} for ${targetCount}x${targetType}")
                             }
                         }
                     }

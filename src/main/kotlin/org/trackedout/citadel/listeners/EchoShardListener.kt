@@ -3,6 +3,7 @@ package org.trackedout.citadel.listeners
 import co.aikar.commands.BaseCommand
 import me.devnatan.inventoryframework.ViewFrame
 import net.kyori.adventure.text.TextComponent
+import org.apache.logging.log4j.util.TriConsumer
 import org.bukkit.Nameable
 import org.bukkit.block.Barrel
 import org.bukkit.block.ShulkerBox
@@ -34,7 +35,6 @@ import org.trackedout.citadel.inventory.ShopView.Companion.SHOP_RULES_REGEX
 import org.trackedout.citadel.inventory.ShopView.Companion.TRADE_FUNC
 import org.trackedout.citadel.inventory.ShopView.Companion.UPDATE_INVENTORY_FUNC
 import org.trackedout.citadel.inventory.Trade
-import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Card
@@ -83,23 +83,7 @@ class EchoShardListener(
     }
 
     private fun showQueueBarrel(player: Player) {
-        val joinQueueFunc = Consumer<String> { deckId ->
-            plugin.async(player) {
-                eventsApi.eventsPost(
-                    Event(
-                        name = "joined-queue",
-                        server = plugin.serverName,
-                        player = player.name,
-                        count = deckId.toInt(),
-                        x = player.x,
-                        y = player.y,
-                        z = player.z,
-                    )
-                )
-
-                player.sendGreenMessage("Joining dungeon queue with Deck #${deckId}")
-            }
-        }
+        val joinQueueFunc = createJoinQueueFunc(plugin, eventsApi, player)
 
         val context = mutableMapOf(
             PLUGIN to plugin,
@@ -111,52 +95,58 @@ class EchoShardListener(
     private fun showShopView(player: Player, shopName: String, shopRules: List<String>) {
         player.debug("Shop rules: $shopRules")
 
-        val performTradeFunc = BiConsumer<Trade, () -> Unit> { trade, successFunc ->
+        val performTradeFunc = TriConsumer<Trade, () -> Unit, () -> Unit> { trade, doneFunc, successFunc ->
             plugin.async(player) {
-                eventsApi.eventsPost(
-                    Event(
-                        name = "trade-requested",
-                        server = plugin.serverName,
-                        player = player.name,
-                        count = 1,
-                        x = player.x,
-                        y = player.y,
-                        z = player.z,
-                        metadata = mapOf(
-                            "run-type" to trade.runType,
-                            "source-scoreboard" to trade.sourceScoreboardName(),
-                            "source-inversion-scoreboard" to trade.sourceInversionScoreboardName(),
-                            "source-count" to trade.sourceItemCount.toString(),
-                            "target-scoreboard" to trade.targetScoreboardName(),
-                            "target-count" to trade.targetItemCount.toString(),
+                try {
+                    eventsApi.eventsPost(
+                        Event(
+                            name = "trade-requested",
+                            server = plugin.serverName,
+                            player = player.name,
+                            count = 1,
+                            x = player.x,
+                            y = player.y,
+                            z = player.z,
+                            metadata = mapOf(
+                                "run-type" to trade.runType,
+                                "source-scoreboard" to trade.sourceScoreboardName(),
+                                "source-inversion-scoreboard" to trade.sourceInversionScoreboardName(),
+                                "source-count" to trade.sourceItemCount.toString(),
+                                "target-scoreboard" to trade.targetScoreboardName(),
+                                "target-count" to trade.targetItemCount.toString(),
+                            )
                         )
                     )
-                )
 
-                successFunc()
+                    successFunc()
+                    doneFunc()
+                } catch (e: Exception) {
+                    doneFunc()
+                    throw e
+                }
             }
         }
 
-        val addCardFunc = BiConsumer<String, Card> { deckId, card ->
+        val addCardFunc = BiConsumer<String, Card> { deckType, card ->
             plugin.async(player) {
                 inventoryApi.inventoryAddCardPost(
                     Card(
                         player = card.player,
                         name = card.name,
-                        deckId = deckId,
+                        deckType = deckType,
                         server = plugin.serverName,
                     )
                 )
             }
         }
 
-        val deleteCardFunc = BiConsumer<String, Card> { deckId, card ->
+        val deleteCardFunc = BiConsumer<String, Card> { deckType, card ->
             plugin.async(player) {
                 inventoryApi.inventoryDeleteCardPost(
                     Card(
                         player = card.player,
                         name = card.name,
-                        deckId = deckId,
+                        deckType = deckType,
                         server = plugin.serverName,
                     )
                 )
@@ -167,6 +157,8 @@ class EchoShardListener(
             inventoryManager.updateInventoryBasedOnScore(it)
         }
 
+        val joinQueueFunc = createJoinQueueFunc(plugin, eventsApi, player)
+
         val context = mutableMapOf(
             PLUGIN to plugin,
             SHOP_NAME to shopName,
@@ -175,6 +167,7 @@ class EchoShardListener(
             ADD_CARD_FUNC to addCardFunc,
             DELETE_CARD_FUNC to deleteCardFunc,
             UPDATE_INVENTORY_FUNC to updateInventoryFunc,
+            JOIN_QUEUE_FUNC to joinQueueFunc,
         )
         viewFrame.open(ShopView::class.java, player, context)
     }
