@@ -1,6 +1,8 @@
 package org.trackedout.citadel
 
 import co.aikar.commands.PaperCommandManager
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 import me.devnatan.inventoryframework.ViewFrame
 import net.megavex.scoreboardlibrary.api.ScoreboardLibrary
 import net.megavex.scoreboardlibrary.api.exception.NoPacketAdapterAvailableException
@@ -162,6 +164,8 @@ class Citadel : JavaPlugin() {
     }
 }
 
+private val gson = Gson()
+
 fun Citadel.async(source: CommandSender, unit: () -> Unit) {
     if (source is Player) {
         object : BukkitRunnable() {
@@ -169,10 +173,7 @@ fun Citadel.async(source: CommandSender, unit: () -> Unit) {
                 try {
                     unit()
                 } catch (e: Exception) {
-                    var message = e.message
-                    if (e is ClientException && e.response is ClientError<*>) {
-                        message = ((e.response as ClientError<*>).body as String).ifEmpty { e.message }
-                    }
+                    val message = getMessage(e)
                     logger.severe("Error in async process: $message")
                     source.sendRedMessage("$message")
                     e.printStackTrace()
@@ -184,14 +185,29 @@ fun Citadel.async(source: CommandSender, unit: () -> Unit) {
         try {
             unit()
         } catch (e: Exception) {
-            var message = e.message
-            if (e is ClientException && e.response is ClientError<*>) {
-                message = ((e.response as ClientError<*>).body as String).ifEmpty { e.message }
-            }
+            val message = getMessage(e)
             logger.severe("Error in command block process: $message")
             source.sendRedMessage("$message")
-            e.printStackTrace()
             e.printStackTrace()
         }
     }
 }
+
+private fun getMessage(e: Exception): String? {
+    var message = e.message
+    if (e is ClientException && e.response is ClientError<*>) {
+        message = ((e.response as ClientError<*>).body as String).ifEmpty { e.message }
+        try {
+            gson.fromJson(message, DungaDungaException::class.java).message?.let { message = it }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+    return message
+}
+
+data class DungaDungaException(
+    @SerializedName("code") var code: Number? = null,
+    @SerializedName("message") var message: String? = null,
+    @SerializedName("stack") var stack: String? = null,
+)
