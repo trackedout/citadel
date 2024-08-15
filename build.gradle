@@ -1,8 +1,8 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.9.22'
-    id "com.github.johnrengelman.shadow" version "8.1.1"
+    id "com.gradleup.shadow" version "8.3.0"
     id "java"
-    id("xyz.jpenilla.run-paper") version "2.2.2" // https://github.com/jpenilla/run-task
+    id("xyz.jpenilla.run-paper") version "2.3.0" // https://github.com/jpenilla/run-task
 }
 
 group = "org.trackedout"
@@ -29,7 +29,7 @@ repositories {
 println "Agronet jar: ${property('agronet_jar')}"
 
 dependencies {
-    compileOnly "io.papermc.paper:paper-api:1.20.2-R0.1-SNAPSHOT"
+    compileOnly "io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT"
     implementation "commons-io:commons-io:2.13.0"
     implementation "co.aikar:acf-paper:0.5.1-SNAPSHOT"
 
@@ -54,6 +54,8 @@ dependencies {
 //    implementation 'me.devnatan:inventory-framework-platform-bukkit:3.0.8'
     compileOnly 'me.devnatan:inventory-framework-platform-bukkit:3.0.8'
     runtimeOnly 'me.devnatan:inventory-framework-platform-bukkit:3.0.8'
+
+    implementation 'xyz.upperlevel.spigot.book:spigot-book-api:1.6'
 
 //    implementation 'me.devnatan:inventory-framework-platform-paper:3.0.8'
 //    compileOnly 'me.devnatan:inventory-framework-platform-bukkit:3.1.0-rc'
@@ -96,7 +98,7 @@ tasks.register('testInteg', Test) {
     include 'org/trackedout/citadel/integration'
 }
 
-def targetJavaVersion = 17
+def targetJavaVersion = 21
 
 compileKotlin {
     kotlinOptions.javaParameters = true
@@ -129,6 +131,7 @@ shadowJar {
     relocate "co.aikar.locales", "org.trackedout.citadel.locales"
     relocate "com.saicone.rtag", project.group + ".libs.rtag"
     relocate "org.trackedout.client", project.group + ".libs.dungadunga"
+    relocate "xyz.upperlevel.spigot.book", project.group + ".libs.spigot.book"
 }
 
 build.dependsOn shadowJar
