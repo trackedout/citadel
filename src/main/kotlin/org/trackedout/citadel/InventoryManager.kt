@@ -23,8 +23,11 @@ class InventoryManager(
             plugin.logger.info("Fetching scores for ${player.name}")
             val scores = scoreApi.scoresGet(player = player.name).results!!
 
-            scores.filter { it.key!!.startsWith("do2.inventory") || it.key!!.contains("do2.lifetime.escaped.crowns") }
-                .forEach { score -> updatePlayerInventoryForState(player, scores.associate { it.key!! to it.value!!.toInt() }, score.key!!, score.value!!.toInt()) }
+            scores.filter {
+                it.key!!.startsWith("do2.inventory")
+                    || it.key!!.contains("do2.lifetime.escaped.crowns")
+                    || it.key!!.contains("do2.lifetime.escaped.tomes")
+            }.forEach { score -> updatePlayerInventoryForState(player, scores.associate { it.key!! to it.value!!.toInt() }, score.key!!, score.value!!.toInt()) }
         }
     }
 
