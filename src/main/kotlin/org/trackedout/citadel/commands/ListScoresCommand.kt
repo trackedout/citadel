@@ -10,6 +10,7 @@ import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.command.CommandSender
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
+import org.trackedout.citadel.isInventoryRelatedScore
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.citadel.sendMessage
@@ -35,7 +36,7 @@ class ListScoresCommand(
         plugin.async(source) {
             val scores = scoreApi.scoresGet(player = playerName).results!!
 
-            val applicableScores = scores.filter { it.key!!.startsWith("do2.inventory") || it.key!!.contains("do2.lifetime.escaped.crowns") }
+            val applicableScores = scores.filter(::isInventoryRelatedScore)
             if (applicableScores.isEmpty()) {
                 source.sendRedMessage("No applicable scores found for $playerName")
                 return@async

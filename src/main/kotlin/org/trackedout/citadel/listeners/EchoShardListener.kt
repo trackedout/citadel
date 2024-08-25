@@ -10,6 +10,7 @@ import org.bukkit.Sound
 import org.bukkit.block.Barrel
 import org.bukkit.block.BlockState
 import org.bukkit.block.ShulkerBox
+import org.bukkit.block.TileState
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
@@ -51,6 +52,8 @@ import org.trackedout.citadel.inventory.Trade
 import org.trackedout.citadel.inventory.isPractice
 import org.trackedout.citadel.inventory.shortRunType
 import org.trackedout.citadel.isDeckedOutCard
+import org.trackedout.citadel.sendRedMessage
+import org.trackedout.citadel.shop.getShopData
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Card
@@ -92,8 +95,14 @@ class EchoShardListener(
 
                         val titleComponents = title.removePrefix("Shop ").split(" ")
                         val shopName = titleComponents.filter { !it.matches(SHOP_RULES_REGEX) }.joinToString(" ")
-                        val shopRules = titleComponents.filter { it.matches(SHOP_RULES_REGEX) }
-                        showShopView(player, shopName, shopRules)
+                        (block as? TileState)?.let {
+                            val shopData = it.getShopData(plugin)
+                            if (shopData.disabled) {
+                                player.sendRedMessage("This shop is not currently open")
+                            } else {
+                                showShopView(player, shopData.name.ifEmpty { shopName }, shopData.trades)
+                            }
+                        } ?: throw Exception("Target block is not of type TileState")
                     }
                 }
             }

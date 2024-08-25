@@ -13,6 +13,7 @@ import org.trackedout.citadel.inventory.practiceDeck
 import org.trackedout.citadel.inventory.practiceShard
 import org.trackedout.citadel.inventory.practiceTome
 import org.trackedout.client.apis.ScoreApi
+import org.trackedout.client.models.Score
 
 class InventoryManager(
     private val plugin: Citadel,
@@ -23,11 +24,15 @@ class InventoryManager(
             plugin.logger.info("Fetching scores for ${player.name}")
             val scores = scoreApi.scoresGet(player = player.name).results!!
 
-            scores.filter {
-                it.key!!.startsWith("do2.inventory")
-                    || it.key!!.contains("do2.lifetime.escaped.crowns")
-                    || it.key!!.contains("do2.lifetime.escaped.tomes")
-            }.forEach { score -> updatePlayerInventoryForState(player, scores.associate { it.key!! to it.value!!.toInt() }, score.key!!, score.value!!.toInt()) }
+            scores.filter(::isInventoryRelatedScore)
+                .forEach { score ->
+                    updatePlayerInventoryForState(
+                        player,
+                        scores.associate { it.key!! to it.value!!.toInt() },
+                        score.key!!,
+                        score.value!!.toInt()
+                    )
+                }
         }
     }
 
@@ -104,4 +109,12 @@ class InventoryManager(
             }
         }
     }
+}
+
+fun isInventoryRelatedScore(score: Score): Boolean {
+    val key = score.key!!
+
+    return (key.startsWith("do2.inventory")
+        || key.contains("do2.lifetime.escaped.crowns")
+        || key.contains("do2.lifetime.escaped.tomes"))
 }

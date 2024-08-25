@@ -32,6 +32,7 @@ import org.trackedout.citadel.inventory.MoveCardView
 import org.trackedout.citadel.inventory.ShopView
 import org.trackedout.citadel.listeners.EchoShardListener
 import org.trackedout.citadel.listeners.PlayedJoinedListener
+import org.trackedout.citadel.shop.ShopCommand
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.ScoreApi
@@ -51,7 +52,7 @@ class Citadel : JavaPlugin() {
 
     override fun onEnable() {
         saveDefaultConfig()
-
+        reloadConfig()
 
         val eventsApi = EventsApi(
             basePath = dungaAPIPath,
@@ -104,6 +105,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(StatusCommand())
         manager.registerCommand(ListScoresCommand(this, scoreApi))
         manager.registerCommand(ShutdownDungeonsCommand(this, eventsApi))
+        manager.registerCommand(ShopCommand(this))
 
         manager.setDefaultExceptionHandler { _, _, sender, _, throwable ->
             sender.sendMessage("Error executing command: ${throwable.message}")
