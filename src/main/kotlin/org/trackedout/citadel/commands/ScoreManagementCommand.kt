@@ -9,18 +9,24 @@ import co.aikar.commands.annotation.Syntax
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.command.CommandSender
 import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
+import org.trackedout.citadel.inventory.Trade
 import org.trackedout.citadel.isInventoryRelatedScore
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.citadel.sendMessage
 import org.trackedout.citadel.sendRedMessage
+import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.ScoreApi
+import org.trackedout.client.models.Event
 
 @CommandAlias("decked-out|do")
-class ListScoresCommand(
+class ScoreManagementCommand(
     private val plugin: Citadel,
     private val scoreApi: ScoreApi,
+    private val eventsApi: EventsApi,
+    private val inventoryManager: InventoryManager,
 ) : BaseCommand() {
     @Subcommand("list-scores")
     @Syntax("[player]")
@@ -80,6 +86,55 @@ class ListScoresCommand(
                 val itemCount = value - scores.getOrDefault("competitive-do2.lifetime.spent.tomes", 0)
                 source.sendMessage("- Competitive Tomes (${key}) = $itemCount", NamedTextColor.AQUA)
             }
+        }
+    }
+
+    enum class RunTypes(val runType: String) {
+        PRACTICE("practice"),
+        COMPETITIVE("competitive"),
+    }
+
+    @Subcommand("give-item")
+    @CommandPermission("decked-out.shop.admin")
+    @Description("Update player's score to give them more items")
+    fun giveScore(source: CommandSender, playerName: String, runType: RunTypes, item: String, count: Int) {
+        val trade = Trade(
+            runType = runType.runType,
+            sourceType = "dummy",
+            sourceItemCount = 0,
+            targetType = item,
+            targetItemCount = count,
+        )
+
+        val sourceScoreboardName = trade.sourceScoreboardName()
+        println("Source scoreboard name: $sourceScoreboardName")
+
+        plugin.async(source) {
+            eventsApi.eventsPost(
+                Event(
+                    name = "trade-requested",
+                    server = plugin.serverName,
+                    player = playerName,
+                    count = 1,
+                    x = 0.0,
+                    y = 0.0,
+                    z = 0.0,
+                    metadata = mapOf(
+                        "run-type" to trade.runType,
+                        "source-scoreboard" to trade.sourceScoreboardName(),
+                        "source-inversion-scoreboard" to trade.sourceInversionScoreboardName(),
+                        "source-count" to trade.sourceItemCount.toString(),
+                        "target-scoreboard" to trade.targetScoreboardName(),
+                        "target-count" to trade.targetItemCount.toString(),
+                        "reason" to "Granted by ${source.name}",
+                    )
+                )
+            )
+
+            plugin.server.onlinePlayers.find { it.name == playerName }?.let { player ->
+                inventoryManager.updateInventoryBasedOnScore(player)
+            }
+            source.sendGreenMessage("Successfully added ${count}x${item} (${runType.runType}) to ${playerName}'s inventory")
         }
     }
 }

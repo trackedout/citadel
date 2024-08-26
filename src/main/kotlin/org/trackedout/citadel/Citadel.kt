@@ -15,10 +15,10 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.commands.GiveShulkerCommand
 import org.trackedout.citadel.commands.InventoryCommand
-import org.trackedout.citadel.commands.ListScoresCommand
 import org.trackedout.citadel.commands.LogEventCommand
 import org.trackedout.citadel.commands.ManageDeckCommand
 import org.trackedout.citadel.commands.SavePlayerDeckCommand
+import org.trackedout.citadel.commands.ScoreManagementCommand
 import org.trackedout.citadel.commands.ShutdownDungeonsCommand
 import org.trackedout.citadel.commands.StatusCommand
 import org.trackedout.citadel.commands.TakeShulkerCommand
@@ -103,7 +103,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(LogEventCommand(eventsApi))
         manager.registerCommand(SavePlayerDeckCommand(inventoryApi))
         manager.registerCommand(StatusCommand())
-        manager.registerCommand(ListScoresCommand(this, scoreApi))
+        manager.registerCommand(ScoreManagementCommand(this, scoreApi, eventsApi, inventoryManager))
         manager.registerCommand(ShutdownDungeonsCommand(this, eventsApi))
         manager.registerCommand(ShopCommand(this))
 
