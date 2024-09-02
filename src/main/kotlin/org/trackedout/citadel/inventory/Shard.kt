@@ -5,6 +5,8 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
+import org.bukkit.potion.Potion
+import org.bukkit.potion.PotionType
 
 fun practiceShard(value: Int) = dungeonShard("Practice runs", NamedTextColor.GREEN, itemCount = value)
 
@@ -31,26 +33,32 @@ fun practiceTome(itemCount: Int) = dungeonTome("Practice", NamedTextColor.GREEN,
 fun competitiveTome(itemCount: Int) = dungeonTome("Competitive", itemCount = itemCount)
 
 fun dungeonTome(
-    tomeType: String,
+    runType: String,
     textColor: NamedTextColor = NamedTextColor.AQUA,
     itemCount: Int = 1,
-) = dungeonItem("❄☠ Victory Tome (${tomeType}) ☠❄", 6, textColor, itemCount = itemCount)
+) = dungeonItem("❄☠ Victory Tome (${runType}) ☠❄", 6, textColor, itemCount = itemCount)
 
-fun practiceDeck() = dungeonDeck(
-    "❄☠ Frozen Assets (Practice Deck #1) ☠❄",
-    textColor = NamedTextColor.GREEN,
-    material = Material.LIME_SHULKER_BOX,
-    deckId = "p1"
-)
+fun practiceSlownessPotion(itemCount: Int) = dungeonSlownessPotion("Practice", NamedTextColor.GREEN, itemCount = itemCount)
 
-fun competitiveDeck() = dungeonDeck("❄☠ Frozen Assets (Competitive Deck #1) ☠❄", deckId = "c1")
+fun competitiveSlownessPotion(itemCount: Int) = dungeonSlownessPotion("Competitive", itemCount = itemCount)
 
-fun dungeonDeck(
-    name: String = "❄☠ Frozen Assets ☠❄",
+fun dungeonSlownessPotion(
+    runType: String,
     textColor: NamedTextColor = NamedTextColor.AQUA,
-    material: Material = Material.CYAN_SHULKER_BOX,
-    deckId: String,
-) = dungeonItem(name, 7, textColor, material = material, metadata = mapOf("deckId" to deckId))
+    itemCount: Int = 1,
+): ItemStack {
+    val potion = Potion(PotionType.SLOWNESS, 2);
+    potion.isSplash = true;
+    val itemStack = potion.toItemStack(if (itemCount <= 0) 999 else itemCount)
+
+    val meta = itemStack.itemMeta
+    meta.displayName(Component.text("Splash Potion of Slowness (${runType})", textColor))
+    meta.setCustomModelData(-1)
+
+    itemStack.itemMeta = meta
+
+    return itemStack
+}
 
 fun dungeonItem(
     name: String,
@@ -72,3 +80,19 @@ fun dungeonItem(
         return tag.loadCopy();
     })
 }
+
+fun practiceDeck() = dungeonDeck(
+    "❄☠ Frozen Assets (Practice Deck #1) ☠❄",
+    textColor = NamedTextColor.GREEN,
+    material = Material.LIME_SHULKER_BOX,
+    deckId = "p1"
+)
+
+fun competitiveDeck() = dungeonDeck("❄☠ Frozen Assets (Competitive Deck #1) ☠❄", deckId = "c1")
+
+fun dungeonDeck(
+    name: String = "❄☠ Frozen Assets ☠❄",
+    textColor: NamedTextColor = NamedTextColor.AQUA,
+    material: Material = Material.CYAN_SHULKER_BOX,
+    deckId: String,
+) = dungeonItem(name, 7, textColor, material = material, metadata = mapOf("deckId" to deckId))

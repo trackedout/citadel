@@ -278,70 +278,81 @@ class EchoShardListener(
         }
 
         if (event.action == Action.RIGHT_CLICK_AIR) {
-            item.getDeckId()?.let { deckId ->
+            item.getDeckId()?.let { showDeckInventory(event, player, it) }
+        }
+
+        // Cancel interaction events for restricted items
+        if ((event.action == Action.RIGHT_CLICK_AIR || event.action == Action.RIGHT_CLICK_BLOCK)) {
+            if (isRestrictedItem(item) && !player.scoreboardTags.contains("nocheck")) {
+                player.debug("Blocking interact event ${event.action}")
                 event.isCancelled = true
-
-                // TODO: Make this async
-                val allCards = inventoryApi.inventoryCardsGet(player = player.name, limit = 200).results!!
-
-                val updateCardVisibility = BiConsumer<DeckId, Map<String, Number>> { deckIdToUpdate, cardsToHide ->
-                    eventsApi.eventsPost(
-                        Event(
-                            name = "card-visibility-updated",
-                            server = plugin.serverName,
-                            player = player.name,
-                            count = 1,
-                            x = player.x,
-                            y = player.y,
-                            z = player.z,
-                            metadata = mapOf(
-                                "run-type" to deckIdToUpdate.shortRunType(),
-                                "deck-id" to deckIdToUpdate,
-                            ).plus(cardsToHide.map { "hide-card-${it.key}" to it.value.toString() })
-                        )
-                    )
-                }
-
-                val addCardFunc = BiConsumer<DeckId, Card> { deckId, card ->
-                    plugin.async(player) {
-                        inventoryApi.inventoryAddCardPost(
-                            Card(
-                                player = card.player,
-                                name = card.name,
-                                deckType = deckId[0].toString(),
-                                server = plugin.serverName,
-                            )
-                        )
-                    }
-                }
-
-                val deleteCardFunc = BiConsumer<DeckId, Card> { deckId, card ->
-                    plugin.async(player) {
-                        inventoryApi.inventoryDeleteCardPost(
-                            Card(
-                                player = card.player,
-                                name = card.name,
-                                deckType = deckId[0].toString(),
-                                server = plugin.serverName,
-                            )
-                        )
-                    }
-                }
-
-                val context = mutableMapOf(
-                    PLUGIN to plugin,
-                    PLAYER_NAME to player.name,
-                    DECK_MAP to allCards.groupBy { it.deckType!! },
-                    SELECTED_DECK to deckId,
-                    UPDATE_CARD_VISIBILITY_FUNC to updateCardVisibility,
-                    ADD_CARD_FUNC to addCardFunc,
-                    DELETE_CARD_FUNC to deleteCardFunc,
-                )
-
-                player.playSound(player.location, Sound.BLOCK_SHULKER_BOX_OPEN, 1f, 1f)
-                viewFrame.open(DeckInventoryViewWithoutBack::class.java, player, context)
+                return
             }
         }
+    }
+
+    private fun showDeckInventory(event: PlayerInteractEvent, player: Player, deckId: String): String? {
+        event.isCancelled = true
+
+        // TODO: Make this async
+        val allCards = inventoryApi.inventoryCardsGet(player = player.name, limit = 200).results!!
+
+        val updateCardVisibility = BiConsumer<DeckId, Map<String, Number>> { deckIdToUpdate, cardsToHide ->
+            eventsApi.eventsPost(
+                Event(
+                    name = "card-visibility-updated",
+                    server = plugin.serverName,
+                    player = player.name,
+                    count = 1,
+                    x = player.x,
+                    y = player.y,
+                    z = player.z,
+                    metadata = mapOf(
+                        "run-type" to deckIdToUpdate.shortRunType(),
+                        "deck-id" to deckIdToUpdate,
+                    ).plus(cardsToHide.map { "hide-card-${it.key}" to it.value.toString() })
+                )
+            )
+        }
+
+        val addCardFunc = BiConsumer<DeckId, Card> { deckId, card ->
+            plugin.async(player) {
+                inventoryApi.inventoryAddCardPost(
+                    Card(
+                        player = card.player,
+                        name = card.name,
+                        deckType = deckId[0].toString(),
+                        server = plugin.serverName,
+                    )
+                )
+            }
+        }
+
+        val deleteCardFunc = BiConsumer<DeckId, Card> { deckId, card ->
+            plugin.async(player) {
+                inventoryApi.inventoryDeleteCardPost(
+                    Card(
+                        player = card.player,
+                        name = card.name,
+                        deckType = deckId[0].toString(),
+                        server = plugin.serverName,
+                    )
+                )
+            }
+        }
+
+        val context = mutableMapOf(
+            PLUGIN to plugin,
+            PLAYER_NAME to player.name,
+            DECK_MAP to allCards.groupBy { it.deckType!! },
+            SELECTED_DECK to deckId,
+            UPDATE_CARD_VISIBILITY_FUNC to updateCardVisibility,
+            ADD_CARD_FUNC to addCardFunc,
+            DELETE_CARD_FUNC to deleteCardFunc,
+        )
+
+        player.playSound(player.location, Sound.BLOCK_SHULKER_BOX_OPEN, 1f, 1f)
+        return viewFrame.open(DeckInventoryViewWithoutBack::class.java, player, context)
     }
 
     @EventHandler(ignoreCancelled = true)

@@ -1,17 +1,11 @@
 package org.trackedout.citadel
 
-import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-import org.trackedout.citadel.inventory.competitiveCrown
+import org.trackedout.citadel.inventory.ScoreboardDescriber
+import org.trackedout.citadel.inventory.baseTradeItems
 import org.trackedout.citadel.inventory.competitiveDeck
-import org.trackedout.citadel.inventory.competitiveShard
-import org.trackedout.citadel.inventory.competitiveTome
-import org.trackedout.citadel.inventory.dungeonShard
-import org.trackedout.citadel.inventory.practiceCrown
 import org.trackedout.citadel.inventory.practiceDeck
-import org.trackedout.citadel.inventory.practiceShard
-import org.trackedout.citadel.inventory.practiceTome
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Score
 
@@ -39,42 +33,32 @@ class InventoryManager(
     private fun updatePlayerInventoryForState(player: Player, scores: Map<String, Int>, key: String, value: Int) {
         plugin.logger.info("Player ${player.name} has inventory score $key=$value")
 
+        for (runType in listOf("practice", "competitive")) {
+            baseTradeItems.forEach { it: Map.Entry<String, ScoreboardDescriber> ->
+                val sb = it.value
+                val sourceScoreKey = sb.sourceScoreboardName(runType)
+                if (sourceScoreKey == key) {
+                    plugin.logger.info("Score $key matches ${it.key} ($runType)")
+
+                    var itemCount = value
+                    val inversionScoreKey = sb.sourceInversionScoreboardName(runType)
+                    if (sourceScoreKey != inversionScoreKey) {
+                        itemCount -= scores.getOrDefault(inversionScoreKey, 0)
+                    }
+
+                    player.ensureInventoryContains(sb.itemStack(runType, itemCount))
+                }
+            }
+        }
+
         when (key) {
             // Shards
             "do2.inventory.shards.practice" -> {
-                player.ensureInventoryContains(practiceShard(value))
                 player.ensureInventoryContains(practiceDeck())
             }
 
             "do2.inventory.shards.competitive" -> {
-                player.ensureInventoryContains(competitiveShard(value))
                 player.ensureInventoryContains(competitiveDeck())
-            }
-
-            "do2.inventory.shards.hardcore" -> {
-                player.ensureInventoryContains(dungeonShard("Hardcore runs", NamedTextColor.RED, value))
-            }
-
-            // Crowns
-            "practice-do2.lifetime.escaped.crowns" -> {
-                val itemCount = value - scores.getOrDefault("practice-do2.lifetime.spent.crowns", 0)
-                player.ensureInventoryContains(practiceCrown(itemCount))
-            }
-
-            "competitive-do2.lifetime.escaped.crowns" -> {
-                val itemCount = value - scores.getOrDefault("competitive-do2.lifetime.spent.crowns", 0)
-                player.ensureInventoryContains(competitiveCrown(itemCount))
-            }
-
-            // Tomes
-            "practice-do2.lifetime.escaped.tomes" -> {
-                val itemCount = value - scores.getOrDefault("practice-do2.lifetime.spent.tomes", 0)
-                player.ensureInventoryContains(practiceTome(itemCount))
-            }
-
-            "competitive-do2.lifetime.escaped.tomes" -> {
-                val itemCount = value - scores.getOrDefault("competitive-do2.lifetime.spent.tomes", 0)
-                player.ensureInventoryContains(competitiveTome(itemCount))
             }
         }
     }
@@ -114,7 +98,9 @@ class InventoryManager(
 fun isInventoryRelatedScore(score: Score): Boolean {
     val key = score.key!!
 
-    return (key.startsWith("do2.inventory")
-        || key.contains("do2.lifetime.escaped.crowns")
-        || key.contains("do2.lifetime.escaped.tomes"))
+    val tradeSourceScores = baseTradeItems.values.flatMap {
+        listOf(it.sourceScoreboardName("competitive"), it.sourceScoreboardName("practice"))
+    }
+
+    return tradeSourceScores.contains(key)
 }
