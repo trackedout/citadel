@@ -70,10 +70,12 @@ val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
             }
         }
     },
+)
 
+val intoDungeonItems: Map<String, ScoreboardDescriber> = mapOf(
     "SLOWNESS_POTION" to object : ScoreboardDescriber {
         override fun sourceScoreboardName(runType: String): String {
-            return "$runType-do2.lifetime.escaped.slowness_potion"
+            return ""
         }
 
         override fun itemStack(runType: String, count: Int): ItemStack {
@@ -82,11 +84,89 @@ val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
                 else -> practiceSlownessPotion(count)
             }
         }
+    },
+
+    "CAVES_OF_CARNAGE_KEY" to object : ScoreboardDescriber {
+        override fun sourceScoreboardName(runType: String): String {
+            return ""
+        }
+
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return when (runType) {
+                "competitive" -> key1Competitive(count)
+                else -> key1Practice(count)
+            }
+        }
+    },
+
+    "BLACK_MINES_KEY" to object : ScoreboardDescriber {
+        override fun sourceScoreboardName(runType: String): String {
+            return ""
+        }
+
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return when (runType) {
+                "competitive" -> key2Competitive(count)
+                else -> key2Practice(count)
+            }
+        }
+    },
+
+    "BURNING_DARK_KEY" to object : ScoreboardDescriber {
+        override fun sourceScoreboardName(runType: String): String {
+            return ""
+        }
+
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return when (runType) {
+                "competitive" -> key3Competitive(count)
+                else -> key3Practice(count)
+            }
+        }
+    },
+
+    "COIN" to object : ScoreboardDescriber {
+        override fun sourceScoreboardName(runType: String): String {
+            return ""
+        }
+
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return when (runType) {
+                "competitive" -> competitiveCoin(count)
+                else -> practiceCoin(count)
+            }
+        }
+    },
+
+//    "CROWN" to object : ScoreboardDescriber {
+//        override fun sourceScoreboardName(runType: String): String {
+//            return ""
+//        }
+//
+//        override fun itemStack(runType: String, count: Int): ItemStack {
+//            return when (runType) {
+//                "competitive" -> competitiveCrown(count)
+//                else -> competitiveCrown(count)
+//            }
+//        }
+//    },
+
+    "RUSTY_REPAIR_KIT" to object : ScoreboardDescriber {
+        override fun sourceScoreboardName(runType: String): String {
+            return ""
+        }
+
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return when (runType) {
+                "competitive" -> competitiveRepairKit(count)
+                else -> practiceRepairKit(count)
+            }
+        }
     }
 
 )
 
-val tradeItems = baseTradeItems.plus(cardDescribers())
+val tradeItems = baseTradeItems.plus(cardDescribers()).plus(intoDungeonItems)
 
 
 fun cardDescribers(): Map<String, ScoreboardDescriber> {

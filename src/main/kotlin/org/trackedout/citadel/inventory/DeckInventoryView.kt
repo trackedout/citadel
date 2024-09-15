@@ -10,9 +10,11 @@ import me.devnatan.inventoryframework.state.StateValueHost
 import org.bukkit.Material
 import org.bukkit.Sound
 import org.bukkit.inventory.ItemStack
+import org.trackedout.citadel.canTakeIntoDungeon
 import org.trackedout.citadel.commands.GiveShulkerCommand.Companion.createCard
 import org.trackedout.citadel.getCard
 import org.trackedout.citadel.getDeckId
+import org.trackedout.citadel.getTradeId
 import org.trackedout.citadel.isDeckedOutCard
 import org.trackedout.citadel.preventRemoval
 import org.trackedout.client.models.Card
@@ -45,8 +47,10 @@ open class DeckInventoryView : DeckManagementView() {
         // Put all non-card items back in the players inventory
         (0 until inventory.size)
             .map(inventory::getItem)
-            .filter { it != null && it.type != Material.AIR && it.getDeckId() != deckId && !it.preventRemoval() }
+            .filter { it != null && it.type != Material.AIR }
             .map { it!! }
+            .filterNot { it.preventRemoval() } // Keep these items in the shulker
+            .filter { it.getDeckId() != deckId || (!it.canTakeIntoDungeon() && !it.isDeckedOutCard()) }
             .forEach { item: ItemStack ->
                 println("Inventory contains: ${item.type}x${item.amount} - returning it to player")
                 player.inventory.addItem(item)
@@ -57,11 +61,15 @@ open class DeckInventoryView : DeckManagementView() {
         }
 
         // For each card in the player's inventory, hide it from the deck
-        val cardsToHide = (0 until player.inventory.size).asSequence()
+        var cardsToHide = (0 until player.inventory.size).asSequence()
             .map(player.inventory::getItem)
             .filter { it != null && it.isDeckedOutCard() && it.getDeckId() == deckId }
             // Count the total number of cards in the player's inventory across all stacks
-            .map { it!!.getCard()!! to player.inventory.filter { p -> p?.getCard()?.name == it.getCard()?.name }.sumOf { p -> p.amount } }
+            .map {
+                it!!.getCard()!! to player.inventory
+                    .filter { it != null && it.isDeckedOutCard() && it.getDeckId() == deckId }
+                    .filter { p -> p?.getCard()?.name == it.getCard()?.name }.sumOf { p -> p.amount }
+            }
             .onEach { pair: Pair<Cards.Companion.Card, Int> ->
                 val card = pair.first
                 val amount = pair.second
@@ -70,6 +78,26 @@ open class DeckInventoryView : DeckManagementView() {
             .associate {
                 it.first.key to it.second
             }
+
+        // For each item in the player's inventory, hide it from the deck
+        val itemsToHide = (0 until player.inventory.size).asSequence()
+            .map(player.inventory::getItem)
+            .filter { it != null && it.canTakeIntoDungeon() && it.getDeckId() == deckId }
+            // Count the total number of this item in the player's inventory across all stacks
+            .map {
+                it!!.getTradeId()!! to player.inventory
+                    .filter { it != null && it.canTakeIntoDungeon() && it.getDeckId() == deckId }
+                    .filter { p -> p?.getTradeId() == it.getTradeId() }.sumOf { p -> p.amount }
+            }
+            .onEach { pair: Pair<String, Int> ->
+                val tradeId = pair.first
+                val amount = pair.second
+                println("Player's inventory contains ${amount}x${tradeId} - hiding it from Deck $deckId")
+            }
+            .associate {
+                it.first to it.second
+            }
+        cardsToHide = cardsToHide.plus(itemsToHide)
 
         println("Updating deck visibility for Deck ID #${deckId}, hiding: ${cardsToHide.map { "${it.value}x${it.key.uppercase()}" }}")
         updateCardVisibilityFunc[event].accept(deckId, cardsToHide)
@@ -126,6 +154,16 @@ open class DeckInventoryView : DeckManagementView() {
 //                    }
 //                }
             }
+        }
+
+        intoDungeonItems.entries.forEach { entry ->
+            val count = cards.count { it.name == entry.key }
+            if (count == 0) {
+                return@forEach
+            }
+
+            val itemStack = entry.value.itemStack(deckId.fullRunType().lowercase(), count).withTradeMeta(deckId.shortRunType(), entry.key)
+            render.availableSlot(itemStack)
         }
     }
 

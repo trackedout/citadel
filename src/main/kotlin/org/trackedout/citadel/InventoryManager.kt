@@ -6,6 +6,7 @@ import org.trackedout.citadel.inventory.ScoreboardDescriber
 import org.trackedout.citadel.inventory.baseTradeItems
 import org.trackedout.citadel.inventory.competitiveDeck
 import org.trackedout.citadel.inventory.practiceDeck
+import org.trackedout.citadel.inventory.withTradeMeta
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Score
 
@@ -46,7 +47,7 @@ class InventoryManager(
                         itemCount -= scores.getOrDefault(inversionScoreKey, 0)
                     }
 
-                    player.ensureInventoryContains(sb.itemStack(runType, itemCount))
+                    player.ensureInventoryContains(sb.itemStack(runType, itemCount).withTradeMeta(runType, it.key))
                 }
             }
         }

@@ -31,6 +31,7 @@ import org.trackedout.citadel.async
 import org.trackedout.citadel.debug
 import org.trackedout.citadel.getCard
 import org.trackedout.citadel.getDeckId
+import org.trackedout.citadel.hasDeckId
 import org.trackedout.citadel.inventory.DeckId
 import org.trackedout.citadel.inventory.DeckInventoryViewWithoutBack
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.ADD_CARD_FUNC
@@ -52,6 +53,7 @@ import org.trackedout.citadel.inventory.Trade
 import org.trackedout.citadel.inventory.isPractice
 import org.trackedout.citadel.inventory.shortRunType
 import org.trackedout.citadel.isDeckedOutCard
+import org.trackedout.citadel.isDeckedOutShulker
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.citadel.shop.getShopData
 import org.trackedout.client.apis.EventsApi
@@ -278,7 +280,11 @@ class EchoShardListener(
         }
 
         if (event.action == Action.RIGHT_CLICK_AIR) {
-            item.getDeckId()?.let { showDeckInventory(event, player, it) }
+            item.getDeckId()?.let {
+                if (item.isDeckedOutShulker() || item.isDeckedOutCard()) {
+                    showDeckInventory(event, player, it)
+                }
+            }
         }
 
         // Cancel interaction events for restricted items
@@ -500,7 +506,7 @@ class EchoShardListener(
         return false
     }
 
-    private fun isRestrictedItem(it: ItemStack) = it.itemMeta != null && it.itemMeta.hasCustomModelData()
+    private fun isRestrictedItem(it: ItemStack) = it.itemMeta != null && it.hasDeckId()
 
     private fun isPracticeCard(it: ItemStack) = isRestrictedItem(it) && it.isDeckedOutCard() && it.getDeckId()?.isPractice() == true
 }

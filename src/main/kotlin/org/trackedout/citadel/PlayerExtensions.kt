@@ -9,6 +9,7 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.HumanEntity
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.inventory.DeckId
+import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.data.Cards
 
 val debugTag = "debug"
@@ -35,7 +36,9 @@ fun HumanEntity.debug(message: String, tag: String = "debug.click") {
     }
 }
 
-fun ItemStack.isDeckedOutShulker() = this.type == Material.CYAN_SHULKER_BOX && getDeckId() != null
+fun ItemStack.isDeckedOutShulker() = (this.type == Material.CYAN_SHULKER_BOX || this.type == Material.LIME_SHULKER_BOX) && getDeckId() != null
+
+fun ItemStack.hasDeckId(): Boolean = RtagItem(this).hasTag("deckId")
 
 fun ItemStack.getDeckId(): String? = RtagItem(this).get<String>("deckId")
 
@@ -51,13 +54,19 @@ fun ItemStack.withTags(tags: Map<String, String>): ItemStack {
     }
 }
 
-fun ItemStack.preventRemoval(): Boolean = RtagItem(this).get<String>("prevent-removal") == "1"
+fun ItemStack.preventRemoval(): Boolean = RtagItem(this).let { it.hasTag("prevent-removal") && it.get<String>("prevent-removal") == "1" }
+
+fun ItemStack.isTradeItem(): Boolean = RtagItem(this).let { it.hasTag("tradeId") && it.get<String>("tradeId").isNotEmpty() }
+
+fun ItemStack.getTradeId(): String? = RtagItem(this).get<String>("tradeId")
+
+fun ItemStack.canTakeIntoDungeon(): Boolean = RtagItem(this).let { it.hasTag("canTakeIntoDungeon") && it.get<String>("canTakeIntoDungeon") == "1" }
 
 fun ItemStack.isDeckedOutCard(): Boolean {
     if (this.itemMeta?.displayName() is TextComponent?) {
         val text = this.itemMeta?.displayName() as TextComponent?
         val name = text?.content()
-        return Cards.findCard(name ?: "") !== null
+        return Cards.findCard(name ?: "") !== null || intoDungeonItems.keys.contains(name ?: "")
     }
 
     return false

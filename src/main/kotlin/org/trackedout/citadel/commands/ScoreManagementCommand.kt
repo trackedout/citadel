@@ -12,13 +12,17 @@ import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
 import org.trackedout.citadel.inventory.Trade
+import org.trackedout.citadel.inventory.intoDungeonItems
+import org.trackedout.citadel.inventory.shortRunType
 import org.trackedout.citadel.isInventoryRelatedScore
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.citadel.sendMessage
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.EventsApi
+import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.ScoreApi
+import org.trackedout.client.models.Card
 import org.trackedout.client.models.Event
 
 @CommandAlias("decked-out|do")
@@ -27,6 +31,7 @@ class ScoreManagementCommand(
     private val scoreApi: ScoreApi,
     private val eventsApi: EventsApi,
     private val inventoryManager: InventoryManager,
+    private val inventoryApi: InventoryApi,
 ) : BaseCommand() {
     @Subcommand("list-scores")
     @Syntax("[player]")
@@ -130,6 +135,25 @@ class ScoreManagementCommand(
                     )
                 )
             )
+
+            if (intoDungeonItems.keys.contains(item)) {
+                println("Target type is an dungeon item: $item")
+
+                val targetItem = item
+                val itemsToAdd = count
+                println("Adding ${itemsToAdd}x $targetItem (item) to ${playerName}'s deck")
+                source.sendGreenMessage("Added ${itemsToAdd}x $targetItem to ${playerName}'s ${runType.runType} deck")
+                (0 until itemsToAdd).map {
+                    inventoryApi.inventoryAddCardPost(
+                        Card(
+                            player = playerName,
+                            name = targetItem,
+                            deckType = runType.runType.shortRunType(),
+                            server = plugin.serverName,
+                        )
+                    )
+                }
+            }
 
             plugin.server.onlinePlayers.find { it.name == playerName }?.let { player ->
                 inventoryManager.updateInventoryBasedOnScore(player)

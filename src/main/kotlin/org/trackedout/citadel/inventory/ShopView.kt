@@ -16,6 +16,7 @@ import org.trackedout.citadel.inventory.DeckManagementView.Companion.ADD_CARD_FU
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.DELETE_CARD_FUNC
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.JOIN_QUEUE_FUNC
 import org.trackedout.citadel.sendGreenMessage
+import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.models.Card
 import org.trackedout.data.Cards
 import java.util.function.BiConsumer
@@ -64,16 +65,16 @@ class ShopView : View() {
         const val SHOP_RULES: String = "shop-rules-list"
         const val TRADE_FUNC: String = "trade-func"
         const val UPDATE_INVENTORY_FUNC: String = "update-inventory-func"
-        val SHOP_RULES_REGEX = "(?<type>[pc])(?<sourceType>.*?)x(?<sourceCount>\\d{1,3})=[pc](?<targetType>.*?)x(?<targetCount>\\d{1,3})".toRegex()
+        val SHOP_RULES_REGEX = "^(?<type>[pc])(?<sourceType>.+?)x(?<sourceCount>\\d{1,3})=[pc](?<targetTypes>(?:.+?x\\d{1,3},?)+)$".toRegex()
+        val SHOP_RULE_TARGET_REGEX = "^(?<targetType>.+?)x(?<targetCount>\\d{1,3})$".toRegex()
     }
 
     override fun onInit(config: ViewConfigBuilder) {
-        config
-            .layout(
-                "         ",
-                "         ",
-                "         ",
-            )
+        config.layout(
+            "         ",
+            "         ",
+            "         ",
+        )
     }
 
     override fun onOpen(open: OpenContext) {
@@ -101,25 +102,50 @@ class ShopView : View() {
 
                     val sourceType = groups["sourceType"]?.value
                     val sourceCount = groups["sourceCount"]?.value
-                    val targetType = groups["targetType"]?.value
-                    val targetCount = groups["targetCount"]?.value
+                    val targetTypes = groups["targetTypes"]?.value
 
-                    println("Rule: Convert { type=$longType, fromType=$sourceType, fromCount=$sourceCount, resultType=$targetType, resultCount=$targetCount)")
-                    if (longType == null || sourceType == null || sourceCount == null || targetType == null || targetCount == null) {
+                    println("Rule: Convert { type=$longType, sourceType=$sourceType, sourceCount=$sourceCount, targetTypes=$targetTypes)")
+                    if (longType == null || sourceType == null || sourceCount == null || targetTypes == null) {
                         System.err.println("An expected regex group is missing from match, skipping rule: $rule")
                         return@let
                     }
 
-                    var sendTradeMessage = false
+                    val targetTypesList = targetTypes.split(",")
+                    val invalidTargets = targetTypesList.filter { !SHOP_RULE_TARGET_REGEX.matches(it) }
+                    if (invalidTargets.isNotEmpty()) {
+                        player.sendRedMessage("The following trade targets are invalid for this shop:")
+                        invalidTargets.forEach {
+                            player.sendRedMessage(" - $it")
+                        }
+                        return@let
+                    }
+
+                    // Pick a random target if there's more than one option
+                    var targetCount = 0
+                    println("Target types: $targetTypesList")
+                    val targetType = targetTypesList.random().let {
+                        println("Selected target type: $it (match check: ${SHOP_RULE_TARGET_REGEX.matches(it)})")
+
+                        SHOP_RULE_TARGET_REGEX.matchEntire(it)?.let { matchResult ->
+                            val targetGroups = matchResult.groups
+                            val targetType = targetGroups["targetType"]?.value
+                            targetCount = targetGroups["targetCount"]?.value?.toInt() ?: 0
+                            targetType
+                        } ?: throw Exception("Shop target $it does not match regex")
+                    }
+
+                    var sendTradeMessage = true
                     var sendToDummy = false
                     var eventToSend: () -> Unit = {}
                     if (Cards.Companion.Card.entries.map { it.key.lowercase() }.contains(targetType.lowercase())) {
                         println("Target type is a card: $targetType")
                         val targetCard = targetType.lowercase()
                         val cardsToAdd = targetCount.toInt()
+                        sendTradeMessage = false
                         sendToDummy = true
                         eventToSend = {
-                            println("Adding ${cardsToAdd}x $targetCard cards to ${player.name}'s deck")
+                            println("Adding ${cardsToAdd}x $targetCard (card) to ${player.name}'s deck")
+                            player.sendGreenMessage("Added ${cardsToAdd}x $targetCard to your $longType deck")
                             (0 until cardsToAdd).map {
                                 val newCard = Card(
                                     player = player.name,
@@ -134,6 +160,25 @@ class ShopView : View() {
                         eventToSend = {
                             println("Placing ${player.name} in queue with Deck ID #${longType}1")
                             joinQueueFunc[event].accept("${shortType?.value ?: throw Exception("Shop type not defined")}1")
+                        }
+                    } else if (intoDungeonItems.keys.contains(targetType)) {
+                        println("Target type is an dungeon item: $targetType")
+
+                        val targetItem = targetType
+                        val itemsToAdd = targetCount.toInt()
+                        sendTradeMessage = false
+                        sendToDummy = true
+                        eventToSend = {
+                            println("Adding ${itemsToAdd}x $targetItem (item) to ${player.name}'s deck")
+                            player.sendGreenMessage("Added ${itemsToAdd}x $targetItem to your $longType deck")
+                            (0 until itemsToAdd).map {
+                                val newCard = Card(
+                                    player = player.name,
+                                    name = targetItem,
+                                )
+
+                                addCardFunc[event].accept(longType[0].toString(), newCard)
+                            }
                         }
                     }
 
@@ -179,21 +224,17 @@ class ShopView : View() {
             e.printStackTrace()
         }
 
-        (0 until inventory.size)
-            .map(inventory::getItem)
-            .filter { it != null && it.type != Material.AIR }
-            .map { it!! }
-            .forEach { item: ItemStack ->
-                println("Inventory contains: ${item.type}x${item.amount} - returning it to player")
-                player.inventory.addItem(item)
-            }
+        (0 until inventory.size).map(inventory::getItem).filter { it != null && it.type != Material.AIR }.map { it!! }.forEach { item: ItemStack ->
+            println("Inventory contains: ${item.type}x${item.amount} - returning it to player")
+            player.inventory.addItem(item)
+        }
     }
 
     private fun itemStackForSource(runType: String, sourceType: String, sourceCount: Int): ItemStack? {
         return tradeItems.getOrElse(sourceType) {
             System.err.println("Unable to determine item stack for source type $sourceType")
             null
-        }?.itemStack(runType, sourceCount)
+        }?.itemStack(runType, sourceCount)?.withTradeMeta(runType, sourceType)
     }
 
     private fun Inventory.removeIfPresent(itemsToRemove: ItemStack, success: () -> Unit) {
