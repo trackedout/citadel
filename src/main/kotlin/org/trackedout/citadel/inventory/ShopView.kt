@@ -161,6 +161,12 @@ class ShopView : View() {
                             println("Placing ${player.name} in queue with Deck ID #${longType}1")
                             joinQueueFunc[event].accept("${shortType?.value ?: throw Exception("Shop type not defined")}1")
                         }
+                    } else if (sourceType == "TOME" && targetType.equals("DUMMY", ignoreCase = true)) {
+                        sendTradeMessage = false
+                        eventToSend = {
+                            println("${player.name} submitted a victory tome")
+                            player.sendGreenMessage("Successfully submitted ${sourceCount}x VICTORY TOME!")
+                        }
                     } else if (intoDungeonItems.keys.contains(targetType)) {
                         println("Target type is an dungeon item: $targetType")
 
@@ -250,7 +256,7 @@ class ShopView : View() {
                 addItem(itemsToRemove)
             }
         } else {
-            println("Inventory count not remove ${insufficientItems.values}, reverting")
+            println("Could not remove ${insufficientItems.values} from shop inventory, reverting")
             itemsToRemove.amount = startAmount - insufficientItems.values.sumOf { it.amount }
             addItem(itemsToRemove)
         }
