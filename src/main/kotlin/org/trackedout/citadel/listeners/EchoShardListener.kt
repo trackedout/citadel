@@ -270,6 +270,7 @@ class EchoShardListener(
             "Interact event: { " +
                 "eventType=${event.action}, " +
                 "openInventoryType=${player.openInventory.type}, " +
+                "currentItem=${event.clickedBlock?.type}, " +
                 "currentItem=${item?.type?.name}, " +
                 "offHandItem=${player.inventory.itemInOffHand.type.name} }",
             "debug.interact"
@@ -290,9 +291,8 @@ class EchoShardListener(
         // Cancel interaction events for restricted items
         if ((event.action == Action.RIGHT_CLICK_AIR || event.action == Action.RIGHT_CLICK_BLOCK)) {
             if (isRestrictedItem(item) && !player.scoreboardTags.contains("nocheck")) {
-                player.debug("Blocking interact event ${event.action}")
-                event.isCancelled = true
-                return
+                event.setUseItemInHand(org.bukkit.event.Event.Result.DENY)
+                player.debug("Preventing item consumption on interact event ${event.action}")
             }
         }
     }
