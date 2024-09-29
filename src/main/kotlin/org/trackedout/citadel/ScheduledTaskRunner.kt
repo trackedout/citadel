@@ -1,6 +1,8 @@
 package org.trackedout.citadel
 
 import com.google.common.io.ByteStreams
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.client.apis.TasksApi
 import org.trackedout.client.models.Task
@@ -84,6 +86,14 @@ class ScheduledTaskRunner(
                             val targetPlayers = plugin.server.worlds.find { it.name == "world" }?.players?.filter { it.scoreboardTags.contains("debug") }
                             targetPlayers?.forEach {
                                 task.arguments?.forEach(it::sendGreyMessage)
+                            }
+                        }
+
+                        "broadcast-message" -> {
+                            plugin.server.worlds.find { it.name == "world" }?.let { world ->
+                                task.arguments?.forEach { message ->
+                                    world.sendMessage(Component.text().color(NamedTextColor.DARK_AQUA).content(message).build())
+                                }
                             }
                         }
 
