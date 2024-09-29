@@ -94,7 +94,7 @@ class Citadel : JavaPlugin() {
                 .build()
         )
 
-        val inventoryManager = InventoryManager(this, scoreApi)
+        val inventoryManager = InventoryManager(this, scoreApi, eventsApi)
 
         // https://github.com/aikar/commands/wiki/Real-World-Examples
         manager.registerCommand(TakeShulkerCommand())
