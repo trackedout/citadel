@@ -44,6 +44,7 @@ class InventoryCommand(
 
         plugin.server.onlinePlayers.find { it.name == args[0] }?.let { player ->
             inventoryManager.updateInventoryBasedOnScore(player)
+            source.sendGreenMessage("Updated ${player.name}'s inventory")
         }
     }
 

@@ -1,10 +1,13 @@
 package org.trackedout.citadel
 
+import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.inventory.ScoreboardDescriber
 import org.trackedout.citadel.inventory.baseTradeItems
 import org.trackedout.citadel.inventory.competitiveDeck
+import org.trackedout.citadel.inventory.intoDungeonItems
+import org.trackedout.citadel.inventory.oldDungeonItem
 import org.trackedout.citadel.inventory.practiceDeck
 import org.trackedout.citadel.inventory.withTradeMeta
 import org.trackedout.client.apis.ScoreApi
@@ -15,6 +18,8 @@ class InventoryManager(
     private val scoreApi: ScoreApi,
 ) {
     fun updateInventoryBasedOnScore(player: Player) {
+        cleanUpOldItems(player)
+
         plugin.async(player) {
             plugin.logger.info("Fetching scores for ${player.name}")
             val scores = scoreApi.scoresGet(player = player.name).results!!
@@ -29,6 +34,19 @@ class InventoryManager(
                     )
                 }
         }
+    }
+
+    private fun cleanUpOldItems(player: Player) {
+        plugin.logger.info("Cleaning up old items for ${player.name}")
+        for (runType in listOf("practice", "competitive")) {
+            baseTradeItems.plus(intoDungeonItems).values.forEach { trade ->
+                val itemStack = trade.itemStack(runType, 0)
+                if (!listOf(Material.AIR, Material.STICK).contains(itemStack.type)) {
+                    player.ensureInventoryContains(itemStack.oldDungeonItem())
+                }
+            }
+        }
+        plugin.logger.info("Finished cleaning up old items")
     }
 
     private fun updatePlayerInventoryForState(player: Player, scores: Map<String, Int>, key: String, value: Int) {

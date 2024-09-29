@@ -153,3 +153,13 @@ fun ItemStack.withTradeMeta(runType: String, tradeId: String): ItemStack {
         return tag.loadCopy();
     })
 }
+
+fun ItemStack.oldDungeonItem(): ItemStack {
+    this.amount = 999
+    return RtagItem.edit(this, fun(tag: RtagItem): ItemStack {
+        tag.remove("deckId");
+        tag.remove("tradeId");
+        tag.remove("canTakeIntoDungeon");
+        return tag.loadCopy();
+    })
+}
