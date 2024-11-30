@@ -1,9 +1,15 @@
 package org.trackedout.citadel.listeners
 
 import co.aikar.commands.BaseCommand
+import com.mongodb.client.model.Accumulators
+import com.mongodb.client.model.Aggregates
+import com.mongodb.client.model.Filters
+import com.mongodb.client.model.Filters.eq
+import com.mongodb.kotlin.client.MongoClient
 import me.devnatan.inventoryframework.ViewFrame
 import net.kyori.adventure.text.TextComponent
 import org.apache.logging.log4j.util.TriConsumer
+import org.bson.Document
 import org.bukkit.Material
 import org.bukkit.Nameable
 import org.bukkit.Sound
@@ -50,11 +56,14 @@ import org.trackedout.citadel.inventory.ShopView.Companion.SHOP_RULES_REGEX
 import org.trackedout.citadel.inventory.ShopView.Companion.TRADE_FUNC
 import org.trackedout.citadel.inventory.ShopView.Companion.UPDATE_INVENTORY_FUNC
 import org.trackedout.citadel.inventory.Trade
+import org.trackedout.citadel.inventory.fullRunType
 import org.trackedout.citadel.inventory.isPractice
 import org.trackedout.citadel.inventory.shortRunType
 import org.trackedout.citadel.isDeckedOutCard
 import org.trackedout.citadel.isDeckedOutShulker
+import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.sendRedMessage
+import org.trackedout.citadel.shop.ShopData
 import org.trackedout.citadel.shop.getShopData
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
@@ -62,6 +71,7 @@ import org.trackedout.client.models.Card
 import org.trackedout.client.models.Event
 import java.util.function.BiConsumer
 import java.util.function.Consumer
+import kotlin.math.pow
 
 class EchoShardListener(
     private val plugin: Citadel,
@@ -102,12 +112,110 @@ class EchoShardListener(
                             if (shopData.disabled) {
                                 player.sendRedMessage("This shop is not currently open")
                             } else {
+
+                                val prices = mutableMapOf("p" to 10, "c" to 10) // Default prices
+                                // Get player overrides for shop trades
+                                for (runType in prices.keys) {
+                                    val crownTrade = "${runType}CROWNx10=${runType}SHARDx1"
+                                    if (shopData.trades.contains(crownTrade)) {
+                                        shopData.name = "{p} prac / {c} comp Crowns"
+                                        getCostForCrownTrade(player.name, runType)?.let { cost ->
+                                            shopData.trades -= crownTrade
+                                            val updatedTrade = "${runType.shortRunType()}CROWNx${cost}=${runType.shortRunType()}SHARDx1"
+                                            shopData.trades += updatedTrade
+                                            prices[runType] = cost
+                                        }
+                                    }
+                                }
+
+                                for (runType in prices.keys) {
+                                    shopData.name = shopData.name.replace("{$runType}", prices[runType].toString())
+                                }
+
                                 showShopView(player, shopData.name.ifEmpty { shopName }, shopData.trades)
                             }
                         } ?: throw Exception("Target block is not of type TileState")
                     }
                 }
             }
+        }
+    }
+
+    private fun getCostForCrownTrade(playerName: String, runType: String): Int? {
+        val database = MongoDBManager.getDatabase("dunga-dunga")
+        val collection = database.getCollection("events")
+
+        /*
+        {
+            _id: ObjectId('674ab5561ff9633efca83191'),
+            name: 'trade-requested',
+            player: '4Ply',
+            count: 1,
+            server: 'lobby',
+            x: -507.1552836355466,
+            y: 113,
+            z: 1976.750589514206,
+            sourceIP: '10.42.4.196',
+            metadata: {
+              'run-type': 'competitive',
+              'source-scoreboard': 'competitive-do2.lifetime.escaped.crowns',
+              'source-inversion-scoreboard': 'competitive-do2.lifetime.spent.crowns',
+              'source-count': '1',
+              'target-scoreboard': 'do2.inventory.shards.competitive',
+              'target-count': '1'
+            },
+            processingFailed: false,
+            createdAt: ISODate('2024-11-30T06:48:54.961Z'),
+            updatedAt: ISODate('2024-11-30T06:48:54.961Z'),
+            __v: 0
+        }
+         */
+
+        val fullRunType = runType.fullRunType().lowercase()
+        val filter = Filters.and(
+            eq("name", "trade-requested"),
+            eq("player", playerName),
+            eq("metadata.run-type", fullRunType),
+            eq("metadata.source-scoreboard", "$fullRunType-do2.lifetime.escaped.crowns"),
+            eq("metadata.target-scoreboard", "do2.inventory.shards.$fullRunType"),
+        )
+
+        val group = Aggregates.group(
+            "\$player", Accumulators.sum("totalShardsBought", Document("\$toInt", "\$metadata.target-count"))
+        )
+        println(group.toBsonDocument())
+        val doc = collection.aggregate(
+            listOf(
+                Aggregates.match(filter), group
+            )
+        ).firstOrNull()
+
+        if (doc != null) {
+            println(doc)
+            val shardsBought = doc["totalShardsBought"].toString().toInt()
+            println("Total $fullRunType shards bought: $shardsBought")
+            val cost = 10 + (shardsBought.toDouble().pow(2.0)).toInt()
+            println("Cost for $fullRunType shards: $cost")
+            return cost
+        } else {
+            println("No matching documents found, not overriding formula")
+        }
+
+        return null
+    }
+
+    private fun findShopOverride(x: Int, y: Int, z: Int) {
+        val uri = "mongodb://dunga-dunga:dunga-dunga@mongodb:27017/dunga-dunga"
+        val mongoClient = MongoClient.create(uri)
+        val database = mongoClient.getDatabase("dunga-dunga")
+        val collection = database.getCollection<ShopData>("shops")
+        // Find a document with the specified title
+        val doc = collection.find(eq("location", "$x-$y-$z")).firstOrNull()
+        if (doc != null) {
+            // Print the matching document
+            println(doc)
+        } else {
+            println("No matching documents found.")
         }
     }
 
@@ -145,14 +253,7 @@ class EchoShardListener(
                 try {
                     eventsApi.eventsPost(
                         Event(
-                            name = "trade-requested",
-                            server = plugin.serverName,
-                            player = player.name,
-                            count = 1,
-                            x = player.x,
-                            y = player.y,
-                            z = player.z,
-                            metadata = mapOf(
+                            name = "trade-requested", server = plugin.serverName, player = player.name, count = 1, x = player.x, y = player.y, z = player.z, metadata = mapOf(
                                 "run-type" to trade.runType,
                                 "source-scoreboard" to trade.sourceScoreboardName(),
                                 "source-inversion-scoreboard" to trade.sourceInversionScoreboardName(),
@@ -221,8 +322,7 @@ class EchoShardListener(
     fun onDropItem(event: PlayerDropItemEvent) {
         val player = event.player
         player.debug(
-            "Drop item event: ${event.eventName} - inventoryType=${event.itemDrop.type}, " +
-                "cursorItem=${event.itemDrop.type.name}"
+            "Drop item event: ${event.eventName} - inventoryType=${event.itemDrop.type}, " + "cursorItem=${event.itemDrop.type.name}"
         )
 
         val item = event.itemDrop.itemStack
@@ -241,11 +341,7 @@ class EchoShardListener(
     fun onDragItem(event: InventoryDragEvent) {
         val player = event.view.player
         player.debug(
-            "Drag event: ${event.type.name} - inventoryType=${event.inventory.type.name}, " +
-                "inventorySize=${event.inventory.size}, " +
-                "view=${event.view.type.name}, " +
-                "cursorItem=${event.cursor?.type?.name}, " +
-                "oldItem=${event.oldCursor.type.name}"
+            "Drag event: ${event.type.name} - inventoryType=${event.inventory.type.name}, " + "inventorySize=${event.inventory.size}, " + "view=${event.view.type.name}, " + "cursorItem=${event.cursor?.type?.name}, " + "oldItem=${event.oldCursor.type.name}"
         )
         val slotTypes = event.rawSlots.map { it to event.view.getSlotType(it).name }
         player.debug("Slot types: $slotTypes")
@@ -267,12 +363,7 @@ class EchoShardListener(
 
         val item = event.item
         player.debug(
-            "Interact event: { " +
-                "eventType=${event.action}, " +
-                "openInventoryType=${player.openInventory.type}, " +
-                "currentItem=${event.clickedBlock?.type}, " +
-                "currentItem=${item?.type?.name}, " +
-                "offHandItem=${player.inventory.itemInOffHand.type.name} }",
+            "Interact event: { " + "eventType=${event.action}, " + "openInventoryType=${player.openInventory.type}, " + "currentItem=${event.clickedBlock?.type}, " + "currentItem=${item?.type?.name}, " + "offHandItem=${player.inventory.itemInOffHand.type.name} }",
             "debug.interact"
         )
 
@@ -306,14 +397,7 @@ class EchoShardListener(
         val updateCardVisibility = BiConsumer<DeckId, Map<String, Number>> { deckIdToUpdate, cardsToHide ->
             eventsApi.eventsPost(
                 Event(
-                    name = "card-visibility-updated",
-                    server = plugin.serverName,
-                    player = player.name,
-                    count = 1,
-                    x = player.x,
-                    y = player.y,
-                    z = player.z,
-                    metadata = mapOf(
+                    name = "card-visibility-updated", server = plugin.serverName, player = player.name, count = 1, x = player.x, y = player.y, z = player.z, metadata = mapOf(
                         "run-type" to deckIdToUpdate.shortRunType(),
                         "deck-id" to deckIdToUpdate,
                     ).plus(cardsToHide.map { "hide-card-${it.key}" to it.value.toString() })
@@ -366,15 +450,7 @@ class EchoShardListener(
         val player = event.whoClicked as Player
 
         player.debug(
-            "Click event: { " +
-                "eventType=${event.action}, " +
-                "hotbarButton=${event.hotbarButton}, " +
-                "inventoryType=${event.inventory.type}, " +
-                "openInventoryType=${player.openInventory.type}, " +
-                "clickedInventoryType=${event.clickedInventory?.type}, " +
-                "cursor=${event.cursor.type.name}, " +
-                "currentItem=${event.currentItem?.type?.name}, " +
-                "offHandItem=${player.inventory.itemInOffHand.type.name} }"
+            "Click event: { " + "eventType=${event.action}, " + "hotbarButton=${event.hotbarButton}, " + "inventoryType=${event.inventory.type}, " + "openInventoryType=${player.openInventory.type}, " + "clickedInventoryType=${event.clickedInventory?.type}, " + "cursor=${event.cursor.type.name}, " + "currentItem=${event.currentItem?.type?.name}, " + "offHandItem=${player.inventory.itemInOffHand.type.name} }"
         )
 
         if (player.scoreboardTags.contains("nocheck")) {
@@ -417,10 +493,7 @@ class EchoShardListener(
             InventoryAction.DROP_ONE_CURSOR,
             InventoryAction.DROP_ALL_CURSOR,
         )
-        if (event.action !in actionsToBlockRegardlessOfInventoryType
-            && isPlayerInventory(event.clickedInventory, event.view)
-            && isPlayerInventory(event.inventory, event.view)
-        ) {
+        if (event.action !in actionsToBlockRegardlessOfInventoryType && isPlayerInventory(event.clickedInventory, event.view) && isPlayerInventory(event.inventory, event.view)) {
             return
         }
 

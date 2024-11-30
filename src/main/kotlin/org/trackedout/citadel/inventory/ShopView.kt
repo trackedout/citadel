@@ -141,7 +141,7 @@ class ShopView : View() {
                     if (Cards.Companion.Card.entries.map { it.key.lowercase() }.contains(targetType.lowercase())) {
                         println("Target type is a card: $targetType")
                         val targetCard = targetType.lowercase()
-                        val cardsToAdd = targetCount.toInt()
+                        val cardsToAdd = targetCount
                         sendTradeMessage = false
                         sendToDummy = true
                         eventToSend = {
@@ -216,7 +216,7 @@ class ShopView : View() {
                                 Trade(
                                     runType = longType,
                                     sourceType = sourceType,
-                                    sourceItemCount = numberOfItemsRemoved / sourceCountInt,
+                                    sourceItemCount = if (repeat) numberOfItemsRemoved / sourceCountInt else sourceCountInt,
                                     targetType = if (sendToDummy) "dummy" else targetType,
                                     targetItemCount = if (sendToDummy) 0 else targetCount,
                                 ),

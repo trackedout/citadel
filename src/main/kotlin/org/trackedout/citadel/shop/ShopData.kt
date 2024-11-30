@@ -6,6 +6,8 @@ import kotlinx.serialization.json.Json
 import org.bukkit.block.TileState
 import org.trackedout.citadel.Citadel
 
+private val json = Json { ignoreUnknownKeys = true }
+
 @Serializable
 data class ShopData(
     var name: String = "",
@@ -17,7 +19,7 @@ data class ShopData(
     }
 
     fun save(plugin: Citadel, x: Int, y: Int, z: Int) {
-        val shopDataJson = Json.encodeToString(this)
+        val shopDataJson = json.encodeToString(this)
         println("Saving shop data: $shopDataJson")
 
         plugin.config.set("shops.${x}-${y}-${z}", shopDataJson)
@@ -31,6 +33,6 @@ fun TileState.getShopData(plugin: Citadel): ShopData {
 
 fun getShopDataAtLocation(plugin: Citadel, x: Int, y: Int, z: Int): ShopData? {
     return (plugin.config.get("shops.$x-$y-$z") as String?)?.let {
-        Json.decodeFromString(it)
+        json.decodeFromString(it)
     }
 }

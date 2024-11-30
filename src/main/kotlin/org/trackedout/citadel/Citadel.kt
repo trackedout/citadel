@@ -32,6 +32,7 @@ import org.trackedout.citadel.inventory.MoveCardView
 import org.trackedout.citadel.inventory.ShopView
 import org.trackedout.citadel.listeners.EchoShardListener
 import org.trackedout.citadel.listeners.PlayedJoinedListener
+import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.shop.ShopCommand
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
@@ -49,6 +50,7 @@ class Citadel : JavaPlugin() {
     private lateinit var scoreboardLibrary: ScoreboardLibrary
     val serverName by lazy { getEnvOrDefault("SERVER_NAME", InetAddress.getLocalHost().hostName) }
     val dungaAPIPath by lazy { getEnvOrDefault("DUNGA_API", "http://localhost:3000/v1") }
+    val mongoURI by lazy { getEnvOrDefault("MONGODB_URL", "") }
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -95,6 +97,8 @@ class Citadel : JavaPlugin() {
         )
 
         val inventoryManager = InventoryManager(this, scoreApi, eventsApi)
+
+        MongoDBManager.initialize(mongoURI)
 
         // https://github.com/aikar/commands/wiki/Real-World-Examples
         manager.registerCommand(TakeShulkerCommand())
@@ -157,6 +161,7 @@ class Citadel : JavaPlugin() {
         Bukkit.getScheduler().cancelTasks(this)
         server.messenger.unregisterIncomingPluginChannel(this)
         scoreboardLibrary.close()
+        MongoDBManager.shutdown()
     }
 
     fun debug(message: String?) {
