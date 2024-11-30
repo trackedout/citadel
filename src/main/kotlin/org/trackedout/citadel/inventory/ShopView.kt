@@ -65,7 +65,7 @@ class ShopView : View() {
         const val SHOP_RULES: String = "shop-rules-list"
         const val TRADE_FUNC: String = "trade-func"
         const val UPDATE_INVENTORY_FUNC: String = "update-inventory-func"
-        val SHOP_RULES_REGEX = "^(?<type>[pc])(?<sourceType>.+?)x(?<sourceCount>\\d{1,3})=[pc](?<targetTypes>(?:.+?x\\d{1,3},?)+)$".toRegex()
+        val SHOP_RULES_REGEX = "^(?<repeat>r|)(?<type>[pc])(?<sourceType>.+?)x(?<sourceCount>\\d{1,3})=[pc](?<targetTypes>(?:.+?x\\d{1,3},?)+)$".toRegex()
         val SHOP_RULE_TARGET_REGEX = "^(?<targetType>.+?)x(?<targetCount>\\d{1,3})$".toRegex()
     }
 
@@ -103,6 +103,7 @@ class ShopView : View() {
                     val sourceType = groups["sourceType"]?.value
                     val sourceCount = groups["sourceCount"]?.value
                     val targetTypes = groups["targetTypes"]?.value
+                    val repeat = groups["repeat"]?.value?.let { it == "r" } ?: false
 
                     println("Rule: Convert { type=$longType, sourceType=$sourceType, sourceCount=$sourceCount, targetTypes=$targetTypes)")
                     if (longType == null || sourceType == null || sourceCount == null || targetTypes == null) {
@@ -136,7 +137,7 @@ class ShopView : View() {
 
                     var sendTradeMessage = true
                     var sendToDummy = false
-                    var eventToSend: () -> Unit = {}
+                    var eventToSend: (count: Int) -> Unit = {}
                     if (Cards.Companion.Card.entries.map { it.key.lowercase() }.contains(targetType.lowercase())) {
                         println("Target type is a card: $targetType")
                         val targetCard = targetType.lowercase()
@@ -163,15 +164,15 @@ class ShopView : View() {
                         }
                     } else if (sourceType == "TOME" && targetType.equals("DUMMY", ignoreCase = true)) {
                         sendTradeMessage = false
-                        eventToSend = {
+                        eventToSend = { count ->
                             println("${player.name} submitted a victory tome")
-                            player.sendGreenMessage("Successfully submitted ${sourceCount}x VICTORY TOME!")
+                            player.sendGreenMessage("Successfully submitted ${count}x VICTORY TOME!")
                         }
                     } else if (intoDungeonItems.keys.contains(targetType)) {
                         println("Target type is an dungeon item: $targetType")
 
                         val targetItem = targetType
-                        val itemsToAdd = targetCount.toInt()
+                        val itemsToAdd = targetCount
                         sendTradeMessage = false
                         sendToDummy = true
                         eventToSend = {
@@ -200,26 +201,32 @@ class ShopView : View() {
                         }
                     }
 
-                    itemStackForSource(longType, sourceType, sourceCount.toInt())?.let { itemsToRemove ->
-                        inventory.removeIfPresent(itemsToRemove) {
+                    val sourceCountInt = sourceCount.toInt()
+
+                    // If it's a repeating trade, we're going to try to use as many resources as possible
+                    println("Repeating trade? - $repeat")
+                    val numberOfItemsToRemove = if (repeat) sourceCountInt * 100 else sourceCountInt
+
+                    itemStackForSource(longType, sourceType, numberOfItemsToRemove)?.let { itemsToRemove ->
+                        inventory.removeIfPresent(itemsToRemove, repeat) { numberOfItemsRemoved ->
                             // Submit trade
-                            println("Successfully removed ${sourceCount.toInt()}x$sourceType from trade view, submitting trade")
+                            println("Successfully removed ${numberOfItemsRemoved}x$sourceType from trade view, submitting trade")
                             successfulTrades.increment(event)
                             tradeFunc[event].accept(
                                 Trade(
                                     runType = longType,
                                     sourceType = sourceType,
-                                    sourceItemCount = sourceCount.toInt(),
+                                    sourceItemCount = numberOfItemsRemoved / sourceCountInt,
                                     targetType = if (sendToDummy) "dummy" else targetType,
-                                    targetItemCount = if (sendToDummy) 0 else targetCount.toInt(),
+                                    targetItemCount = if (sendToDummy) 0 else targetCount,
                                 ),
                                 updateInventoryHandler, // This is fired for both success and fail
                             ) {
                                 // Success handler
-                                eventToSend()
+                                eventToSend(numberOfItemsRemoved)
 
                                 if (sendTradeMessage) {
-                                    player.sendGreenMessage("Successfully traded ${sourceCount.toInt()}x${sourceType} for ${targetCount}x${targetType}")
+                                    player.sendGreenMessage("Successfully traded ${numberOfItemsRemoved}x${sourceType} for ${targetCount}x${targetType}")
                                 }
                             }
                         }
@@ -243,21 +250,24 @@ class ShopView : View() {
         }?.itemStack(runType, sourceCount)?.withTradeMeta(runType, sourceType)
     }
 
-    private fun Inventory.removeIfPresent(itemsToRemove: ItemStack, success: () -> Unit) {
+    private fun Inventory.removeIfPresent(itemsToRemove: ItemStack, allowLeftOvers: Boolean, success: (count: Int) -> Unit) {
         val startAmount = itemsToRemove.amount
         val insufficientItems = removeItemAnySlot(itemsToRemove)
-        if (insufficientItems.isEmpty()) {
+        val insufficientItemCount = insufficientItems.values.sumOf { it.amount }
+        val successCount = startAmount - insufficientItemCount
+
+        if (insufficientItemCount == 0 || (successCount > 0 && allowLeftOvers)) {
             try {
-                success()
+                success(successCount)
             } catch (e: Exception) {
                 e.printStackTrace()
                 println("API call failed, reverting inventory changes")
-                itemsToRemove.amount = startAmount - insufficientItems.values.sumOf { it.amount }
+                itemsToRemove.amount = successCount
                 addItem(itemsToRemove)
             }
         } else {
             println("Could not remove ${insufficientItems.values} from shop inventory, reverting")
-            itemsToRemove.amount = startAmount - insufficientItems.values.sumOf { it.amount }
+            itemsToRemove.amount = successCount
             addItem(itemsToRemove)
         }
     }
