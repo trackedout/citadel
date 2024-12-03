@@ -193,30 +193,15 @@ class EchoShardListener(
         if (doc != null) {
             println(doc)
             val shardsBought = doc["totalShardsBought"].toString().toInt()
-            println("Total $fullRunType shards bought: $shardsBought")
+            plugin.logger.info("Total $fullRunType shards bought: $shardsBought")
             val cost = 10 + (shardsBought.toDouble().pow(2.0)).toInt()
-            println("Cost for $fullRunType shards: $cost")
+            plugin.logger.info("Cost for $fullRunType shards: $cost")
             return cost
         } else {
-            println("No matching documents found, not overriding formula")
+            plugin.logger.warning("No matching documents found, not overriding formula")
         }
 
         return null
-    }
-
-    private fun findShopOverride(x: Int, y: Int, z: Int) {
-        val uri = "mongodb://dunga-dunga:dunga-dunga@mongodb:27017/dunga-dunga"
-        val mongoClient = MongoClient.create(uri)
-        val database = mongoClient.getDatabase("dunga-dunga")
-        val collection = database.getCollection<ShopData>("shops")
-        // Find a document with the specified title
-        val doc = collection.find(eq("location", "$x-$y-$z")).firstOrNull()
-        if (doc != null) {
-            // Print the matching document
-            println(doc)
-        } else {
-            println("No matching documents found.")
-        }
     }
 
     private fun playSoundForOpeningBlock(state: BlockState, player: Player) {
@@ -544,13 +529,13 @@ class EchoShardListener(
         val card = it.getCard()
 
         if (deckType == null || card == null) {
-            System.err.println("Cannot delete card for item stack: $it (either deckType or resolved Card type is null)")
+            plugin.logger.warning("Cannot delete card for item stack: $it (either deckType or resolved Card type is null)")
             return
         }
 
         plugin.async(player) {
             for (i in 1..it.amount) {
-                println("Deleting ${card.key} (loop iteration ${i})")
+                plugin.logger.info("Deleting ${card.key} (loop iteration ${i})")
                 inventoryApi.inventoryDeleteCardPost(
                     Card(
                         player = player.name,

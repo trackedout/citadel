@@ -20,7 +20,7 @@ data class ShopData(
 
     fun save(plugin: Citadel, x: Int, y: Int, z: Int) {
         val shopDataJson = json.encodeToString(this)
-        println("Saving shop data: $shopDataJson")
+        plugin.logger.info("Saving shop data: $shopDataJson")
 
         plugin.config.set("shops.${x}-${y}-${z}", shopDataJson)
         plugin.saveConfig()

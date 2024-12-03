@@ -112,7 +112,7 @@ class ScoreManagementCommand(
         )
 
         val sourceScoreboardName = trade.sourceScoreboardName()
-        println("Source scoreboard name: $sourceScoreboardName")
+        plugin.logger.info("Source scoreboard name: $sourceScoreboardName")
 
         plugin.async(source) {
             eventsApi.eventsPost(
@@ -137,11 +137,11 @@ class ScoreManagementCommand(
             )
 
             if (intoDungeonItems.keys.contains(item)) {
-                println("Target type is an dungeon item: $item")
+                plugin.logger.info("Target type is an dungeon item: $item")
 
                 val targetItem = item
                 val itemsToAdd = count
-                println("Adding ${itemsToAdd}x $targetItem (item) to ${playerName}'s deck")
+                plugin.logger.info("Adding ${itemsToAdd}x $targetItem (item) to ${playerName}'s deck")
                 source.sendGreenMessage("Added ${itemsToAdd}x $targetItem to ${playerName}'s ${runType.runType} deck")
                 (0 until itemsToAdd).map {
                     inventoryApi.inventoryAddCardPost(

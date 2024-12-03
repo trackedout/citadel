@@ -20,6 +20,7 @@ import org.trackedout.citadel.commands.ManageDeckCommand
 import org.trackedout.citadel.commands.SavePlayerDeckCommand
 import org.trackedout.citadel.commands.ScoreManagementCommand
 import org.trackedout.citadel.commands.ShutdownDungeonsCommand
+import org.trackedout.citadel.commands.SpectateCommand
 import org.trackedout.citadel.commands.StatusCommand
 import org.trackedout.citadel.commands.TakeShulkerCommand
 import org.trackedout.citadel.inventory.AddACardView
@@ -30,6 +31,7 @@ import org.trackedout.citadel.inventory.DeckManagementView
 import org.trackedout.citadel.inventory.EnterQueueView
 import org.trackedout.citadel.inventory.MoveCardView
 import org.trackedout.citadel.inventory.ShopView
+import org.trackedout.citadel.inventory.SpectateSelectorView
 import org.trackedout.citadel.listeners.EchoShardListener
 import org.trackedout.citadel.listeners.PlayedJoinedListener
 import org.trackedout.citadel.mongo.MongoDBManager
@@ -145,10 +147,12 @@ class Citadel : JavaPlugin() {
                 DeckInventoryViewWithoutBack(),
                 DeckManagementView(),
                 EnterQueueView(),
+                SpectateSelectorView(),
                 ShopView(),
             )
             .register()
         manager.registerCommand(ManageDeckCommand(this, inventoryApi, eventsApi, viewFrame))
+        manager.registerCommand(SpectateCommand(this, eventsApi, viewFrame))
 
         val echoShardListener = EchoShardListener(this, inventoryApi, eventsApi, viewFrame, inventoryManager)
         server.pluginManager.registerEvents(echoShardListener, this)
