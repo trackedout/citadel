@@ -2,7 +2,6 @@ package org.trackedout.citadel.commands
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.CommandAlias
-import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Description
 import co.aikar.commands.annotation.Subcommand
 import com.google.common.io.ByteStreams
@@ -32,7 +31,6 @@ class SpectateCommand(
 ) : BaseCommand() {
 
     @Subcommand("spectate")
-    @CommandPermission("decked-out.inventory.admin")
     @Description("Spectate a player's game")
     fun spectate(source: CommandSender, args: Array<String>) {
         plugin.async(source) {
