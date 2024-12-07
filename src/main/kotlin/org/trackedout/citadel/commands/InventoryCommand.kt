@@ -42,7 +42,7 @@ class InventoryCommand(
             return
         }
 
-        plugin.server.onlinePlayers.find { it.name == args[0] }?.let { player ->
+        plugin.server.onlinePlayers.find { it.name == args[0] || args[0] == "ALL" }?.let { player ->
             inventoryManager.updateInventoryBasedOnScore(player)
             source.sendGreenMessage("Updated ${player.name}'s inventory")
         }
