@@ -102,7 +102,7 @@ class ScoreManagementCommand(
     @Subcommand("give-item")
     @CommandPermission("decked-out.shop.admin")
     @Description("Update player's score to give them more items")
-    fun giveScore(source: CommandSender, playerName: String, runType: RunTypes, item: String, count: Int) {
+    fun giveScore(source: CommandSender, playerName: String, runType: RunTypes, item: String, count: Int, reason: String) {
         val trade = Trade(
             runType = runType.runType,
             sourceType = "dummy",
@@ -131,7 +131,7 @@ class ScoreManagementCommand(
                         "source-count" to trade.sourceItemCount.toString(),
                         "target-scoreboard" to trade.targetScoreboardName(),
                         "target-count" to trade.targetItemCount.toString(),
-                        "reason" to "Granted by ${source.name}",
+                        "reason" to "Granted by ${source.name} - $reason",
                     )
                 )
             )
