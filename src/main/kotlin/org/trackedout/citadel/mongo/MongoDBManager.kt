@@ -11,7 +11,7 @@ object MongoDBManager {
         client = MongoClients.create(connectionString)
     }
 
-    fun getDatabase(databaseName: String): MongoDatabase = client.getDatabase(databaseName)
+    fun getDatabase(databaseName: String = "dunga-dunga"): MongoDatabase = client.getDatabase(databaseName)
 
     fun shutdown() {
         if (::client.isInitialized) {
