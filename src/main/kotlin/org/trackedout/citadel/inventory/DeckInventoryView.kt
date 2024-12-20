@@ -67,7 +67,7 @@ open class DeckInventoryView : DeckManagementView() {
             // Count the total number of cards in the player's inventory across all stacks
             .map {
                 it!!.getCard()!! to player.inventory
-                    .filter { it != null && it.isDeckedOutCard() && it.getDeckId() == deckId }
+                    .filter { card -> card != null && card.isDeckedOutCard() && card.getDeckId() == deckId }
                     .filter { p -> p?.getCard()?.name == it.getCard()?.name }.sumOf { p -> p.amount }
             }
             .onEach { pair: Pair<Cards.Companion.Card, Int> ->
@@ -86,7 +86,7 @@ open class DeckInventoryView : DeckManagementView() {
             // Count the total number of this item in the player's inventory across all stacks
             .map {
                 it!!.getTradeId()!! to player.inventory
-                    .filter { it != null && it.canTakeIntoDungeon() && it.getDeckId() == deckId }
+                    .filter { item -> item != null && item.canTakeIntoDungeon() && item.getDeckId() == deckId }
                     .filter { p -> p?.getTradeId() == it.getTradeId() }.sumOf { p -> p.amount }
             }
             .onEach { pair: Pair<String, Int> ->
@@ -122,13 +122,6 @@ open class DeckInventoryView : DeckManagementView() {
                 .withItem(namedItem(Material.SLIME_BLOCK, "Add a card"))
                 .onClick { _: StateValueHost? -> render.openForPlayer(AddACardView::class.java, getContext(render)) }
         }
-
-//        if (cards.isNotEmpty()) {
-//            render.slot(6, 5)
-//                 .cancelOnClick()
-//                .withItem(namedItem(Material.ECHO_SHARD, "QUEUE"))
-//                .onClick { _: StateValueHost? -> joinQueue(render, deckId) }
-//        }
 
         Cards.Companion.Card.entries.sortedBy { it.colour + it.key }.forEach { cardDefinition ->
             val count = cards.count { it.name == cardDefinition.key }

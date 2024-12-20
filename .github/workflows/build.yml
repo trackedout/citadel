@@ -37,9 +37,19 @@ jobs:
           fileName: 'agronet-*'
           out-file-path: 'agronet-jar'
 
+      - name: download config files from brilliance
+        uses: robinraju/release-downloader@v1.10
+        with:
+          repository: 'trackedout/Brilliance'
+          latest: true
+          fileName: '*.json'
+          out-file-path: 'brilliance-configs'
+
       - name: build
         env:
           ORG_GRADLE_PROJECT_agronet_jar: agronet-fabric/agronet-1.0.0.jar
+          ORG_GRADLE_PROJECT_cards_json: brilliance-configs/Cards.json
+          ORG_GRADLE_PROJECT_artifacts_json: brilliance-configs/Artifacts.json
         run: ./gradlew build
 
       - name: capture build artifacts

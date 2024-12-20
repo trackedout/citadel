@@ -55,8 +55,9 @@ dependencies {
     implementation 'com.saicone.rtag:rtag-entity:1.4.4'
     implementation 'com.saicone.rtag:rtag-item:1.4.4'
 
-    compileOnly 'me.devnatan:inventory-framework-platform-bukkit:3.0.8'
-    runtimeOnly 'me.devnatan:inventory-framework-platform-bukkit:3.0.8'
+    compileOnly 'me.devnatan:inventory-framework-platform-bukkit:3.2.0'
+    runtimeOnly 'me.devnatan:inventory-framework-platform-bukkit:3.2.0'
+    implementation 'me.devnatan:inventory-framework-platform-paper:3.2.0'
 
     implementation 'xyz.upperlevel.spigot.book:spigot-book-api:1.6'
 
@@ -127,12 +128,23 @@ shadowJar {
 
 build.dependsOn shadowJar
 
+def cardsJsonPath = property('cards_json')
+def artifactsJsonPath = property('artifacts_json')
+
 processResources {
     def props = [version: version]
     inputs.properties props
     filteringCharset "UTF-8"
     filesMatching("plugin.yml") {
         expand props
+    }
+
+    // Place json files in resources/items_json/
+    from(cardsJsonPath) {
+        into('items_json')
+    }
+    from(artifactsJsonPath) {
+        into('items_json')
     }
 }
 

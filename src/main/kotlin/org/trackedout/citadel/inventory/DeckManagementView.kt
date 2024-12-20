@@ -233,13 +233,6 @@ open class DeckManagementView : View() {
             moveCardFunc: TriConsumer<DeckId, DeckId, Card>,
             joinQueueFunc: Consumer<DeckId>,
         ): MutableMap<String, Any> {
-//            val deckMap = mutableMapOf<String, List<Card>>()
-//            allCards.forEach { card ->
-//                card.deckType?.forEach { deckId ->
-//                    val map = deckMap.getOrDefault(deckId, mutableListOf())
-//                    deckMap[deckId.shortRunType()] = map.plus(card)
-//                }
-//            }
 
             val context = mutableMapOf(
                 PLUGIN to plugin,
