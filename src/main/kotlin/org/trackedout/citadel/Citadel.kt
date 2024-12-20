@@ -212,6 +212,14 @@ fun Citadel.async(source: CommandSender, unit: () -> Unit) {
     }
 }
 
+fun Citadel.runOnNextTick(unit: () -> Unit) {
+    object : BukkitRunnable() {
+        override fun run() {
+            unit()
+        }
+    }.runTask(this)
+}
+
 private fun getMessage(e: Exception): String? {
     var message = e.message
     if (e is ClientException && e.response is ClientError<*>) {

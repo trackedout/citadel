@@ -10,7 +10,6 @@ import com.mongodb.client.model.Filters.eq
 import me.devnatan.inventoryframework.ViewFrame
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
-import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
 import org.trackedout.citadel.inventory.SpectateSelectorView
@@ -18,6 +17,7 @@ import org.trackedout.citadel.mongo.MongoClaim
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoEvent
 import org.trackedout.citadel.mongo.MongoPlayer
+import org.trackedout.citadel.runOnNextTick
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.models.Event
@@ -113,20 +113,12 @@ class SpectateCommand(
                     }
                 }
 
-                runOnNextTick {
+                plugin.runOnNextTick {
                     val context = SpectateSelectorView.createContext(plugin, source, games, spectatePlayerFunc)
                     viewFrame.open(SpectateSelectorView::class.java, source, context)
                 }
             }
         }
-    }
-
-    private fun runOnNextTick(unit: () -> Unit) {
-        object : BukkitRunnable() {
-            override fun run() {
-                unit()
-            }
-        }.runTask(plugin)
     }
 }
 
