@@ -15,6 +15,7 @@ import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
+import org.trackedout.citadel.inventory.fullRunType
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.citadel.sendRedMessage
@@ -82,9 +83,11 @@ class InventoryCommand(
                 deckId = "1",
             ).results!!
 
-            val cardCount = cards.sortedBy { it.name }.groupingBy { it.name!! }.eachCount()
-            source.sendGreyMessage("${target}'s shulker contains ${cards.size} cards:")
-            cardCount.forEach { (cardName, count) -> source.sendGreyMessage("${count}x $cardName") }
+            cards.map { it.deckType }.distinct().forEach { deckType ->
+                val cardCount = cards.filter { it.deckType == deckType }.sortedBy { it.name }.groupingBy { it.name!! }.eachCount()
+                source.sendGreenMessage("${target}'s ${deckType?.fullRunType()} deck contains ${cardCount.values.sum()} cards:")
+                cardCount.forEach { (cardName, count) -> source.sendGreyMessage("${count}x $cardName") }
+            }
         }
     }
 
