@@ -5,7 +5,7 @@ import com.mongodb.client.model.Accumulators
 import com.mongodb.client.model.Aggregates
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Filters.eq
-import com.mongodb.kotlin.client.MongoClient
+import com.mongodb.client.model.Filters.gte
 import me.devnatan.inventoryframework.ViewFrame
 import net.kyori.adventure.text.TextComponent
 import org.apache.logging.log4j.util.TriConsumer
@@ -63,12 +63,12 @@ import org.trackedout.citadel.isDeckedOutCard
 import org.trackedout.citadel.isDeckedOutShulker
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.sendRedMessage
-import org.trackedout.citadel.shop.ShopData
 import org.trackedout.citadel.shop.getShopData
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Card
 import org.trackedout.client.models.Event
+import java.text.SimpleDateFormat
 import java.util.function.BiConsumer
 import java.util.function.Consumer
 import kotlin.math.pow
@@ -171,6 +171,7 @@ class EchoShardListener(
         }
          */
 
+        val phase2StartDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse("2024-12-21T16:00:00")
         val fullRunType = runType.fullRunType().lowercase()
         val filter = Filters.and(
             eq("name", "trade-requested"),
@@ -178,6 +179,7 @@ class EchoShardListener(
             eq("metadata.run-type", fullRunType),
             eq("metadata.source-scoreboard", "$fullRunType-do2.lifetime.escaped.crowns"),
             eq("metadata.target-scoreboard", "do2.inventory.shards.$fullRunType"),
+            gte("createdAt", phase2StartDate)
         )
 
         val group = Aggregates.group(
