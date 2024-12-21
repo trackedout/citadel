@@ -1,12 +1,18 @@
 package org.trackedout.citadel
 
+import net.kyori.adventure.key.Key
+import net.kyori.adventure.sound.Sound
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.format.TextDecoration
+import net.kyori.adventure.title.Title
 import org.bukkit.Material
+import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
 import org.bukkit.block.Sign
 import org.bukkit.block.Skull
+import org.bukkit.block.data.type.Snow
 import org.bukkit.block.sign.Side
 import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.mongo.MongoDBManager
@@ -24,15 +30,20 @@ class LeaderboardTaskRunner(
             return
         }
 
-        plugin.debug("[Async task ${this.taskId}] Fetching leaderboard from MongoDB")
+        plugin.logger.info("[Async task ${this.taskId}] Fetching leaderboard from MongoDB (skip=${FirstRun.skip})")
+        val pointsForPosition = arrayOf(10, 8, 6, 5, 4, 3, 2, 1)
+
+        if (FirstRun.skip > 0) {
+            plugin.logger.info("Skipping this task (skip=${FirstRun.skip})")
+            FirstRun.skip--
+            return
+        }
 
         plugin.server.worlds.find { it.name == "world" }?.let { world ->
             val database = MongoDBManager.getDatabase("dunga-dunga")
             val playerStatsCollection = database.getCollection("playerStatsPhase1", MongoPlayerStats::class.java)
 
-            val activePlayers = playerStatsCollection.find().toList()
-                .sortedByDescending { it.stats.tomesSubmitted }
-                .filter { it.stats.tomesSubmitted > 0 }
+            val activePlayers = playerStatsCollection.find().toList().sortedByDescending { it.stats.tomesSubmitted }.filter { it.stats.tomesSubmitted > 0 }
 
             val maxPerPage = 20
             val pages = ceil(activePlayers.size / maxPerPage.toDouble()).toInt()
@@ -48,12 +59,13 @@ class LeaderboardTaskRunner(
             activePlayers.slice(startIndex until upperIndex).forEachIndexed { index, player ->
                 val playerName = player.player
                 val offlinePlayer = plugin.server.getOfflinePlayer(playerName)
+                val points = pointsForPosition.getOrElse(index) { 0 }
 
                 val x = -534 + index
                 val y = 114
                 val z = 1973
 
-                plugin.runOnNextTick {
+                val unit = {
                     val block: Block = world.getBlockAt(x, y, z)
                     val signBlock: Block = world.getBlockAt(x, y - 1, z + 1)
 
@@ -76,10 +88,49 @@ class LeaderboardTaskRunner(
                         signSide.line(0, Component.text("# ${startIndex + index + 1}").color(NamedTextColor.AQUA))
                         signSide.line(1, Component.text(playerName).color(NamedTextColor.WHITE))
                         signSide.line(2, Component.text(""))
-                        signSide.line(3, Component.text("Points: ${player.stats.tomesSubmitted}").color(NamedTextColor.AQUA))
+                        signSide.line(3, Component.text("Tomes: ${player.stats.tomesSubmitted}").color(NamedTextColor.AQUA))
                         sign.update()
                     }
+
+                    setSnowLayers(world, x, y, z, points)
                 }
+
+                if (FirstRun.isFirstRun) {
+                    var delay = (((upperIndex + 1) - index) * 30).toLong()
+                    if (index <= 2) {
+                        delay += (30 * (3 - index))
+                    }
+
+                    if (index == 0) {
+                        plugin.runLater(delay, unit)
+                        plugin.runLater(delay) {
+                            plugin.server.onlinePlayers.forEach { onlinePlayer ->
+                                onlinePlayer.showTitle(
+                                    Title.title(
+                                        Component.text(playerName).color(NamedTextColor.AQUA).decorate(TextDecoration.BOLD),
+                                        Component.text("Phase 1 Winner!").color(NamedTextColor.AQUA)
+                                    )
+                                )
+                                onlinePlayer.playSound(Sound.sound(Key.key("do2:events.artifact_retrived"), Sound.Source.MASTER, 1f, 0f))
+
+                            }
+                        }
+                    } else {
+                        plugin.runLater(delay, unit)
+                        plugin.runLater(delay) {
+                            plugin.server.onlinePlayers.forEach { onlinePlayer ->
+                                onlinePlayer.playSound(Sound.sound(Key.key("do2:events.card_reveal"), Sound.Source.MASTER, 1f, 0f))
+                            }
+                        }
+                    }
+                } else {
+                    plugin.runOnNextTick(unit)
+                }
+            }
+
+            if (upperIndex > 0) {
+                FirstRun.isFirstRun = false
+                FirstRun.skip = 5
             }
 
             // Clear remaining slots
@@ -104,7 +155,32 @@ class LeaderboardTaskRunner(
                         signSide.line(3, Component.text(""))
                         sign.update()
                     }
+
+                    setSnowLayers(world, x, y, z, 0)
                 }
+            }
+        }
+    }
+
+    private fun setSnowLayers(world: World, x: Int, y: Int, z: Int, layers: Int) {
+        // blockIndex = snowLayers / 8 (e.g. 0 for first 8 layers)
+        for (blockIndex in 0 until 6) { // support 6 blocks worth (48 points)
+            val snowBlock = world.getBlockAt(x, y + blockIndex, z - 1)
+            val layersForBlock = min(8, layers - (blockIndex * 8))
+
+            if (layersForBlock <= 0) {
+                if (snowBlock.type != Material.AIR) {
+                    snowBlock.type = Material.AIR
+                }
+            } else {
+                if (snowBlock.type != Material.SNOW) {
+                    snowBlock.type = Material.SNOW
+                }
+
+                val snow = snowBlock.blockData as Snow
+                plugin.logger.info("Setting snow layers at $x, $y, $z to $layersForBlock at index $blockIndex")
+                snow.layers = layersForBlock
+                snowBlock.blockData = snow
             }
         }
     }
@@ -112,4 +188,9 @@ class LeaderboardTaskRunner(
 
 object PageWatcher {
     var page: Int = 99
+}
+
+object FirstRun {
+    var isFirstRun = true
+    var skip: Int = 0
 }

@@ -227,6 +227,15 @@ fun Citadel.runOnNextTick(unit: () -> Unit) {
     }.runTask(this)
 }
 
+// delay is the number of ticks to wait (20 per second)
+fun Citadel.runLater(delay: Long, unit: () -> Unit) {
+    object : BukkitRunnable() {
+        override fun run() {
+            unit()
+        }
+    }.runTaskLater(this, delay)
+}
+
 private fun getMessage(e: Exception): String? {
     var message = e.message
     if (e is ClientException && e.response is ClientError<*>) {
