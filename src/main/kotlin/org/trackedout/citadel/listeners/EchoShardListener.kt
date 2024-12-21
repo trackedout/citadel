@@ -171,7 +171,8 @@ class EchoShardListener(
         }
          */
 
-        val phase2StartDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse("2024-12-21T16:00:00")
+        // Lobby is running on PST time
+        val phase2StartDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse("2024-12-21T08:00:00")
         val fullRunType = runType.fullRunType().lowercase()
         val filter = Filters.and(
             eq("name", "trade-requested"),
