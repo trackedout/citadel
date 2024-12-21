@@ -214,6 +214,6 @@ object PageWatcher {
 }
 
 object FirstRun {
-    var isFirstRun = true
+    var isFirstRun = false
     var skip: Int = 0
 }
