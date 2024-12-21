@@ -17,13 +17,16 @@ import org.bukkit.block.sign.Side
 import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoPlayerStats
+import org.trackedout.client.apis.ScoreApi
 import kotlin.math.ceil
+import kotlin.math.max
 import kotlin.math.min
 
 // WARNING: This task is processed *asynchronously*, and thus most interactions with the main Minecraft thread
 // must go through a sync task scheduler. The Scoreboard lib is thread-safe, so it doesn't require a sync task.
 class LeaderboardTaskRunner(
     private val plugin: Citadel,
+    private val scoreApi: ScoreApi,
 ) : BukkitRunnable() {
     override fun run() {
         if (this.isCancelled) {
@@ -43,7 +46,7 @@ class LeaderboardTaskRunner(
             val database = MongoDBManager.getDatabase("dunga-dunga")
             val playerStatsCollection = database.getCollection("playerStatsPhase1", MongoPlayerStats::class.java)
 
-            val activePlayers = playerStatsCollection.find().toList().sortedByDescending { it.stats.tomesSubmitted }.filter { it.stats.tomesSubmitted > 0 }
+            val activePlayers = playerStatsCollection.find().toList().filter { it.stats.tomesSubmitted > 0 }
 
             val maxPerPage = 20
             val pages = ceil(activePlayers.size / maxPerPage.toDouble()).toInt()
@@ -56,7 +59,22 @@ class LeaderboardTaskRunner(
             val upperIndex = min(startIndex + maxPerPage, activePlayers.size)
             plugin.logger.info("Active players: ${activePlayers.size}, showing $startIndex to $upperIndex (page ${PageWatcher.page + 1}/${pages})")
 
-            activePlayers.slice(startIndex until upperIndex).forEachIndexed { index, player ->
+            val lifetimeEmbersMap = mutableMapOf<String, Int>()
+            activePlayers.forEach { activePlayer ->
+                val scores = scoreApi.scoresGet(player = activePlayer.player).results!!
+
+                val relevantScores = scores.filter { activePlayers.map(MongoPlayerStats::player).contains(it.player) }
+                    .filter { it.key == "competitive-do2.lifetime.escaped.embers" }
+
+                lifetimeEmbersMap += relevantScores.associate { it.player!! to it.value!!.toInt() }
+            }
+
+            val sortedPlayers = activePlayers.sortedWith(
+                compareByDescending<MongoPlayerStats> { it.stats.tomesSubmitted }
+                    .thenByDescending { getAverageEmbersPerWin(lifetimeEmbersMap, it) }
+            )
+
+            sortedPlayers.slice(startIndex until upperIndex).forEachIndexed { index, player ->
                 val playerName = player.player
                 val offlinePlayer = plugin.server.getOfflinePlayer(playerName)
                 val points = pointsForPosition.getOrElse(index) { 0 }
@@ -88,7 +106,10 @@ class LeaderboardTaskRunner(
                         signSide.line(0, Component.text("# ${startIndex + index + 1}").color(NamedTextColor.AQUA))
                         signSide.line(1, Component.text(playerName).color(NamedTextColor.WHITE))
                         signSide.line(2, Component.text(""))
-                        signSide.line(3, Component.text("Tomes: ${player.stats.tomesSubmitted}").color(NamedTextColor.AQUA))
+                        signSide.line(3, Component.text("Points: $points").color(NamedTextColor.AQUA))
+
+//                        signSide.line(2, Component.text("Embers/win: ${getAverageEmbersPerWin(lifetimeEmbersMap, player)}"))
+//                        signSide.line(3, Component.text("Tomes: ${player.stats.tomesSubmitted}").color(NamedTextColor.AQUA))
                         sign.update()
                     }
 
@@ -101,9 +122,15 @@ class LeaderboardTaskRunner(
                         delay += (30 * (3 - index))
                     }
 
+                    plugin.runLater(delay, unit)
+                    plugin.runLater(delay) {
+                        plugin.server.onlinePlayers.forEach { onlinePlayer ->
+                            onlinePlayer.playSound(Sound.sound(Key.key("do2:events.card_reveal"), Sound.Source.MASTER, 1f, 0f))
+                        }
+                    }
+
                     if (index == 0) {
-                        plugin.runLater(delay, unit)
-                        plugin.runLater(delay) {
+                        plugin.runLater(delay + 60) {
                             plugin.server.onlinePlayers.forEach { onlinePlayer ->
                                 onlinePlayer.showTitle(
                                     Title.title(
@@ -112,14 +139,6 @@ class LeaderboardTaskRunner(
                                     )
                                 )
                                 onlinePlayer.playSound(Sound.sound(Key.key("do2:events.artifact_retrived"), Sound.Source.MASTER, 1f, 0f))
-
-                            }
-                        }
-                    } else {
-                        plugin.runLater(delay, unit)
-                        plugin.runLater(delay) {
-                            plugin.server.onlinePlayers.forEach { onlinePlayer ->
-                                onlinePlayer.playSound(Sound.sound(Key.key("do2:events.card_reveal"), Sound.Source.MASTER, 1f, 0f))
                             }
                         }
                     }
@@ -160,6 +179,10 @@ class LeaderboardTaskRunner(
                 }
             }
         }
+    }
+
+    private fun getAverageEmbersPerWin(lifetimeEmbersMap: Map<String, Int>, it: MongoPlayerStats): Int {
+        return lifetimeEmbersMap.getOrDefault(it.player, 0) / max(1, it.stats.competitive.wins)
     }
 
     private fun setSnowLayers(world: World, x: Int, y: Int, z: Int, layers: Int) {
