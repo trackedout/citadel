@@ -25,6 +25,9 @@ repositories {
     maven {
         url = "https://jitpack.io"
     }
+    maven {
+        url = "https://maven.enginehub.org/repo/"
+    }
 }
 
 println "Agronet jar: ${property('agronet_jar')}"
@@ -60,6 +63,8 @@ dependencies {
     implementation 'me.devnatan:inventory-framework-platform-paper:3.2.0'
 
     implementation 'xyz.upperlevel.spigot.book:spigot-book-api:1.6'
+
+    compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.9'
 
     // https://github.com/MegavexNetwork/scoreboard-library/blob/main/INSTALLATION.md
     var scoreboardLibraryVersion = "2.1.6"

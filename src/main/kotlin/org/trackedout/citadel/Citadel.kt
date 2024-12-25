@@ -20,6 +20,7 @@ import org.trackedout.citadel.commands.ManageDeckCommand
 import org.trackedout.citadel.commands.SavePlayerDeckCommand
 import org.trackedout.citadel.commands.ScoreManagementCommand
 import org.trackedout.citadel.commands.ShowArtifakesCommand
+import org.trackedout.citadel.commands.CubbyManagementCommand
 import org.trackedout.citadel.commands.ShutdownDungeonsCommand
 import org.trackedout.citadel.commands.SpectateCommand
 import org.trackedout.citadel.commands.StatusCommand
@@ -160,6 +161,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(ManageDeckCommand(this, inventoryApi, eventsApi, viewFrame))
         manager.registerCommand(SpectateCommand(this, eventsApi, viewFrame))
         manager.registerCommand(ShowArtifakesCommand(this, eventsApi, scoreApi, viewFrame))
+        manager.registerCommand(CubbyManagementCommand(this, eventsApi, scoreApi, viewFrame))
 
         val echoShardListener = EchoShardListener(this, inventoryApi, eventsApi, viewFrame, inventoryManager)
         server.pluginManager.registerEvents(echoShardListener, this)
