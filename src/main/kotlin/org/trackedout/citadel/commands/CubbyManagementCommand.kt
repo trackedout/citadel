@@ -81,6 +81,23 @@ class CubbyManagementCommand(
         }
     }
 
+    @Subcommand("cubby count")
+    @Description("Show counts of owned / available cubbies")
+    fun listCubbyCounts(source: CommandSender) {
+        val world = if (source is Player) source.world else plugin.server.worlds.find { it.name == "world" }
+        val allCubbies = world?.regions()?.filter { it.id.startsWith(CUBBY_PREFIX) }
+
+        if (allCubbies != null) {
+            val ownedCubbies = allCubbies.filter { it.members.players.isNotEmpty() }
+            val availableCubbies = allCubbies.filter { it.members.players.isEmpty() }
+
+            source.sendGreenMessage("Owned Cubbies: ${ownedCubbies.size}")
+            source.sendGreenMessage("Available Cubbies: ${availableCubbies.size}")
+        } else {
+            source.sendRedMessage("No cubbies found")
+        }
+    }
+
     @Subcommand("cubby list")
     @Description("Show all owned cubbies by all players")
     fun listCubbies(source: CommandSender) {
@@ -91,7 +108,7 @@ class CubbyManagementCommand(
             val ownedCubbies = allCubbies.filter { it.members.players.isNotEmpty() }
             val availableCubbies = allCubbies.filter { it.members.players.isEmpty() }
 
-            source.sendGreenMessage("Cubbies:")
+            source.sendGreenMessage("Cubbies (${ownedCubbies.size} total):")
             ownedCubbies.forEach { cubby ->
                 source.sendGreenMessage("- ${cubby.id} -> ${cubby.minimumPoint}, ${cubby.maximumPoint} (owned by ${cubby.members.players})")
             }
