@@ -33,6 +33,7 @@ jobs:
         uses: robinraju/release-downloader@v1.10
         with:
           repository: 'trackedout/agronet-fabric'
+          token: ${{ secrets.SSH_PRIVATE_KEY }}
           latest: true
           fileName: 'agronet-*'
           out-file-path: 'agronet-jar'
