@@ -52,7 +52,7 @@ open class DeckInventoryView : DeckManagementView() {
             .filterNot { it.preventRemoval() } // Keep these items in the shulker
             .filter { it.getDeckId() != deckId || (!it.canTakeIntoDungeon() && !it.isDeckedOutCard()) }
             .forEach { item: ItemStack ->
-                plugin[event].logger.info("Inventory contains: ${item.type}x${item.amount} - returning it to player")
+                plugin[event].logger.info("Inventory contains: ${item.type}x${item.amount} - returning it to ${player.name}")
                 player.inventory.addItem(item)
             }
 
@@ -73,7 +73,7 @@ open class DeckInventoryView : DeckManagementView() {
             .onEach { pair: Pair<Cards.Companion.Card, Int> ->
                 val card = pair.first
                 val amount = pair.second
-                plugin[event].logger.info("Player's inventory contains ${amount}x${card.name} - hiding it from Deck $deckId")
+                plugin[event].logger.info("${player.name}'s inventory contains ${amount}x${card.name} - hiding it from Deck $deckId")
             }
             .associate {
                 it.first.key to it.second
@@ -92,14 +92,14 @@ open class DeckInventoryView : DeckManagementView() {
             .onEach { pair: Pair<String, Int> ->
                 val tradeId = pair.first
                 val amount = pair.second
-                plugin[event].logger.info("Player's inventory contains ${amount}x${tradeId} - hiding it from Deck $deckId")
+                plugin[event].logger.info("${player.name}'s inventory contains ${amount}x${tradeId} - hiding it from Deck $deckId")
             }
             .associate {
                 it.first to it.second
             }
         cardsToHide = cardsToHide.plus(itemsToHide)
 
-        plugin[event].logger.info("Updating deck visibility for Deck ID #${deckId}, hiding: ${cardsToHide.map { "${it.value}x${it.key.uppercase()}" }}")
+        plugin[event].logger.info("Updating deck visibility for Deck ID #${deckId} for ${player.name}, hiding: ${cardsToHide.map { "${it.value}x${it.key.uppercase()}" }}")
         updateCardVisibilityFunc[event].accept(deckId, cardsToHide)
     }
 
