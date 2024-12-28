@@ -36,7 +36,7 @@ jobs:
           token: ${{ secrets.WORKER_PAT }}
           latest: true
           fileName: 'agronet-*'
-          out-file-path: 'agronet-jar'
+          out-file-path: 'agronet-fabric'
 
       - name: download config files from brilliance
         uses: robinraju/release-downloader@v1.10
