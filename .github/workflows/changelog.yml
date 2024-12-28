@@ -1,0 +1,15 @@
+name: Publish changelog
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: ['main']
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  generate-changelog:
+    name: Generate changelog
+    uses: trackedout/dunga-dunga-backend/.github/workflows/changelog.yml@main
+    secrets: inherit
