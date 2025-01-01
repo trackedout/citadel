@@ -3,6 +3,8 @@ package org.trackedout.citadel
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import org.trackedout.citadel.commands.GiveShulkerCommand.Companion.createCard
+import org.trackedout.citadel.commands.ScoreManagementCommand
 import org.trackedout.citadel.inventory.ScoreboardDescriber
 import org.trackedout.citadel.inventory.Trade
 import org.trackedout.citadel.inventory.baseTradeItems
@@ -10,15 +12,19 @@ import org.trackedout.citadel.inventory.competitiveDeck
 import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.citadel.inventory.oldDungeonItem
 import org.trackedout.citadel.inventory.practiceDeck
+import org.trackedout.citadel.inventory.shortRunType
 import org.trackedout.citadel.inventory.tradeItems
 import org.trackedout.citadel.inventory.withTradeMeta
 import org.trackedout.client.apis.EventsApi
+import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Event
 import org.trackedout.client.models.Score
+import org.trackedout.data.Cards
 
 class InventoryManager(
     private val plugin: Citadel,
+    private val inventoryApi: InventoryApi,
     private val scoreApi: ScoreApi,
     private val eventsApi: EventsApi,
 ) {
@@ -40,7 +46,46 @@ class InventoryManager(
                         score.value!!.toInt()
                     )
                 }
+
+            ensurePlayerInventoryReflectsItemsOutsideOfDeck(player)
         }
+    }
+
+    private fun ensurePlayerInventoryReflectsItemsOutsideOfDeck(player: Player) {
+        // For each card in the player's inventory, ensure they only have the correct amount
+        val deckItems = inventoryApi.inventoryCardsGet(player = player.name, limit = 200).results!!
+
+        ScoreManagementCommand.RunTypes.entries.forEach { runType ->
+
+            // Check cards against contents of player's deck
+            Cards.Companion.Card.entries.sortedBy { it.colour + it.key }.forEach { card ->
+                val maxCardsThatShouldBeInInventory = deckItems.count {
+                    plugin.logger.info("Checking ${it.name} == ${card.key} && ${it.deckType} == ${runType.runType.shortRunType()} && ${it.hiddenInDecks?.isNotEmpty() == true}")
+                    it.name == card.key && it.deckType == runType.runType.shortRunType() && it.hiddenInDecks?.isNotEmpty() == true
+                }
+
+                plugin.logger.info("${player.name} should have ${maxCardsThatShouldBeInInventory}x${card.key} in their inventory (runType: ${runType.runType})")
+                val itemStack = createCard(plugin, null, card.key, 1, "${runType.runType.shortRunType()}1")
+
+                itemStack?.let {
+                    player.ensureInventoryContains(it.clone().apply { amount = zeroSupportedItemCount(maxCardsThatShouldBeInInventory) })
+                }
+            }
+
+            // Check items against contents of player's deck
+            intoDungeonItems.entries.forEach { (itemKey, scoreboardDescriber) ->
+                val maxItemsThatShouldBeInInventory = deckItems.count {
+                    it.name == itemKey && it.deckType == runType.runType.shortRunType() && it.hiddenInDecks?.isNotEmpty() == true
+                }
+                plugin.logger.info("${player.name} should have ${maxItemsThatShouldBeInInventory}x${itemKey} in their inventory (runType: ${runType.runType})")
+                val itemStack = scoreboardDescriber.itemStack(runType.runType, 1)
+
+                itemStack.let {
+                    player.ensureInventoryContains(it.withTradeMeta(runType.runType, itemKey).clone().apply { amount = zeroSupportedItemCount(maxItemsThatShouldBeInInventory) })
+                }
+            }
+        }
+
     }
 
     private fun ensurePlayerHasPracticeShards(player: Player, currentScores: List<Score>): List<Score> {
@@ -85,6 +130,8 @@ class InventoryManager(
 
         return scores
     }
+
+    private fun zeroSupportedItemCount(count: Int) = if (count <= 0) 999 else count
 
     private fun cleanUpOldItems(player: Player) {
         plugin.logger.info("Cleaning up old items for ${player.name}")

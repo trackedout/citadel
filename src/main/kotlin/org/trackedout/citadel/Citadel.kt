@@ -101,7 +101,7 @@ class Citadel : JavaPlugin() {
                 .build()
         )
 
-        val inventoryManager = InventoryManager(this, scoreApi, eventsApi)
+        val inventoryManager = InventoryManager(this, inventoryApi, scoreApi, eventsApi)
 
         MongoDBManager.initialize(mongoURI)
 
