@@ -34,7 +34,7 @@ class LeaderboardTaskRunner(
         }
 
         plugin.logger.info("[Async task ${this.taskId}] Fetching leaderboard from MongoDB (skip=${FirstRun.skip})")
-        val pointsForPosition = arrayOf(10, 8, 6, 5, 4, 3, 2, 1)
+        val pointsForPosition = arrayOf(25, 21, 18, 16, 14, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
 
         if (FirstRun.skip > 0) {
             plugin.logger.info("Skipping this task (skip=${FirstRun.skip})")
@@ -46,7 +46,7 @@ class LeaderboardTaskRunner(
             val database = MongoDBManager.getDatabase("dunga-dunga")
             val playerStatsCollection = database.getCollection("playerStatsPhase1", MongoPlayerStats::class.java)
 
-            val activePlayers = playerStatsCollection.find().toList().filter { it.stats.tomesSubmitted > 0 }
+            val activePlayers = playerStatsCollection.find().toList().filter { it.stats.tomesSubmitted > 0 }.sortedBy { it.player }
 
             val maxPerPage = 20
             val pages = ceil(activePlayers.size / maxPerPage.toDouble()).toInt()
@@ -59,25 +59,17 @@ class LeaderboardTaskRunner(
             val upperIndex = min(startIndex + maxPerPage, activePlayers.size)
             plugin.logger.info("Active players: ${activePlayers.size}, showing $startIndex to $upperIndex (page ${PageWatcher.page + 1}/${pages})")
 
-            val lifetimeEmbersMap = mutableMapOf<String, Int>()
-            activePlayers.forEach { activePlayer ->
-                val scores = scoreApi.scoresGet(player = activePlayer.player).results!!
-
-                val relevantScores = scores.filter { activePlayers.map(MongoPlayerStats::player).contains(it.player) }
-                    .filter { it.key == "competitive-do2.lifetime.escaped.embers" }
-
-                lifetimeEmbersMap += relevantScores.associate { it.player!! to it.value!!.toInt() }
-            }
-
-            val sortedPlayers = activePlayers.sortedWith(
-                compareByDescending<MongoPlayerStats> { it.stats.tomesSubmitted }
-                    .thenByDescending { getAverageEmbersPerWin(lifetimeEmbersMap, it) }
+            val tomesSubmitted = activePlayers.map { it.stats.tomesSubmitted }.distinct().sortedWith(
+                compareByDescending { it }
             )
+            plugin.logger.info("Tomes submitted leaderboard: $tomesSubmitted")
 
-            sortedPlayers.slice(startIndex until upperIndex).forEachIndexed { index, player ->
+            activePlayers.slice(startIndex until upperIndex).forEachIndexed { index, player ->
                 val playerName = player.player
                 val offlinePlayer = plugin.server.getOfflinePlayer(playerName)
-                val points = pointsForPosition.getOrElse(index) { 0 }
+                val tomeIndex = tomesSubmitted.indexOf(player.stats.tomesSubmitted)
+                plugin.logger.info("Player $playerName has ${player.stats.tomesSubmitted} tomes, placing at index $tomeIndex")
+                val points = pointsForPosition.getOrElse(tomeIndex) { 0 }
 
                 val x = -534 + index
                 val y = 114
@@ -103,9 +95,9 @@ class LeaderboardTaskRunner(
                     if (signBlock.type == Material.WARPED_WALL_SIGN) {
                         val sign = signBlock.state as Sign
                         val signSide = sign.getSide(Side.FRONT)
-                        signSide.line(0, Component.text("# ${startIndex + index + 1}").color(NamedTextColor.AQUA))
+                        signSide.line(0, Component.text("# ${tomeIndex + 1}").color(NamedTextColor.AQUA))
                         signSide.line(1, Component.text(playerName).color(NamedTextColor.WHITE))
-                        signSide.line(2, Component.text(""))
+                        signSide.line(2, Component.text("Tomes: ${player.stats.tomesSubmitted}").color(NamedTextColor.AQUA))
                         signSide.line(3, Component.text("Points: $points").color(NamedTextColor.AQUA))
 
 //                        signSide.line(2, Component.text("Embers/win: ${getAverageEmbersPerWin(lifetimeEmbersMap, player)}"))
