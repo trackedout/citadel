@@ -1,18 +1,18 @@
 package org.trackedout.citadel.mongo
 
-data class MongoPlayerStats (
+data class MongoPlayerStats(
     val player: String,
-    val stats: Stats
+    val stats: Stats,
 )
 
-data class Stats (
+data class Stats(
     val total: Int,
     val practice: RunStats,
     val competitive: RunStats,
-    val tomesSubmitted: Int
+    val tomesSubmitted: Int,
 )
 
-data class RunStats (
+data class RunStats(
     val total: Int,
     val easy: Int,
     val medium: Int,
@@ -20,5 +20,5 @@ data class RunStats (
     val deadly: Int,
     val deepFrost: Int,
     val wins: Int,
-    val losses: Int
+    val losses: Int,
 )

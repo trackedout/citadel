@@ -13,14 +13,15 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
+import org.trackedout.citadel.commands.CubbyManagementCommand
 import org.trackedout.citadel.commands.GiveShulkerCommand
 import org.trackedout.citadel.commands.InventoryCommand
+import org.trackedout.citadel.commands.LeaderboardCommand
 import org.trackedout.citadel.commands.LogEventCommand
 import org.trackedout.citadel.commands.ManageDeckCommand
 import org.trackedout.citadel.commands.SavePlayerDeckCommand
 import org.trackedout.citadel.commands.ScoreManagementCommand
 import org.trackedout.citadel.commands.ShowArtifakesCommand
-import org.trackedout.citadel.commands.CubbyManagementCommand
 import org.trackedout.citadel.commands.ShutdownDungeonsCommand
 import org.trackedout.citadel.commands.SpectateCommand
 import org.trackedout.citadel.commands.StatusCommand
@@ -162,6 +163,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(SpectateCommand(this, eventsApi, viewFrame))
         manager.registerCommand(ShowArtifakesCommand(this, eventsApi, scoreApi, viewFrame))
         manager.registerCommand(CubbyManagementCommand(this, eventsApi, scoreApi, viewFrame))
+        manager.registerCommand(LeaderboardCommand(this))
 
         val echoShardListener = EchoShardListener(this, inventoryApi, eventsApi, viewFrame, inventoryManager)
         server.pluginManager.registerEvents(echoShardListener, this)
@@ -234,6 +236,15 @@ fun Citadel.runLater(delay: Long, unit: () -> Unit) {
     object : BukkitRunnable() {
         override fun run() {
             unit()
+        }
+    }.runTaskLater(this, delay)
+}
+
+// delay is the number of ticks to wait (20 per second)
+fun Citadel.runLaterOnATick(delay: Long, unit: () -> Unit) {
+    object : BukkitRunnable() {
+        override fun run() {
+            runOnNextTick(unit)
         }
     }.runTaskLater(this, delay)
 }
