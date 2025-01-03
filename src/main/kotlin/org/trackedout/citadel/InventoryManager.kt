@@ -60,7 +60,6 @@ class InventoryManager(
             // Check cards against contents of player's deck
             Cards.Companion.Card.entries.sortedBy { it.colour + it.key }.forEach { card ->
                 val maxCardsThatShouldBeInInventory = deckItems.count {
-                    plugin.logger.info("Checking ${it.name} == ${card.key} && ${it.deckType} == ${runType.runType.shortRunType()} && ${it.hiddenInDecks?.isNotEmpty() == true}")
                     it.name == card.key && it.deckType == runType.runType.shortRunType() && it.hiddenInDecks?.isNotEmpty() == true
                 }
 
