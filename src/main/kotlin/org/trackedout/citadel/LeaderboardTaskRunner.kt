@@ -103,7 +103,7 @@ class LeaderboardTaskRunner(
 //                        signSide.line(0, Component.text("# $rank").color(NamedTextColor.AQUA))
                         signSide.line(0, Component.text("#$rank ($points points)").color(NamedTextColor.AQUA))
                         signSide.line(1, Component.text(playerName).color(NamedTextColor.WHITE))
-                        signSide.line(3, Component.text("Phase${maxPhase} tomes: ${player.stats.lastOrNull()?.tomesSubmitted}").color(NamedTextColor.AQUA))
+                        signSide.line(3, Component.text("Phase${maxPhase} tomes: ${player.stats.getOrDefault(maxPhase, null)?.tomesSubmitted ?: 0}").color(NamedTextColor.AQUA))
 //                        signSide.line(3, Component.text("Points: $points").color(NamedTextColor.AQUA))
                         signSide.line(2, Component.text("").color(NamedTextColor.AQUA))
 
@@ -216,10 +216,10 @@ class LeaderboardTaskRunner(
             }
 
             activePlayersInPhase.forEach { player ->
-                val playerWithPoints = activePlayers.getOrDefault(player.player, PlayerWithPoints(player.player, listOf()))
+                val playerWithPoints = activePlayers.getOrDefault(player.player, PlayerWithPoints(player.player, mapOf()))
 
                 activePlayers[player.player] = playerWithPoints.copy(
-                    stats = playerWithPoints.stats + player.stats,
+                    stats = playerWithPoints.stats + mapOf(phase to player.stats),
                     totalPoints = playerWithPoints.totalPoints + pointsForPosition.getOrElse(tomesSubmitted.indexOf(player.stats.tomesSubmitted)) { 0 }
                 )
             }
@@ -229,7 +229,7 @@ class LeaderboardTaskRunner(
 
     data class PlayerWithPoints(
         val player: String,
-        val stats: List<Stats>,
+        val stats: Map<Int, Stats>,
         val totalPoints: Int = 0,
     )
 
