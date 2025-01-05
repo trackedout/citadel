@@ -171,8 +171,8 @@ class EchoShardListener(
         }
          */
 
-        // Lobby is running on PST time
-        val phase2StartDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse("2024-12-21T08:00:00")
+        // Lobby is running on UTC time
+        val phase3StartDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse("2025-01-04T16:00:00")
         val fullRunType = runType.fullRunType().lowercase()
         val filter = Filters.and(
             eq("name", "trade-requested"),
@@ -180,7 +180,7 @@ class EchoShardListener(
             eq("metadata.run-type", fullRunType),
             eq("metadata.source-scoreboard", "$fullRunType-do2.lifetime.escaped.crowns"),
             eq("metadata.target-scoreboard", "do2.inventory.shards.$fullRunType"),
-            gte("createdAt", phase2StartDate)
+            gte("createdAt", phase3StartDate)
         )
 
         val group = Aggregates.group(
