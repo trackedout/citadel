@@ -25,6 +25,7 @@ class ShutdownDungeonsCommand(
                 Event(
                     name = "shutdown-all-empty-dungeons",
                     server = plugin.serverName,
+                    player = source.name,
                     count = 1,
                     x = 0.0,
                     y = 0.0,
