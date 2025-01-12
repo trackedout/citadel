@@ -2,6 +2,10 @@
 
 The Paper plugin that runs the lobby side of [Tracked Out](https://trackedout.org).
 
+### Changelog
+
+For a list of changes, see the [latest release notes](https://github.com/trackedout/citadel/releases/tag/latest).
+
 ## Supported Commands
 
 #### Sending events to Dunga Dunga:
@@ -53,3 +57,11 @@ Start a local Minecraft server on port 25575. You may have to edit `./run/eula.t
 ```bash
 ./gradlew runServer
 ```
+
+### Contributors
+
+Thank you to all our contributors for your hard work and support!
+
+<a href="https://github.com/trackedout/citadel/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=trackedout/citadel"/>
+</a>
