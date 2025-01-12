@@ -1,6 +1,8 @@
 package org.trackedout.citadel
 
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
+import org.bukkit.advancement.Advancement
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.commands.GiveShulkerCommand.Companion.createCard
@@ -9,6 +11,7 @@ import org.trackedout.citadel.inventory.ScoreboardDescriber
 import org.trackedout.citadel.inventory.Trade
 import org.trackedout.citadel.inventory.baseTradeItems
 import org.trackedout.citadel.inventory.competitiveDeck
+import org.trackedout.citadel.inventory.fullRunType
 import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.citadel.inventory.oldDungeonItem
 import org.trackedout.citadel.inventory.practiceDeck
@@ -48,6 +51,7 @@ class InventoryManager(
                 }
 
             ensurePlayerInventoryReflectsItemsOutsideOfDeck(player)
+            syncAdvancements(player)
         }
     }
 
@@ -206,6 +210,65 @@ class InventoryManager(
                 }
                 break
             }
+        }
+    }
+
+    private fun syncAdvancements(player: Player) {
+        val server = player.server
+        val playerName = player.name
+
+        try {
+            val runType = "c".fullRunType().lowercase()
+            val advancementFilter = "$runType-advancement-"
+
+            plugin.logger.info("Score filter for advancements: $advancementFilter")
+            val scores = scoreApi.scoresGet(
+                player = playerName,
+                prefixFilter = advancementFilter,
+                limit = 10000,
+            )
+
+            scores.results!!
+                .asSequence()
+                .filter { it.key!!.startsWith(advancementFilter) }
+                .map { it.copy(key = it.key?.substring(advancementFilter.length)) }
+                .filter { it.key!!.isNotBlank() && it.key!!.contains("#") }
+                .filter { it.key!!.contains("hidden") || it.key!!.contains("visible") }
+                .filter { it.value!!.toInt() > 0 }
+                .toList()
+                .forEach { score ->
+                    // e.g. competitive-advancement-do2#hidden/survival/win_50_times#given_by_commands
+                    val split = score.key!!.split("#")
+                    var namespace = "do2"
+                    var key = split[0]
+                    var criterion = split[1]
+
+                    if (split.size == 3) {
+                        namespace = split[0]
+                        key = split[1]
+                        criterion = split[2]
+                    }
+
+                    server.getAdvancement(NamespacedKey(namespace, key))?.let { advancement: Advancement ->
+                        player.getAdvancementProgress(advancement).let { progress ->
+                            if (progress.isDone || progress.awardedCriteria.contains(criterion)) {
+                                plugin.logger.info("$playerName already has advancement ${key}#${criterion}")
+                            } else {
+                                plugin.runOnNextTick {
+                                    progress.awardCriteria(criterion)
+                                    plugin.logger.info("Granted advancement ${key}#${criterion} to $playerName")
+                                }
+                            }
+                        }
+                    }
+                }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            player.sendRedMessage(
+                "An error occurred when attempting to fetch your data from dunga-dunga, " +
+                    "and your advancement data could not be imported."
+            )
         }
     }
 }
