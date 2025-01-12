@@ -264,4 +264,6 @@ fun DeckId.fullRunType(): String {
     return runType
 }
 
+fun DeckId.isValidRunType(): Boolean = this.isNotEmpty() && this.shortRunType() in "pc"
+
 fun DeckId.isPractice(): Boolean = this.shortRunType() == "p"

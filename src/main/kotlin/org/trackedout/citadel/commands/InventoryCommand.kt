@@ -16,6 +16,8 @@ import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
 import org.trackedout.citadel.inventory.fullRunType
+import org.trackedout.citadel.inventory.isValidRunType
+import org.trackedout.citadel.inventory.shortRunType
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.citadel.sendRedMessage
@@ -102,7 +104,12 @@ class InventoryCommand(
         }
 
         val target = args[0]
-        val deckType = args[1]
+        val deckType = args[1].shortRunType()
+        if (!deckType.isValidRunType()) {
+            source.sendRedMessage("Invalid deckType: $deckType")
+            return
+        }
+
         plugin.async(source) {
             val cards = inventoryApi.inventoryCardsGet(
                 player = target,
@@ -110,7 +117,7 @@ class InventoryCommand(
                 deckType = deckType,
             ).results!!
 
-            source.sendGreyMessage("Deleting ${cards.size} cards from ${target}'s deck...")
+            source.sendGreyMessage("Deleting ${cards.size} cards from ${target}'s ${deckType.fullRunType()} deck...")
             cards.forEach {
                 inventoryApi.inventoryDeleteCardPost(
                     Card(
@@ -120,7 +127,7 @@ class InventoryCommand(
                     )
                 )
             }
-            source.sendGreenMessage("Deleted ${cards.size} cards from ${target}'s deck!")
+            source.sendGreenMessage("Deleted ${cards.size} cards from ${target}'s ${deckType.fullRunType()} deck!")
         }
     }
 
@@ -154,10 +161,15 @@ class InventoryCommand(
         }
 
         val target = args[0]
-        val deckType = args[1]
+        val deckType = args[1].shortRunType()
+        if (!deckType.isValidRunType()) {
+            source.sendRedMessage("Invalid deckType: $deckType")
+            return
+        }
+
         plugin.async(source) {
             val knownCards = Cards.Companion.Card.entries
-            source.sendGreyMessage("Adding ${knownCards.size} cards to ${target}'s deck...")
+            source.sendGreyMessage("Adding ${knownCards.size} cards to ${target}'s ${deckType.fullRunType()} deck...")
 
             knownCards.forEach {
                 inventoryApi.inventoryAddCardPost(
@@ -170,7 +182,7 @@ class InventoryCommand(
                 )
             }
 
-            source.sendGreenMessage("Added ${knownCards.size} cards to ${target}'s deck!")
+            source.sendGreenMessage("Added ${knownCards.size} cards to ${target}'s ${deckType.fullRunType()} deck!")
         }
     }
 
@@ -183,14 +195,18 @@ class InventoryCommand(
         val target = args[0]
         val cardName = args[1].let {
             try {
-                Cards.cardModelData(it)
-                it
+                Cards.findCard(it)!!.key
             } catch (e: Exception) {
                 source.sendRedMessage("Unknown card: $it")
                 return
             }
         }
-        val deckType = args[1]
+
+        val deckType = args[2].shortRunType()
+        if (!deckType.isValidRunType()) {
+            source.sendRedMessage("Invalid deckType: $deckType")
+            return
+        }
 
         try {
             when (action) {
@@ -203,8 +219,8 @@ class InventoryCommand(
                             server = plugin.serverName,
                         )
                     )
-                    plugin.logger.info("Added $cardName to $target's deck")
-                    source.sendGreenMessage("Added $cardName to $target's deck")
+                    plugin.logger.info("Added $cardName to $target's ${deckType.fullRunType()} deck")
+                    source.sendGreenMessage("Added $cardName to $target's ${deckType.fullRunType()} deck")
                 }
 
                 "remove" -> plugin.async(source) {
@@ -215,15 +231,15 @@ class InventoryCommand(
                             deckType = deckType,
                         )
                     )
-                    plugin.logger.info("Removed $cardName from $target's deck")
-                    source.sendGreenMessage("Removed $cardName from $target's deck")
+                    plugin.logger.info("Removed $cardName from $target's ${deckType.fullRunType()} deck")
+                    source.sendGreenMessage("Removed $cardName from $target's ${deckType.fullRunType()} deck")
                 }
             }
 
         } catch (e: Exception) {
             e.printStackTrace()
-            plugin.logger.severe("Failed to $action $cardName to/from $target's deck. Exception: $e")
-            source.sendRedMessage("Failed to $action $cardName to $target's deck. Exception: $e")
+            plugin.logger.severe("Failed to $action $cardName to/from $target's ${deckType.fullRunType()} deck. Exception: $e")
+            source.sendRedMessage("Failed to $action $cardName to $target's ${deckType.fullRunType()} deck. Exception: $e")
         }
     }
 }
