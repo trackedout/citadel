@@ -233,10 +233,6 @@ class LeaderboardTaskRunner(
         val totalPoints: Int = 0,
     )
 
-    private fun getAverageEmbersPerWin(lifetimeEmbersMap: Map<String, Int>, it: MongoPlayerStats): Int {
-        return lifetimeEmbersMap.getOrDefault(it.player, 0) / max(1, it.stats.competitive.wins)
-    }
-
     // This runs on a tick, so we don't need to schedule a tick task for each block
     private fun setSnowLayers(world: World, x: Int, y: Int, z: Int, layers: Int, shouldAnimate: Boolean = false) {
         // blockIndex = snowLayers / 8 (e.g. 0 for first 8 layers)
@@ -280,7 +276,7 @@ object PageWatcher {
 }
 
 object FirstRun {
-    var showLeaderboard = false
+    var showLeaderboard = true
     var isFirstRun = false
     var skip: Int = 0
 }
