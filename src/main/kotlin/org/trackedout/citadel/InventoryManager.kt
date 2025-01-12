@@ -1,5 +1,6 @@
 package org.trackedout.citadel
 
+import org.bukkit.GameRule
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.advancement.Advancement
@@ -228,40 +229,60 @@ class InventoryManager(
                 limit = 10000,
             )
 
-            scores.results!!
-                .asSequence()
-                .filter { it.key!!.startsWith(advancementFilter) }
-                .map { it.copy(key = it.key?.substring(advancementFilter.length)) }
-                .filter { it.key!!.isNotBlank() && it.key!!.contains("#") }
-                .filter { it.key!!.contains("hidden") || it.key!!.contains("visible") }
-                .filter { it.value!!.toInt() > 0 }
-                .toList()
-                .forEach { score ->
-                    // e.g. competitive-advancement-do2#hidden/survival/win_50_times#given_by_commands
-                    val split = score.key!!.split("#")
-                    var namespace = "do2"
-                    var key = split[0]
-                    var criterion = split[1]
-
-                    if (split.size == 3) {
-                        namespace = split[0]
-                        key = split[1]
-                        criterion = split[2]
-                    }
-
-                    server.getAdvancement(NamespacedKey(namespace, key))?.let { advancement: Advancement ->
+            plugin.runOnNextTick {
+                try {
+                    // If this is the first time the player has logged in, we don't want to spam everyone with advancements
+                    server.getAdvancement(NamespacedKey("do2", "visible/cards/get_deck_box"))?.let { advancement: Advancement ->
                         player.getAdvancementProgress(advancement).let { progress ->
-                            if (progress.isDone || progress.awardedCriteria.contains(criterion)) {
-                                plugin.logger.info("$playerName already has advancement ${key}#${criterion}")
-                            } else {
-                                plugin.runOnNextTick {
-                                    progress.awardCriteria(criterion)
-                                    plugin.logger.info("Granted advancement ${key}#${criterion} to $playerName")
-                                }
+                            if (!progress.isDone) {
+                                plugin.logger.info("Preventing advancement spam")
+                                player.world.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false)
                             }
                         }
                     }
+
+                    scores.results!!
+                        .asSequence()
+                        .filter { it.key!!.startsWith(advancementFilter) }
+                        .map { it.copy(key = it.key?.substring(advancementFilter.length)) }
+                        .filter { it.key!!.isNotBlank() && it.key!!.contains("#") }
+                        .filter { it.key!!.contains("hidden") || it.key!!.contains("visible") }
+                        .filter { it.value!!.toInt() > 0 }
+                        .toList()
+                        .forEach { score ->
+                            // e.g. competitive-advancement-do2#hidden/survival/win_50_times#given_by_commands
+                            val split = score.key!!.split("#")
+                            var namespace = "do2"
+                            var key = split[0]
+                            var criterion = split[1]
+
+                            if (split.size == 3) {
+                                namespace = split[0]
+                                key = split[1]
+                                criterion = split[2]
+                            }
+
+                            server.getAdvancement(NamespacedKey(namespace, key))?.let { advancement: Advancement ->
+                                player.getAdvancementProgress(advancement).let { progress ->
+                                    if (progress.isDone || progress.awardedCriteria.contains(criterion)) {
+                                        plugin.logger.info("$playerName already has advancement ${key}#${criterion}")
+                                    } else {
+                                        progress.awardCriteria(criterion)
+                                        plugin.logger.info("Granted advancement ${key}#${criterion} to $playerName")
+                                    }
+                                }
+                            }
+                        }
+
+                    player.world.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, true)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    player.sendRedMessage(
+                        "An error occurred when attempting to apply your data from dunga-dunga, " +
+                            "and your advancement data could not be imported."
+                    )
                 }
+            }
 
         } catch (e: Exception) {
             e.printStackTrace()
