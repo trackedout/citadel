@@ -18,6 +18,7 @@ import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoEvent
 import org.trackedout.citadel.mongo.MongoPlayer
 import org.trackedout.citadel.runOnNextTick
+import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.models.Event
@@ -79,7 +80,19 @@ class SpectateCommand(
                     ).toList()
 
                     gameStartedEvents.firstOrNull()?.let {
-                        games += Game(mongoPlayer.playerName, server, runId, runType, deckId)
+                        val gameEndedEvents = eventCollection.find(
+                            Filters.and(
+                                eq("player", mongoPlayer.playerName),
+                                eq("name", "game-ended"),
+                                eq("metadata.run-id", runId),
+                            )
+                        ).toList()
+
+                        if (gameEndedEvents.isEmpty()) {
+                            games += Game(mongoPlayer.playerName, server, runId, runType, deckId)
+                        } else {
+                            plugin.logger.info("Game has already ended for $claim")
+                        }
                     } ?: plugin.logger.warning("Did not find game-started event for $claim")
                 } ?: plugin.logger.warning("Did not find claim for ${mongoPlayer.playerName}")
             }
@@ -94,6 +107,7 @@ class SpectateCommand(
             if (source is Player) {
                 val spectatePlayerFunc = BiConsumer<Player, Game> { player, game ->
                     plugin.async(source) {
+                        player.sendGreenMessage("You can use /lobby to return to the lobby")
                         val out = ByteStreams.newDataOutput()
                         listOf("Connect", game.server).forEach(out::writeUTF)
                         player.sendPluginMessage(plugin, "BungeeCord", out.toByteArray())
