@@ -36,10 +36,13 @@ class InventoryManager(
         cleanUpOldItems(player)
 
         plugin.async(player) {
-            plugin.logger.info("Fetching scores for ${player.name}")
-            var scores = scoreApi.scoresGet(player = player.name).results!!
+            plugin.logger.info("Fetching scores for ${player.name} (filtering for prefixes: ${tradeSourceScores})")
+            var scores = scoreApi.getInventoryRelatedScores(player.name)
 
-            scores = ensurePlayerHasPracticeShards(player, scores)
+            if (ensurePlayerHasPracticeShards(player, scores)) {
+                // Update scores again to reflect new shard count
+                scores = scoreApi.getInventoryRelatedScores(player.name)
+            }
 
             scores.filter(::isInventoryRelatedScore)
                 .forEach { score ->
@@ -92,9 +95,7 @@ class InventoryManager(
 
     }
 
-    private fun ensurePlayerHasPracticeShards(player: Player, currentScores: List<Score>): List<Score> {
-        var scores = currentScores
-
+    private fun ensurePlayerHasPracticeShards(player: Player, scores: List<Score>): Boolean {
         tradeItems["SHARD"]?.let { tradeItem ->
             scores.find { score -> score.key == tradeItem.sourceScoreboardName("practice") }?.let { score ->
                 if (score.value!!.toInt() <= 10) {
@@ -127,12 +128,12 @@ class InventoryManager(
                         )
                     )
 
-                    scores = scoreApi.scoresGet(player = player.name).results!!
+                    return true
                 }
             }
         }
 
-        return scores
+        return false
     }
 
     private fun zeroSupportedItemCount(count: Int) = if (count <= 0) 999 else count
@@ -294,12 +295,21 @@ class InventoryManager(
     }
 }
 
-fun isInventoryRelatedScore(score: Score): Boolean {
-    val key = score.key!!
+val tradeSourceScores = baseTradeItems.values.flatMap {
+    listOf(
+        it.sourceScoreboardName("competitive"),
+        it.sourceScoreboardName("practice"),
+        it.sourceInversionScoreboardName("competitive"),
+        it.sourceInversionScoreboardName("practice"),
+    )
+}.filterNot { it.isBlank() }.distinct()
 
-    val tradeSourceScores = baseTradeItems.values.flatMap {
-        listOf(it.sourceScoreboardName("competitive"), it.sourceScoreboardName("practice"))
+fun ScoreApi.getInventoryRelatedScores(playerName: String): List<Score> {
+    return tradeSourceScores.flatMap {
+        this.scoresGet(playerName, prefixFilter = it).results!!
     }
+}
 
-    return tradeSourceScores.contains(key)
+fun isInventoryRelatedScore(score: Score): Boolean {
+    return tradeSourceScores.contains(score.key!!)
 }

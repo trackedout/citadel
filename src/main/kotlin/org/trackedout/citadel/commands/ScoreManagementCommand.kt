@@ -11,6 +11,7 @@ import org.bukkit.command.CommandSender
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
+import org.trackedout.citadel.getInventoryRelatedScores
 import org.trackedout.citadel.inventory.Trade
 import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.citadel.inventory.shortRunType
@@ -45,7 +46,7 @@ class ScoreManagementCommand(
 
         val playerName = args[0]
         plugin.async(source) {
-            val scores = scoreApi.scoresGet(player = playerName).results!!
+            val scores = scoreApi.getInventoryRelatedScores(playerName)
 
             val applicableScores = scores.filter(::isInventoryRelatedScore)
             if (applicableScores.isEmpty()) {

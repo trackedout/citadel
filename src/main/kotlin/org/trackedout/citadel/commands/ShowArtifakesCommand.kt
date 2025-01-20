@@ -50,7 +50,7 @@ class ShowArtifakesCommand(
 
     private fun showArtifakeUIForPlayer(source: CommandSender, playerName: String) {
         plugin.async(source) {
-            val scores = scoreApi.scoresGet(player = playerName).results!!
+            val scores = scoreApi.scoresGet(playerName, prefixFilter = "competitive-do2.artifakes.").results!!
 
             val artifactConfig = loadArtifactConfig()
 
