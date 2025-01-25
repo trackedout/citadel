@@ -4,15 +4,22 @@ import com.saicone.rtag.RtagItem
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.TextComponent
 import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.Material
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.HumanEntity
+import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.inventory.DeckId
 import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.data.Cards
 
 val debugTag = "debug"
+
+fun Player.sendMiniMessage(message: String) {
+    val parsed = MiniMessage.miniMessage().deserialize(message)
+    this.sendMessage(parsed)
+}
 
 fun CommandSender.sendGreenMessage(message: String) {
     this.sendMessage(Component.text().color(NamedTextColor.GREEN).content(message).build())

@@ -63,7 +63,7 @@ class ScheduledTaskRunner(
                         "message-player" -> {
                             val targetPlayer = plugin.server.worlds.find { it.name == "world" }?.players?.find { it.name == task.targetPlayer }
                             if (targetPlayer != null) {
-                                task.arguments?.forEach(targetPlayer::sendMessage)
+                                task.arguments?.forEach(targetPlayer::sendMiniMessage)
                             } else {
                                 val message = "Task type is '${task.type}' which targets a player, but the player was not found"
                                 plugin.logger.warning(message)
