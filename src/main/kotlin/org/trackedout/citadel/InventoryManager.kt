@@ -266,10 +266,10 @@ class InventoryManager(
                             server.getAdvancement(NamespacedKey(namespace, key))?.let { advancement: Advancement ->
                                 player.getAdvancementProgress(advancement).let { progress ->
                                     if (progress.isDone || progress.awardedCriteria.contains(criterion)) {
-                                        plugin.logger.info("$playerName already has advancement ${key}#${criterion}")
+//                                        plugin.logger.info("$playerName already has advancement ${key}#${criterion}")
                                     } else {
                                         progress.awardCriteria(criterion)
-                                        plugin.logger.info("Granted advancement ${key}#${criterion} to $playerName")
+//                                        plugin.logger.info("Granted advancement ${key}#${criterion} to $playerName")
                                     }
                                 }
                             }
