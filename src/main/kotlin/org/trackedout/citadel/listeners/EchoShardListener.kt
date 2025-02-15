@@ -172,7 +172,7 @@ class EchoShardListener(
          */
 
         // Lobby is running on UTC time
-        val phase5StartDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse("2025-02-01T16:00:00")
+        val phase6StartDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse("2025-02-15T16:00:00")
         val fullRunType = runType.fullRunType().lowercase()
         val filter = Filters.and(
             eq("name", "trade-requested"),
@@ -180,7 +180,7 @@ class EchoShardListener(
             eq("metadata.run-type", fullRunType),
             eq("metadata.source-scoreboard", "$fullRunType-do2.lifetime.escaped.crowns"),
             eq("metadata.target-scoreboard", "do2.inventory.shards.$fullRunType"),
-            gte("createdAt", phase5StartDate)
+            gte("createdAt", phase6StartDate)
         )
 
         val group = Aggregates.group(
