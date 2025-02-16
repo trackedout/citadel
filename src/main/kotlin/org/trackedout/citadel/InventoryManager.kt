@@ -8,12 +8,14 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.commands.GiveShulkerCommand.Companion.createCard
 import org.trackedout.citadel.commands.ScoreManagementCommand
+import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.inventory.ScoreboardDescriber
 import org.trackedout.citadel.inventory.Trade
 import org.trackedout.citadel.inventory.baseTradeItems
 import org.trackedout.citadel.inventory.competitiveDeck
 import org.trackedout.citadel.inventory.fullRunType
 import org.trackedout.citadel.inventory.intoDungeonItems
+import org.trackedout.citadel.inventory.oldCards
 import org.trackedout.citadel.inventory.oldDungeonItem
 import org.trackedout.citadel.inventory.practiceDeck
 import org.trackedout.citadel.inventory.shortRunType
@@ -24,7 +26,7 @@ import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Event
 import org.trackedout.client.models.Score
-import org.trackedout.data.Cards
+import org.trackedout.data.sortedList
 
 class InventoryManager(
     private val plugin: Citadel,
@@ -34,6 +36,7 @@ class InventoryManager(
 ) {
     fun updateInventoryBasedOnScore(player: Player) {
         cleanUpOldItems(player)
+        removeLegacyCardsFromInventory(player)
 
         plugin.async(player) {
             plugin.logger.info("Fetching scores for ${player.name} (filtering for prefixes: ${tradeSourceScores})")
@@ -66,13 +69,13 @@ class InventoryManager(
         ScoreManagementCommand.RunTypes.entries.forEach { runType ->
 
             // Check cards against contents of player's deck
-            Cards.Companion.Card.entries.sortedBy { it.colour + it.key }.forEach { card ->
+            cardConfig.sortedList().forEach { card ->
                 val maxCardsThatShouldBeInInventory = deckItems.count {
-                    it.name == card.key && it.deckType == runType.runType.shortRunType() && it.hiddenInDecks?.isNotEmpty() == true
+                    it.name == card.shorthand && it.deckType == runType.runType.shortRunType() && it.hiddenInDecks?.isNotEmpty() == true
                 }
 
-                plugin.logger.info("${player.name} should have ${maxCardsThatShouldBeInInventory}x${card.key} in their inventory (runType: ${runType.runType})")
-                val itemStack = createCard(plugin, null, card.key, 1, "${runType.runType.shortRunType()}1")
+                plugin.logger.fine("${player.name} should have ${maxCardsThatShouldBeInInventory}x${card.shorthand} in their inventory (runType: ${runType.runType})")
+                val itemStack = createCard(plugin, null, card.shorthand, 1, "${runType.runType.shortRunType()}1")
 
                 itemStack?.let {
                     player.ensureInventoryContains(it.clone().apply { amount = zeroSupportedItemCount(maxCardsThatShouldBeInInventory) })
@@ -84,7 +87,7 @@ class InventoryManager(
                 val maxItemsThatShouldBeInInventory = deckItems.count {
                     it.name == itemKey && it.deckType == runType.runType.shortRunType() && it.hiddenInDecks?.isNotEmpty() == true
                 }
-                plugin.logger.info("${player.name} should have ${maxItemsThatShouldBeInInventory}x${itemKey} in their inventory (runType: ${runType.runType})")
+                plugin.logger.fine("${player.name} should have ${maxItemsThatShouldBeInInventory}x${itemKey} in their inventory (runType: ${runType.runType})")
                 val itemStack = scoreboardDescriber.itemStack(runType.runType, 1)
 
                 itemStack.let {
@@ -144,11 +147,26 @@ class InventoryManager(
             baseTradeItems.plus(intoDungeonItems).values.forEach { trade ->
                 val itemStack = trade.itemStack(runType, 0)
                 if (!listOf(Material.AIR, Material.STICK).contains(itemStack.type)) {
-                    player.ensureInventoryContains(itemStack.oldDungeonItem())
+                    val oldDungeonItem = itemStack.oldDungeonItem()
+                    player.ensureInventoryContains(oldDungeonItem)
                 }
             }
         }
         plugin.logger.info("Finished cleaning up old items")
+    }
+
+    private fun removeLegacyCardsFromInventory(player: Player) {
+        plugin.logger.info("Cleaning up legacy cards for ${player.name}")
+        for (runType in listOf("practice", "competitive")) {
+            oldCards().values.forEach { trade ->
+                val itemStack = trade.itemStack(runType, 999)
+                plugin.logger.fine("Cleaning up old card: $itemStack")
+                if (!listOf(Material.AIR, Material.STICK).contains(itemStack.type)) {
+                    player.ensureInventoryContains(itemStack)
+                }
+            }
+        }
+        plugin.logger.info("Finished cleaning up legacy cards for ${player.name}")
     }
 
     private fun updatePlayerInventoryForState(player: Player, scores: Map<String, Int>, key: String, value: Int) {
@@ -186,9 +204,16 @@ class InventoryManager(
 
     private fun Player.ensureInventoryContains(itemStack: ItemStack) {
         val targetAmount = if (itemStack.amount == 999) 0 else itemStack.amount
-        plugin.logger.info("Ensuring ${this.name} has ${targetAmount}x ${itemStack.type.name} (name: ${itemStack.name()})")
+        plugin.logger.fine("Ensuring ${this.name} has ${targetAmount}x ${itemStack.type.name} (name: ${itemStack.name()})")
 
         var attempts = 0
+
+        // Offhand stacks are not counted in the main inventory, which allows for unwanted duplication
+        // So we just remove the offhand stack if it matches the item we're trying to add
+        if (inventory.itemInOffHand.isSimilar(itemStack)) {
+            inventory.itemInOffHand.amount = 0
+        }
+
         while (inventory.containsAtLeast(itemStack, targetAmount + 1)) {
             plugin.logger.fine("Removing item $itemStack")
             inventory.removeItemAnySlot(itemStack.clone().apply { amount = 1 })
@@ -205,7 +230,7 @@ class InventoryManager(
 
         for (i in targetAmount - 1 downTo 0) {
             if (inventory.containsAtLeast(itemStack, i) || i == 0) {
-                plugin.logger.info("Adding item ${itemStack}x${targetAmount - i}")
+                plugin.logger.fine("Adding item ${itemStack}x${targetAmount - i}")
                 val failedItems = inventory.addItem(itemStack.clone().apply { amount = targetAmount - i })
                 if (failedItems.isNotEmpty()) {
                     plugin.logger.warning("$failedItems items failed to be added to ${this.name}'s inventory")

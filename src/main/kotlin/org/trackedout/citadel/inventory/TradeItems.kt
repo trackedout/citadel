@@ -172,3 +172,37 @@ fun cardDescribers(): Map<String, ScoreboardDescriber> {
         }
     }
 }
+
+fun oldCards(): Map<String, ScoreboardDescriber> {
+    return Cards.Companion.Card.entries.associate { card ->
+        card.key.uppercase() to object : ScoreboardDescriber {
+            override fun sourceScoreboardName(runType: String): String {
+                return ""
+            }
+
+            override fun itemStack(runType: String, count: Int): ItemStack {
+                val nugget = ItemStack(Material.IRON_NUGGET, count)
+
+                val cardItem = Cards.findCard(card.key)?.let {
+                    return@let RtagItem.edit(nugget, fun(tag: RtagItem): ItemStack {
+                        tag.customModelData = it.modelData
+                        val nameJson = "{\"color\":\"${it.colour}\",\"text\":\"${it.displayName}\"}"
+                        tag.set(nameJson, "display", "Name")
+                        tag.set("{\"color\":\"${it.colour}\",\"OriginalName\":\"${nameJson}\"}", "display", "NameFormat");
+                        tag.set("${runType.shortRunType()}1", "deckId")
+
+                        return tag.load()
+                    })
+                }
+
+                if (cardItem == null) {
+                    logger.warn("Failed to create legacy card item for ${card.key}")
+                    return nugget
+                } else {
+                    logger.debug("Created legacy card item for ${card.key} with count $count: $cardItem")
+                    return cardItem
+                }
+            }
+        }
+    }
+}
