@@ -7,6 +7,7 @@ import co.aikar.commands.annotation.Default
 import co.aikar.commands.annotation.Dependency
 import co.aikar.commands.annotation.Description
 import com.saicone.rtag.RtagItem
+import com.saicone.rtag.tag.TagCompound
 import org.bukkit.Material
 import org.bukkit.block.ShulkerBox
 import org.bukkit.entity.Player
@@ -14,6 +15,7 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.BlockStateMeta
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
+import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.isDeckedOutShulker
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
@@ -21,7 +23,7 @@ import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Card
-import org.trackedout.data.Cards
+import org.trackedout.data.find
 
 const val DECK_NAME = "{\"text\":\"❄☠ Frozen Assets ☠❄\"}"
 
@@ -116,30 +118,32 @@ class GiveShulkerCommand(
     }
 
     companion object {
-        fun createCard(plugin: Citadel?, player: Player?, cardName: String, count: Int, deckId: String? = null): ItemStack? {
+        fun createCard(plugin: Citadel?, player: Player?, cardKey: String, count: Int, deckId: String? = null): ItemStack? {
             try {
                 val nugget = ItemStack(Material.IRON_NUGGET, count)
-                val card = Cards.findCard(cardName)?.let {
+                val card = cardConfig.find(cardKey)?.let {
                     return@let RtagItem.edit(nugget, fun(tag: RtagItem): ItemStack {
-                        tag.setCustomModelData(it.modelData)
-                        val nameJson = "{\"color\":\"${it.colour}\",\"text\":\"${it.displayName}\"}"
-                        tag.set(nameJson, "display", "Name")
-                        tag.set("{\"color\":\"${it.colour}\",\"OriginalName\":\"${nameJson}\"}", "display", "NameFormat");
+
+                        tag.merge(TagCompound.newTag(it.tagRaw), true)
+                        it.lore?.let { lore ->
+                            tag.set(lore, "display", "Lore")
+                        }
                         deckId?.let { deckIdValue -> tag.set(deckIdValue, "deckId") }
+                        tag.set(it.shorthand, "shorthand")
 
                         return tag.loadCopy()
                     })
                 }
 
                 if (card == null) {
-                    player?.sendRedMessage("Failed to add $cardName to your shulker as it's metadata is missing")
-                    plugin?.logger?.warning("Failed to add $cardName to your shulker as card data for this card was not found")
+                    player?.sendRedMessage("Failed to add $cardKey to your shulker as it's metadata is missing")
+                    plugin?.logger?.warning("Failed to add $cardKey to your shulker as card data for this card was not found")
                 }
 
                 return card
             } catch (e: Exception) {
-                player?.sendRedMessage("Failed to add $cardName to your shulker, error: ${e.message}")
-                plugin?.logger?.warning("Failed to add $cardName to your shulker, error: ${e.message}")
+                player?.sendRedMessage("Failed to add $cardKey to your shulker, error: ${e.message}")
+                plugin?.logger?.warning("Failed to add $cardKey to your shulker, error: ${e.message}")
                 e.printStackTrace()
                 return null
             }

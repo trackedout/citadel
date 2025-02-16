@@ -15,6 +15,7 @@ import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
+import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.inventory.fullRunType
 import org.trackedout.citadel.inventory.isValidRunType
 import org.trackedout.citadel.inventory.shortRunType
@@ -24,7 +25,8 @@ import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Card
-import org.trackedout.data.Cards
+import org.trackedout.data.find
+import org.trackedout.data.sortedList
 
 @CommandAlias("decked-out|do")
 class InventoryCommand(
@@ -85,10 +87,22 @@ class InventoryCommand(
                 deckId = "1",
             ).results!!
 
+            val knownCards = cardConfig.sortedList()
             cards.map { it.deckType }.distinct().forEach { deckType ->
-                val cardCount = cards.filter { it.deckType == deckType }.sortedBy { it.name }.groupingBy { it.name!! }.eachCount()
-                source.sendGreenMessage("${target}'s ${deckType?.fullRunType()} deck contains ${cardCount.values.sum()} cards:")
-                cardCount.forEach { (cardName, count) -> source.sendGreyMessage("${count}x $cardName") }
+                val cardsForRunType = cards.filter { it.deckType == deckType }
+                source.sendGreenMessage("${target}'s ${deckType?.fullRunType()} deck contains ${cardsForRunType.size} cards:")
+
+                knownCards.forEach {
+                    var textColor = it.tag.nameFormat?.color?.let(TextColor::fromHexString)
+                    if (textColor == null) {
+                        textColor = TextColor.color(NamedTextColor.GRAY)
+                    }
+
+                    val count = cardsForRunType.count { card -> card.name == it.shorthand }
+                    if (count > 0) {
+                        source.sendMessage(Component.text().color(textColor).content("${count}x ${it.name}").build())
+                    }
+                }
             }
         }
     }
@@ -136,17 +150,16 @@ class InventoryCommand(
     @CommandPermission("decked-out.inventory.list-known")
     @Description("List all known Decked Out 2 cards")
     fun listAllKnownCards(player: Player) {
-        val knownCards = Cards.Companion.Card.entries.sortedBy { it.colour }.reversed()
+        val knownCards = cardConfig.sortedList()
         player.sendGreenMessage("Decked Out 2 has the following cards:")
         knownCards.forEach {
-            var textColor = TextColor.fromHexString(it.colour)
-            if (textColor == null) {
-                textColor = NamedTextColor.NAMES.value(it.colour)
-            }
+            var textColor = it.tag.nameFormat?.color?.let(TextColor::fromHexString)
             if (textColor == null) {
                 textColor = TextColor.color(NamedTextColor.GRAY)
             }
-            player.sendMessage(Component.text().color(textColor).content("- ${it.displayName}").build())
+
+//            val content = "- ${it.name}${it.emberValue?.let { cost -> " ($cost embers)" } ?: ""}"
+            player.sendMessage(Component.text().color(textColor).content(it.name).build())
         }
     }
 
@@ -168,14 +181,14 @@ class InventoryCommand(
         }
 
         plugin.async(source) {
-            val knownCards = Cards.Companion.Card.entries
+            val knownCards = cardConfig.values.map { it.shorthand }
             source.sendGreyMessage("Adding ${knownCards.size} cards to ${target}'s ${deckType.fullRunType()} deck...")
 
             knownCards.forEach {
                 inventoryApi.inventoryAddCardPost(
                     Card(
                         player = target,
-                        name = it.key,
+                        name = it,
                         deckType = deckType,
                         server = plugin.serverName,
                     )
@@ -195,7 +208,7 @@ class InventoryCommand(
         val target = args[0]
         val cardName = args[1].let {
             try {
-                Cards.findCard(it)!!.key
+                cardConfig.find(it)!!.shorthand
             } catch (e: Exception) {
                 source.sendRedMessage("Unknown card: $it")
                 return

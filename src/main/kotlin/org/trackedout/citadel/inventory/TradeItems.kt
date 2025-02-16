@@ -1,8 +1,11 @@
 package org.trackedout.citadel.inventory
 
+import com.saicone.rtag.RtagItem
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
+import org.trackedout.citadel.config.cardConfig
 import org.trackedout.data.Cards
+import org.trackedout.fs.logger
 
 interface ScoreboardDescriber {
     fun sourceScoreboardName(runType: String): String
@@ -138,19 +141,6 @@ val intoDungeonItems: Map<String, ScoreboardDescriber> = mapOf(
         }
     },
 
-//    "CROWN" to object : ScoreboardDescriber {
-//        override fun sourceScoreboardName(runType: String): String {
-//            return ""
-//        }
-//
-//        override fun itemStack(runType: String, count: Int): ItemStack {
-//            return when (runType) {
-//                "competitive" -> competitiveCrown(count)
-//                else -> competitiveCrown(count)
-//            }
-//        }
-//    },
-
     "RUSTY_REPAIR_KIT" to object : ScoreboardDescriber {
         override fun sourceScoreboardName(runType: String): String {
             return ""
@@ -170,8 +160,8 @@ val tradeItems = baseTradeItems.plus(cardDescribers()).plus(intoDungeonItems)
 
 
 fun cardDescribers(): Map<String, ScoreboardDescriber> {
-    return Cards.Companion.Card.entries.associate {
-        it.key.uppercase() to object : ScoreboardDescriber {
+    return cardConfig.entries.associate {
+        it.key to object : ScoreboardDescriber {
             override fun sourceScoreboardName(runType: String): String {
                 return ""
             }

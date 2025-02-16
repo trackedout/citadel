@@ -10,9 +10,11 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.HumanEntity
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.inventory.DeckId
 import org.trackedout.citadel.inventory.intoDungeonItems
-import org.trackedout.data.Cards
+import org.trackedout.data.BrillianceCard
+import org.trackedout.data.find
 
 val debugTag = "debug"
 
@@ -67,22 +69,34 @@ fun ItemStack.isTradeItem(): Boolean = RtagItem(this).let { it.hasTag("tradeId")
 
 fun ItemStack.getTradeId(): String? = RtagItem(this).get<String>("tradeId")
 
+fun ItemStack.getShorthand(): String? = RtagItem(this).get<String>("shorthand")
+
 fun ItemStack.canTakeIntoDungeon(): Boolean = RtagItem(this).let { it.hasTag("canTakeIntoDungeon") && it.get<String>("canTakeIntoDungeon") == "1" }
 
 fun ItemStack.isDeckedOutCard(): Boolean {
+    this.getShorthand()?.let {
+        return cardConfig.find(it) !== null || intoDungeonItems.keys.contains(it)
+    }
+
     if (this.itemMeta?.displayName() is TextComponent?) {
         val text = this.itemMeta?.displayName() as TextComponent?
         val name = text?.content()
-        return Cards.findCard(name ?: "") !== null || intoDungeonItems.keys.contains(name ?: "")
+        return cardConfig.find(name ?: "") !== null || intoDungeonItems.keys.contains(name ?: "")
     }
 
     return false
 }
 
-fun ItemStack.getCard(): Cards.Companion.Card? {
+fun ItemStack.getCard(): BrillianceCard? {
+    this.getShorthand()?.let {
+        cardConfig.find(it)?.let { card ->
+            return card
+        }
+    }
+
     if (this.itemMeta?.displayName() is TextComponent?) {
         val text = this.itemMeta?.displayName() as TextComponent?
-        return text?.content()?.let { Cards.findCard(it) }
+        return text?.content()?.let { cardConfig.find(it) }
     }
 
     return null

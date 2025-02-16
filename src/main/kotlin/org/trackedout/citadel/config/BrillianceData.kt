@@ -3,12 +3,17 @@ package org.trackedout.citadel.config
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
 import net.kyori.adventure.text.serializer.json.JSONComponentSerializer
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
+import org.trackedout.data.BrillianceCard
+import org.trackedout.listeners.json
+
+val json = Json { ignoreUnknownKeys = true }
 
 typealias ArtifactConfig = HashMap<String, ArtifactConfigValue>
 
@@ -21,19 +26,16 @@ data class ArtifactConfigValue(
 
 @Serializable
 data class Tag(
-    @SerialName("CustomModelData")
-    val customModelData: Int,
+    @SerialName("CustomModelData") val customModelData: Int,
 
     val display: Display,
 )
 
 @Serializable
 data class Display(
-    @SerialName("Lore")
-    val lore: List<String>,
+    @SerialName("Lore") val lore: List<String>,
 
-    @SerialName("Name")
-    val name: String,
+    @SerialName("Name") val name: String,
 )
 
 fun String.cleanDataPackEscaping(): String {
@@ -66,9 +68,18 @@ fun ArtifactConfigValue.itemStackNotYetAcquired(itemCount: Int = 1): ItemStack {
 }
 
 fun loadArtifactConfig(): ArtifactConfig? {
-    // Load the JSON file content
     return object {}.javaClass.getResource("/items_json/Artifacts.json")?.readText()?.let {
-        // Deserialize the JSON content into the ArtifactConfig type
-        Json.decodeFromString(it)
+        json.decodeFromString(it)
     }
+}
+
+val cardConfig: Map<String, BrillianceCard> by lazy {
+    object {}.javaClass.getResource("/items_json/Cards.json")?.readText()?.let {
+        val jsonElement = json.parseToJsonElement(it).jsonObject
+        jsonElement.mapValues { (_, value) ->
+            val rawTag = value.jsonObject["tag"]?.toString() ?: error("Missing tag field")
+            val brillianceCard = json.decodeFromJsonElement(BrillianceCard.serializer(), value)
+            brillianceCard.copy(tagRaw = rawTag)
+        }
+    } ?: emptyMap()
 }

@@ -12,13 +12,14 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
+import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.ADD_CARD_FUNC
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.DELETE_CARD_FUNC
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.JOIN_QUEUE_FUNC
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.models.Card
-import org.trackedout.data.Cards
+import org.trackedout.data.find
 import java.util.function.BiConsumer
 import java.util.function.Consumer
 
@@ -138,9 +139,10 @@ class ShopView : View() {
                     var sendTradeMessage = true
                     var sendToDummy = false
                     var eventToSend: (count: Int) -> Unit = {}
-                    if (Cards.Companion.Card.entries.map { it.key.lowercase() }.contains(targetType.lowercase())) {
+                    if (cardConfig.find(targetType) != null) {
                         println("Target type is a card: $targetType")
-                        val targetCard = targetType.lowercase()
+                        val card = cardConfig.find(targetType)!!
+                        val targetCard = card.shorthand
                         val cardsToAdd = targetCount
                         sendTradeMessage = false
                         sendToDummy = true
@@ -237,10 +239,14 @@ class ShopView : View() {
             e.printStackTrace()
         }
 
-        (0 until inventory.size).map(inventory::getItem).filter { it != null && it.type != Material.AIR }.map { it!! }.forEach { item: ItemStack ->
-            println("Inventory contains: ${item.type}x${item.amount} - returning it to player")
-            player.inventory.addItem(item)
-        }
+        (0 until inventory.size)
+            .map(inventory::getItem)
+            .filter { it != null && it.type != Material.AIR }
+            .map { it!! }
+            .forEach { item: ItemStack ->
+                println("Inventory contains: ${item.type}x${item.amount} - returning it to player")
+                player.inventory.addItem(item)
+            }
     }
 
     private fun itemStackForSource(runType: String, sourceType: String, sourceCount: Int): ItemStack? {

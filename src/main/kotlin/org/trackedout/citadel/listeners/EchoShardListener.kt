@@ -538,11 +538,11 @@ class EchoShardListener(
 
         plugin.async(player) {
             for (i in 1..it.amount) {
-                plugin.logger.info("Deleting ${card.key} (loop iteration ${i})")
+                plugin.logger.info("Deleting ${card.shorthand} (loop iteration ${i})")
                 inventoryApi.inventoryDeleteCardPost(
                     Card(
                         player = player.name,
-                        name = card.key,
+                        name = card.shorthand,
                         deckType = deckType,
                         server = plugin.serverName,
                     )

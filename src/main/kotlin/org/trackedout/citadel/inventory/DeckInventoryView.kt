@@ -12,13 +12,15 @@ import org.bukkit.Sound
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.canTakeIntoDungeon
 import org.trackedout.citadel.commands.GiveShulkerCommand.Companion.createCard
+import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.getCard
 import org.trackedout.citadel.getDeckId
 import org.trackedout.citadel.getTradeId
 import org.trackedout.citadel.isDeckedOutCard
 import org.trackedout.citadel.preventRemoval
 import org.trackedout.client.models.Card
-import org.trackedout.data.Cards
+import org.trackedout.data.BrillianceCard
+import org.trackedout.data.sortedList
 import java.util.function.BiConsumer
 
 open class DeckInventoryView : DeckManagementView() {
@@ -53,6 +55,8 @@ open class DeckInventoryView : DeckManagementView() {
             .filter { it.getDeckId() != deckId || (!it.canTakeIntoDungeon() && !it.isDeckedOutCard()) }
             .forEach { item: ItemStack ->
                 plugin[event].logger.info("Inventory contains: ${item.type}x${item.amount} - returning it to ${player.name}")
+                plugin[event].logger.info("Item: $item")
+                plugin[event].logger.info("DeckId: ${item.getDeckId()} - Can take into dungeon: ${item.canTakeIntoDungeon()} - Is Decked Out card: ${item.isDeckedOutCard()}")
                 player.inventory.addItem(item)
             }
 
@@ -68,15 +72,15 @@ open class DeckInventoryView : DeckManagementView() {
             .map {
                 it!!.getCard()!! to player.inventory
                     .filter { card -> card != null && card.isDeckedOutCard() && card.getDeckId() == deckId }
-                    .filter { p -> p?.getCard()?.name == it.getCard()?.name }.sumOf { p -> p.amount }
+                    .filter { p -> p?.getCard()?.shorthand == it.getCard()?.shorthand }.sumOf { p -> p.amount }
             }
-            .onEach { pair: Pair<Cards.Companion.Card, Int> ->
+            .onEach { pair: Pair<BrillianceCard, Int> ->
                 val card = pair.first
                 val amount = pair.second
-                plugin[event].logger.info("${player.name}'s inventory contains ${amount}x${card.name} - hiding it from Deck $deckId")
+                plugin[event].logger.info("${player.name}'s inventory contains ${amount}x${card.tag.display.name} - hiding it from Deck $deckId")
             }
             .associate {
-                it.first.key to it.second
+                it.first.shorthand to it.second
             }
 
         // For each item in the player's inventory, hide it from the deck
@@ -123,13 +127,13 @@ open class DeckInventoryView : DeckManagementView() {
                 .onClick { _: StateValueHost? -> render.openForPlayer(AddACardView::class.java, getContext(render)) }
         }
 
-        Cards.Companion.Card.entries.sortedBy { it.colour + it.key }.forEach { cardDefinition ->
-            val count = cards.count { it.name == cardDefinition.key }
+        cardConfig.sortedList().forEach { cardDefinition ->
+            val count = cards.count { it.name == cardDefinition.shorthand }
             if (count == 0) {
                 return@forEach
             }
 
-            val itemStack = createCard(null, null, cardDefinition.key, count, deckId)
+            val itemStack = createCard(null, null, cardDefinition.shorthand, count, deckId)
 
             itemStack?.let {
                 val slot = render.availableSlot(it)

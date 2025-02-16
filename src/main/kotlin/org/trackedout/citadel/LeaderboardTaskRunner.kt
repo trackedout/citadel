@@ -64,7 +64,7 @@ class LeaderboardTaskRunner(
 
             val startIndex = maxPerPage * PageWatcher.page
             val upperIndex = min(startIndex + maxPerPage, activePlayers.size)
-            plugin.logger.info("Active players: ${activePlayers.size}, showing $startIndex to $upperIndex (page ${PageWatcher.page + 1}/${pages})")
+            plugin.logger.info("[Leaderboard] Active players: ${activePlayers.size}, showing $startIndex to $upperIndex (page ${PageWatcher.page + 1}/${pages})")
             val minRank = totalPointsRank.indexOf(activePlayers.values.minOfOrNull { it.totalPoints } ?: -1)
 
             val soundScheduled = mutableMapOf<Int, Boolean>()
@@ -209,7 +209,7 @@ class LeaderboardTaskRunner(
             val tomesSubmitted = activePlayersInPhase.map { it.stats.tomesSubmitted }.distinct().sortedWith(
                 compareByDescending { it }
             )
-            plugin.logger.info("Tomes submitted leaderboard for Phase${phase}: $tomesSubmitted")
+            plugin.logger.fine("[Leaderboard] Tomes submitted for Phase${phase}: $tomesSubmitted")
 
             if (activePlayersInPhase.isNotEmpty()) {
                 maxPhase = max(maxPhase, phase)

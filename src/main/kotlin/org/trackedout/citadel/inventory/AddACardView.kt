@@ -6,8 +6,9 @@ import me.devnatan.inventoryframework.state.State
 import me.devnatan.inventoryframework.state.StateValueHost
 import org.bukkit.Material
 import org.trackedout.citadel.commands.GiveShulkerCommand.Companion.createCard
+import org.trackedout.citadel.config.cardConfig
 import org.trackedout.client.models.Card
-import org.trackedout.data.Cards
+import org.trackedout.data.sortedList
 
 class AddACardView : DeckManagementView() {
     val deckId: State<DeckId> = initialState(SELECTED_DECK)
@@ -28,8 +29,8 @@ class AddACardView : DeckManagementView() {
                 render.openForPlayer(DeckInventoryViewWithoutBack::class.java, getContext(render))
             }
 
-        Cards.Companion.Card.entries.sortedBy { it.colour + it.key }.forEachIndexed { index, card ->
-            val itemStack = createCard(null, null, card.key, 1)
+        cardConfig.sortedList().forEachIndexed { index, card ->
+            val itemStack = createCard(null, null, card.shorthand, 1)
 
             itemStack?.let {
                 render.slot(index, it)
@@ -37,7 +38,7 @@ class AddACardView : DeckManagementView() {
                         val runType = getRunType(render)
                         val newCard = Card(
                             player = playerName[render],
-                            name = card.key,
+                            name = card.shorthand,
                             deckType = runType,
                             server = plugin[render].serverName,
                         )

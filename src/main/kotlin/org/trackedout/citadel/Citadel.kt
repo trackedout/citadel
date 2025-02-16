@@ -19,7 +19,6 @@ import org.trackedout.citadel.commands.InventoryCommand
 import org.trackedout.citadel.commands.LeaderboardCommand
 import org.trackedout.citadel.commands.LogEventCommand
 import org.trackedout.citadel.commands.ManageDeckCommand
-import org.trackedout.citadel.commands.SavePlayerDeckCommand
 import org.trackedout.citadel.commands.ScoreManagementCommand
 import org.trackedout.citadel.commands.ShowArtifakesCommand
 import org.trackedout.citadel.commands.ShutdownDungeonsCommand
@@ -111,7 +110,6 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(GiveShulkerCommand(eventsApi, inventoryApi))
         manager.registerCommand(InventoryCommand(eventsApi, inventoryApi, inventoryManager))
         manager.registerCommand(LogEventCommand(eventsApi))
-        manager.registerCommand(SavePlayerDeckCommand(inventoryApi))
         manager.registerCommand(StatusCommand())
         manager.registerCommand(ScoreManagementCommand(this, scoreApi, eventsApi, inventoryManager, inventoryApi))
         manager.registerCommand(ShutdownDungeonsCommand(this, eventsApi))
