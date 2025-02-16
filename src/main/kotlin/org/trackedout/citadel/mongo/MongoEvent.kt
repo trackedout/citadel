@@ -11,7 +11,7 @@ data class MongoEvent(
     val count: Long,
     val server: String,
     val x: Double,
-    val y: Long,
+    val y: Double,
     val z: Double,
     val sourceIP: String?,
     val processingFailed: Boolean?,
