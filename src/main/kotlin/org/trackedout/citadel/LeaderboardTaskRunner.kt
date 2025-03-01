@@ -202,7 +202,7 @@ class LeaderboardTaskRunner(
     ): Int {
         val database = MongoDBManager.getDatabase("dunga-dunga");
         var maxPhase = 0
-        listOf(1, 2, 3, 4, 5).forEach { phase ->
+        listOf(1, 2, 3, 4, 5, 6).forEach { phase ->
             val playerStatsCollection = database.getCollection("playerStatsPhase${phase}", MongoPlayerStats::class.java)
 
             val activePlayersInPhase = playerStatsCollection.find().toList().filter { it.stats.tomesSubmitted > 0 }.sortedBy { it.player }
