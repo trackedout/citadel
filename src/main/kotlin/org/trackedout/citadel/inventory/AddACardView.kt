@@ -5,7 +5,7 @@ import me.devnatan.inventoryframework.context.RenderContext
 import me.devnatan.inventoryframework.state.State
 import me.devnatan.inventoryframework.state.StateValueHost
 import org.bukkit.Material
-import org.trackedout.citadel.commands.GiveShulkerCommand.Companion.createCard
+import org.trackedout.citadel.commands.createCard
 import org.trackedout.citadel.config.cardConfig
 import org.trackedout.client.models.Card
 import org.trackedout.data.sortedList

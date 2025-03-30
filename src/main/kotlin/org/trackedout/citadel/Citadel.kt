@@ -1,5 +1,6 @@
 package org.trackedout.citadel
 
+import co.aikar.commands.InvalidCommandArgument
 import co.aikar.commands.PaperCommandManager
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
@@ -14,7 +15,6 @@ import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.commands.CubbyManagementCommand
-import org.trackedout.citadel.commands.GiveShulkerCommand
 import org.trackedout.citadel.commands.InventoryCommand
 import org.trackedout.citadel.commands.LeaderboardCommand
 import org.trackedout.citadel.commands.LogEventCommand
@@ -24,20 +24,22 @@ import org.trackedout.citadel.commands.ShowArtifakesCommand
 import org.trackedout.citadel.commands.ShutdownDungeonsCommand
 import org.trackedout.citadel.commands.SpectateCommand
 import org.trackedout.citadel.commands.StatusCommand
-import org.trackedout.citadel.commands.TakeShulkerCommand
+import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.inventory.AddACardView
 import org.trackedout.citadel.inventory.BasicItemView
 import org.trackedout.citadel.inventory.CardActionView
 import org.trackedout.citadel.inventory.DeckInventoryView
 import org.trackedout.citadel.inventory.DeckInventoryViewWithoutBack
 import org.trackedout.citadel.inventory.DeckManagementView
-import org.trackedout.citadel.inventory.EnterQueueView
 import org.trackedout.citadel.inventory.MoveCardView
 import org.trackedout.citadel.inventory.ShopView
 import org.trackedout.citadel.inventory.SpectateSelectorView
+import org.trackedout.citadel.inventory.baseTradeItems
+import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.citadel.listeners.EchoShardListener
 import org.trackedout.citadel.listeners.PlayedJoinedListener
 import org.trackedout.citadel.mongo.MongoDBManager
+import org.trackedout.citadel.mongo.MongoPlayer
 import org.trackedout.citadel.shop.ShopCommand
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
@@ -46,6 +48,9 @@ import org.trackedout.client.apis.StatusApi
 import org.trackedout.client.apis.TasksApi
 import org.trackedout.client.infrastructure.ClientError
 import org.trackedout.client.infrastructure.ClientException
+import org.trackedout.data.RunType
+import org.trackedout.data.findRunTypeById
+import org.trackedout.data.runTypes
 import java.net.InetAddress
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
@@ -105,9 +110,9 @@ class Citadel : JavaPlugin() {
 
         MongoDBManager.initialize(mongoURI)
 
+        registerCommandCompletions()
+
         // https://github.com/aikar/commands/wiki/Real-World-Examples
-        manager.registerCommand(TakeShulkerCommand())
-        manager.registerCommand(GiveShulkerCommand(eventsApi, inventoryApi))
         manager.registerCommand(InventoryCommand(eventsApi, inventoryApi, inventoryManager))
         manager.registerCommand(LogEventCommand(eventsApi))
         manager.registerCommand(StatusCommand())
@@ -152,7 +157,6 @@ class Citadel : JavaPlugin() {
                 DeckInventoryView(),
                 DeckInventoryViewWithoutBack(),
                 DeckManagementView(),
-                EnterQueueView(),
                 SpectateSelectorView(),
                 ShopView(),
             )
@@ -167,6 +171,32 @@ class Citadel : JavaPlugin() {
         server.pluginManager.registerEvents(echoShardListener, this)
 
         logger.info("Citadel has been enabled. Server name: $serverName")
+    }
+
+    private fun registerCommandCompletions() {
+        manager.commandCompletions.registerStaticCompletion("runTypes", runTypes.map { it.longId })
+
+        manager.commandCompletions.registerAsyncCompletion("cards") { c ->
+            cardConfig.entries.map { it.key }
+        }
+
+        manager.commandCompletions.registerAsyncCompletion("items") { c ->
+            baseTradeItems.plus(intoDungeonItems).minus(listOf("DUMMY", "QUEUE")).map { it.key }
+        }
+
+        manager.commandCompletions.registerAsyncCompletion("dbPlayers") { c ->
+            val database = MongoDBManager.getDatabase("dunga-dunga")
+            val playerCollection = database.getCollection("players", MongoPlayer::class.java)
+
+            val players = playerCollection.find().map { it.playerName }.toList()
+            players
+        }
+
+        manager.commandContexts.registerContext(RunType::class.java) { context ->
+            val arg = context.popFirstArg()
+            val runType = findRunTypeById(arg) ?: throw InvalidCommandArgument("Invalid run type: $arg")
+            runType
+        }
     }
 
     override fun onDisable() {

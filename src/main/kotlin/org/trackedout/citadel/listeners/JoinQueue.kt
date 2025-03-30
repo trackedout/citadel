@@ -4,7 +4,7 @@ import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
 import org.trackedout.citadel.inventory.DeckId
-import org.trackedout.citadel.inventory.fullRunType
+import org.trackedout.citadel.inventory.displayName
 import org.trackedout.citadel.inventory.id
 import org.trackedout.citadel.inventory.shortRunType
 import org.trackedout.citadel.sendGreenMessage
@@ -31,7 +31,7 @@ fun createJoinQueueFunc(citadel: Citadel, eventsApi: EventsApi, player: Player):
                 )
             )
 
-            player.sendGreenMessage("Joining dungeon queue with ${deckId.fullRunType()} Deck #${deckId.id()}")
+            player.sendGreenMessage("Joining dungeon queue with ${deckId.displayName()} Deck #${deckId.id()}")
         }
     }
 

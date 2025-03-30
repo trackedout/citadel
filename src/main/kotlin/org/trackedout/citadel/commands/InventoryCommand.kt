@@ -2,6 +2,7 @@ package org.trackedout.citadel.commands
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.CommandAlias
+import co.aikar.commands.annotation.CommandCompletion
 import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Dependency
 import co.aikar.commands.annotation.Description
@@ -16,15 +17,14 @@ import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
 import org.trackedout.citadel.config.cardConfig
-import org.trackedout.citadel.inventory.fullRunType
-import org.trackedout.citadel.inventory.isValidRunType
-import org.trackedout.citadel.inventory.shortRunType
+import org.trackedout.citadel.inventory.displayName
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Card
+import org.trackedout.data.RunType
 import org.trackedout.data.find
 import org.trackedout.data.sortedList
 
@@ -38,48 +38,38 @@ class InventoryCommand(
     private lateinit var plugin: Citadel
 
     @Subcommand("update-inventory")
-    @Syntax("[player]")
+    @Syntax("<player>")
     @CommandPermission("decked-out.inventory.admin")
     @Description("Update a player's inventory using DB state")
-    fun updateInventory(source: CommandSender, args: Array<String>) {
-        if (args.size != 1) {
-            source.sendGreyMessage("Usage: /decked-out update-inventory <Player>")
-            return
-        }
-
-        plugin.server.onlinePlayers.filter { it.name == args[0] || args[0] == "ALL" }.forEach { player ->
+    fun updateInventory(source: CommandSender, target: String) {
+        plugin.server.onlinePlayers.filter { it.name == target || target == "ALL" }.forEach { player ->
             inventoryManager.updateInventoryBasedOnScore(player)
             source.sendGreenMessage("Updated ${player.name}'s inventory")
         }
     }
 
     @Subcommand("add-card")
-    @Syntax("[player] [card-name]")
     @CommandPermission("decked-out.inventory.admin")
     @Description("Add Decked Out 2 card into player's DB inventory")
-    fun addCard(sender: CommandSender, args: Array<String>) {
-        mutateInventory("add", sender, args)
+    @CommandCompletion("@dbPlayers @cards @runTypes")
+    fun addCard(source: CommandSender, target: String, cardName: String, runType: RunType) {
+        mutateInventory("add", source, target, cardName, runType)
     }
 
     @Subcommand("remove-card")
-    @Syntax("[player] [card-name]")
     @CommandPermission("decked-out.inventory.admin")
     @Description("Remove a Decked Out 2 card from player's DB inventory")
-    fun removeCard(source: CommandSender, args: Array<String>) {
-        mutateInventory("remove", source, args)
+    @CommandCompletion("@dbPlayers @cards @runTypes")
+    fun removeCard(source: CommandSender, target: String, cardName: String, runType: RunType) {
+        mutateInventory("remove", source, target, cardName, runType)
     }
 
     @Subcommand("list-cards")
-    @Syntax("[player]")
+    @Syntax("<player>")
     @CommandPermission("decked-out.inventory.admin")
     @Description("List the Decked Out 2 cards in a player's DB inventory")
-    fun listCards(source: CommandSender, args: Array<String>) {
-        if (args.size != 1) {
-            source.sendGreyMessage("Usage: /decked-out list-cards <Player>")
-            return
-        }
-
-        val target = args[0]
+    @CommandCompletion("@dbPlayers")
+    fun listCards(source: CommandSender, target: String) {
         plugin.async(source) {
             val cards = inventoryApi.inventoryCardsGet(
                 player = target,
@@ -90,7 +80,7 @@ class InventoryCommand(
             val knownCards = cardConfig.sortedList()
             cards.map { it.deckType }.distinct().forEach { deckType ->
                 val cardsForRunType = cards.filter { it.deckType == deckType }
-                source.sendGreenMessage("${target}'s ${deckType?.fullRunType()} deck contains ${cardsForRunType.size} cards:")
+                source.sendGreenMessage("${target}'s ${deckType?.displayName()} deck contains ${cardsForRunType.size} cards:")
 
                 knownCards.forEach {
                     var textColor = it.tag.nameFormat?.color?.let(TextColor::fromHexString)
@@ -108,47 +98,37 @@ class InventoryCommand(
     }
 
     @Subcommand("remove-all-cards")
-    @Syntax("[player]")
+    @Syntax("<player> <runType>")
     @CommandPermission("decked-out.inventory.admin")
     @Description("Remove all Decked Out 2 cards from a player's DB inventory")
-    fun removeAllCards(source: CommandSender, args: Array<String>) {
-        if (args.size != 2) {
-            source.sendGreyMessage("Usage: /decked-out remove-all-cards <Player> <deckType (p/c)>")
-            return
-        }
-
-        val target = args[0]
-        val deckType = args[1].shortRunType()
-        if (!deckType.isValidRunType()) {
-            source.sendRedMessage("Invalid deckType: $deckType")
-            return
-        }
-
+    @CommandCompletion("@dbPlayers @runTypes")
+    fun removeAllCards(source: CommandSender, target: String, runType: RunType) {
         plugin.async(source) {
             val cards = inventoryApi.inventoryCardsGet(
                 player = target,
                 limit = 200,
-                deckType = deckType,
+                deckType = runType.deckType(),
             ).results!!
 
-            source.sendGreyMessage("Deleting ${cards.size} cards from ${target}'s ${deckType.fullRunType()} deck...")
+            source.sendGreyMessage("Deleting ${cards.size} cards from ${target}'s ${runType.displayName} deck...")
             cards.forEach {
                 inventoryApi.inventoryDeleteCardPost(
                     Card(
                         player = it.player,
                         name = it.name,
-                        deckType = deckType,
+                        deckType = runType.deckType(),
                     )
                 )
             }
-            source.sendGreenMessage("Deleted ${cards.size} cards from ${target}'s ${deckType.fullRunType()} deck!")
+            source.sendGreenMessage("Deleted ${cards.size} cards from ${target}'s ${runType.displayName} deck!")
         }
     }
 
     @Subcommand("list-known-cards")
-    @Syntax("[player]")
+    @Syntax("<player>")
     @CommandPermission("decked-out.inventory.list-known")
     @Description("List all known Decked Out 2 cards")
+    @CommandCompletion("@dbPlayers")
     fun listAllKnownCards(player: Player) {
         val knownCards = cardConfig.sortedList()
         player.sendGreenMessage("Decked Out 2 has the following cards:")
@@ -164,61 +144,38 @@ class InventoryCommand(
     }
 
     @Subcommand("add-all-known-cards")
-    @Syntax("[player]")
+    @Syntax("<player> <runType>")
     @CommandPermission("decked-out.inventory.admin")
     @Description("Add a copy of every known card to a player's DB inventory")
-    fun addAllKnownCards(source: CommandSender, args: Array<String>) {
-        if (args.size != 2) {
-            source.sendGreyMessage("Usage: /decked-out add-all-known-cards <Player> <deckType (p/c)>")
-            return
-        }
-
-        val target = args[0]
-        val deckType = args[1].shortRunType()
-        if (!deckType.isValidRunType()) {
-            source.sendRedMessage("Invalid deckType: $deckType")
-            return
-        }
-
+    @CommandCompletion("@dbPlayers @runTypes")
+    fun addAllKnownCards(source: CommandSender, target: String, runType: RunType) {
         plugin.async(source) {
             val knownCards = cardConfig.values.map { it.shorthand }
-            source.sendGreyMessage("Adding ${knownCards.size} cards to ${target}'s ${deckType.fullRunType()} deck...")
+            source.sendGreyMessage("Adding ${knownCards.size} cards to ${target}'s ${runType.displayName} deck...")
 
             knownCards.forEach {
                 inventoryApi.inventoryAddCardPost(
                     Card(
                         player = target,
                         name = it,
-                        deckType = deckType,
+                        deckType = runType.deckType(),
                         server = plugin.serverName,
                     )
                 )
             }
 
-            source.sendGreenMessage("Added ${knownCards.size} cards to ${target}'s ${deckType.fullRunType()} deck!")
+            source.sendGreenMessage("Added ${knownCards.size} cards to ${target}'s ${runType.displayName} deck!")
         }
     }
 
-    private fun mutateInventory(action: String, source: CommandSender, args: Array<String>) {
-        if (args.size != 3) {
-            source.sendGreyMessage("Usage: /decked-out $action-card <Player> <card-name> <deckType (p/c)>")
-            return
-        }
-
-        val target = args[0]
-        val cardName = args[1].let {
+    private fun mutateInventory(action: String, source: CommandSender, target: String, cardName: String, runType: RunType) {
+        val cardName = cardName.let {
             try {
                 cardConfig.find(it)!!.shorthand
             } catch (e: Exception) {
                 source.sendRedMessage("Unknown card: $it")
                 return
             }
-        }
-
-        val deckType = args[2].shortRunType()
-        if (!deckType.isValidRunType()) {
-            source.sendRedMessage("Invalid deckType: $deckType")
-            return
         }
 
         try {
@@ -228,12 +185,12 @@ class InventoryCommand(
                         Card(
                             player = target,
                             name = cardName,
-                            deckType = deckType,
+                            deckType = runType.deckType(),
                             server = plugin.serverName,
                         )
                     )
-                    plugin.logger.info("Added $cardName to $target's ${deckType.fullRunType()} deck")
-                    source.sendGreenMessage("Added $cardName to $target's ${deckType.fullRunType()} deck")
+                    plugin.logger.info("Added $cardName to $target's ${runType.displayName} deck")
+                    source.sendGreenMessage("Added $cardName to $target's ${runType.displayName} deck")
                 }
 
                 "remove" -> plugin.async(source) {
@@ -241,18 +198,18 @@ class InventoryCommand(
                         Card(
                             player = target,
                             name = cardName,
-                            deckType = deckType,
+                            deckType = runType.deckType(),
                         )
                     )
-                    plugin.logger.info("Removed $cardName from $target's ${deckType.fullRunType()} deck")
-                    source.sendGreenMessage("Removed $cardName from $target's ${deckType.fullRunType()} deck")
+                    plugin.logger.info("Removed $cardName from $target's ${runType.displayName} deck")
+                    source.sendGreenMessage("Removed $cardName from $target's ${runType.displayName} deck")
                 }
             }
 
         } catch (e: Exception) {
             e.printStackTrace()
-            plugin.logger.severe("Failed to $action $cardName to/from $target's ${deckType.fullRunType()} deck. Exception: $e")
-            source.sendRedMessage("Failed to $action $cardName to $target's ${deckType.fullRunType()} deck. Exception: $e")
+            plugin.logger.severe("Failed to $action $cardName to/from $target's ${runType.displayName} deck. Exception: $e")
+            source.sendRedMessage("Failed to $action $cardName to $target's ${runType.displayName} deck. Exception: $e")
         }
     }
 }

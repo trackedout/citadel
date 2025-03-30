@@ -7,11 +7,12 @@ import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 import org.bukkit.potion.Potion
 import org.bukkit.potion.PotionType
+import org.trackedout.citadel.displayNamedText
+import org.trackedout.data.RunType
 
-
-fun practiceShard(value: Int) = dungeonShard("Practice runs", NamedTextColor.GREEN, itemCount = value)
-
-fun competitiveShard(value: Int) = dungeonShard("Competitive runs", itemCount = value)
+fun dungeonShard(runType: RunType, itemCount: Int): ItemStack {
+    return dungeonShard("${runType.displayName} runs", runType.displayNamedText(), itemCount)
+}
 
 fun dungeonShard(
     name: String,
@@ -19,10 +20,7 @@ fun dungeonShard(
     itemCount: Int = 1,
 ) = dungeonItem(name, 7, textColor, itemCount = itemCount)
 
-
-fun practiceCrown(itemCount: Int) = dungeonCrown("Practice", NamedTextColor.GREEN, itemCount = itemCount)
-
-fun competitiveCrown(itemCount: Int) = dungeonCrown("Competitive", itemCount = itemCount)
+fun dungeonCrown(runType: RunType, itemCount: Int) = dungeonCrown(runType.displayName, runType.displayNamedText(), itemCount)
 
 fun dungeonCrown(
     crownType: String,
@@ -30,10 +28,7 @@ fun dungeonCrown(
     itemCount: Int = 1,
 ) = dungeonItem("❄☠ Decked Out Crown (${crownType}) ☠❄", 2, textColor, itemCount = itemCount)
 
-
-fun practiceTome(itemCount: Int) = dungeonTome("Practice", NamedTextColor.GREEN, itemCount = itemCount)
-
-fun competitiveTome(itemCount: Int) = dungeonTome("Competitive", itemCount = itemCount)
+fun dungeonTome(runType: RunType, itemCount: Int) = dungeonTome(runType.displayName, runType.displayNamedText(), itemCount)
 
 fun dungeonTome(
     runType: String,
@@ -41,10 +36,7 @@ fun dungeonTome(
     itemCount: Int = 1,
 ) = dungeonItem("❄☠ Victory Tome (${runType}) ☠❄", 6, textColor, itemCount = itemCount)
 
-
-fun practiceSlownessPotion(itemCount: Int) = dungeonSlownessPotion("Practice", NamedTextColor.GREEN, itemCount = itemCount)
-
-fun competitiveSlownessPotion(itemCount: Int) = dungeonSlownessPotion("Competitive", itemCount = itemCount)
+fun dungeonSlownessPotion(runType: RunType, itemCount: Int) = dungeonSlownessPotion(runType.displayName, runType.displayNamedText(), itemCount)
 
 fun dungeonSlownessPotion(
     runType: String,
@@ -69,25 +61,23 @@ fun dungeonSlownessPotion(
         metadata.entries.forEach { entry -> tag.set(entry.value, entry.key) }
         return tag.loadCopy();
     })
-
-    return itemStack
 }
 
+fun dungeonKeyLevel1(runType: RunType, count: Int): ItemStack {
+    return dungeonKey("❄☠ The Caves of Carnage Key (${runType.displayName}) ☠❄", 201, runType.displayNamedText(), count)
+}
 
-fun key1Practice(count: Int) = practiceKey("❄☠ The Caves of Carnage Key (Practice) ☠❄", 201, count)
-fun key1Competitive(count: Int) = competitiveKey("❄☠ The Caves of Carnage Key (Competitive) ☠❄", 201, count)
+fun dungeonKeyLevel2(runType: RunType, count: Int): ItemStack {
+    return dungeonKey("❄☠ The Black Mines Key (${runType.displayName}) ☠❄", 203, runType.displayNamedText(), count)
+}
 
-fun key2Practice(count: Int) = practiceKey("❄☠ The Black Mines Key (Practice) ☠❄", 203, count)
-fun key2Competitive(count: Int) = competitiveKey("❄☠ The Black Mines Key (Competitive) ☠❄", 203, count)
+fun dungeonKeyLevel3(runType: RunType, count: Int): ItemStack {
+    return dungeonKey("❄☠ The Burning Dark Key (${runType.displayName}) ☠❄", 209, runType.displayNamedText(), count)
+}
 
-fun key3Practice(count: Int) = practiceKey("❄☠ The Burning Dark Key (Practice) ☠❄", 209, count)
-fun key3Competitive(count: Int) = competitiveKey("❄☠ The Burning Dark Key (Competitive) ☠❄", 209, count)
-
-fun practiceCoin(count: Int) = practiceKey("❄☠ Decked Out Coin (Practice) ☠❄", 1, count)
-fun competitiveCoin(count: Int) = competitiveKey("❄☠ Decked Out Coin (Competitive) ☠❄", 1, count)
-
-fun practiceKey(name: String, customModelData: Int, count: Int) = dungeonKey(name, customModelData, NamedTextColor.GREEN, count)
-fun competitiveKey(name: String, customModelData: Int, count: Int) = dungeonKey(name, customModelData, itemCount = count)
+fun dungeonCoin(runType: RunType, count: Int): ItemStack {
+    return dungeonKey("❄☠ Decked Out Coin (${runType.displayName}) ☠❄", 1, runType.displayNamedText(), count)
+}
 
 fun dungeonKey(
     name: String,
@@ -96,9 +86,9 @@ fun dungeonKey(
     itemCount: Int = 1,
 ) = dungeonItem(name, customModelData, textColor, itemCount = itemCount)
 
-fun practiceRepairKit(count: Int) = dungeonItem("❄☠ Rusty Repair Kit (Practice) ☠❄", 2, NamedTextColor.GREEN, Material.IRON_INGOT, count)
-fun competitiveRepairKit(count: Int) = dungeonItem("❄☠ Rusty Repair Kit (Competitive) ☠❄", 2, NamedTextColor.AQUA, Material.IRON_INGOT, count)
-
+fun repairKit(runType: RunType, count: Int): ItemStack {
+    return dungeonItem("❄☠ Rusty Repair Kit (${runType.displayName}) ☠❄", 2, runType.displayNamedText(), Material.IRON_INGOT, count)
+}
 
 fun dungeonItem(
     name: String,
@@ -121,19 +111,19 @@ fun dungeonItem(
     })
 }
 
-fun practiceDeck() = dungeonDeck(
-    "❄☠ Frozen Assets (Practice Deck #1) ☠❄",
-    textColor = NamedTextColor.GREEN,
-    material = Material.LIME_SHULKER_BOX,
-    deckId = "p1"
-)
-
-fun competitiveDeck() = dungeonDeck("❄☠ Frozen Assets (Competitive Deck #1) ☠❄", deckId = "c1")
+fun dungeonDeck(runType: RunType): ItemStack {
+    return dungeonDeck(
+        "❄☠ Frozen Assets (${runType.displayName} Deck #1) ☠❄",
+        textColor = runType.displayNamedText(),
+        material = Material.valueOf(runType.deckMaterial),
+        deckId = "${runType.shortId}1"
+    )
+}
 
 fun dungeonDeck(
     name: String = "❄☠ Frozen Assets ☠❄",
     textColor: NamedTextColor = NamedTextColor.AQUA,
-    material: Material = Material.CYAN_SHULKER_BOX,
+    material: Material,
     deckId: String,
 ) = dungeonItem(name, 7, textColor, material = material, metadata = mapOf("deckId" to deckId))
 

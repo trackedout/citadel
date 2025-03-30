@@ -15,6 +15,9 @@ import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.withTags
 import org.trackedout.client.models.Card
+import org.trackedout.data.RunType
+import org.trackedout.data.findRunTypeById
+import org.trackedout.data.getRunTypeById
 import java.util.function.BiConsumer
 import java.util.function.Consumer
 
@@ -61,7 +64,7 @@ open class DeckManagementView : View() {
         decks.forEach { entry ->
             val runType = entry.key
             val allCards = entry.value
-            var i = if (runType[0] == 'p') 0 else 18
+            var i = if (runType.isPractice()) 0 else 18
 
             i += 4 // center decks (only works if we have 1 deck)
 
@@ -73,9 +76,9 @@ open class DeckManagementView : View() {
                     showDeckLink(
                         render,
                         i,
-                        "View ${deckId.fullRunType()} Deck #${deckId.id()} (contains ${cards.size} cards)",
+                        "View ${deckId.displayName()} Deck #${deckId.id()} (contains ${cards.size} cards)",
                         deckId,
-                        materialForDeckId(deckId)
+                        deckId.deckMaterial(),
                     )
                     i++
                 }
@@ -88,18 +91,6 @@ open class DeckManagementView : View() {
 //            .filter { it in 1..9 }
         // TODO: Do this better
         return listOf(1)
-    }
-
-    private fun materialForDeckId(deckId: DeckId): Material {
-        var material = if (deckId.isPractice()) Material.GRAY_SHULKER_BOX else Material.CYAN_SHULKER_BOX
-
-        // Make every other shulker a different colour
-        deckId.substring(1).toIntOrNull()?.let {
-            if (it % 2 == 0) {
-                material = if (deckId.isPractice()) Material.LIGHT_GRAY_SHULKER_BOX else Material.BLUE_SHULKER_BOX
-            }
-        }
-        return material
     }
 
     private fun showDeckLink(
@@ -255,15 +246,16 @@ fun DeckId.id(): String = this.substring(1)
 
 fun DeckId.shortRunType(): String = this.lowercase()[0].toString()
 
-fun DeckId.fullRunType(): String {
-    val runType = when (if (this.isNotEmpty()) this[0] else '?') {
-        'p' -> "Practice"
-        'c' -> "Competitive"
-        else -> "Unknown"
-    }
-    return runType
+fun DeckId.displayName(): String {
+    return getRunTypeById(this).displayName
 }
 
-fun DeckId.isValidRunType(): Boolean = this.isNotEmpty() && this.shortRunType() in "pc"
+fun DeckId.isValidRunType(): Boolean = findRunTypeById(this) != null
 
 fun DeckId.isPractice(): Boolean = this.shortRunType() == "p"
+
+fun DeckId.runType(): RunType = getRunTypeById(this)
+
+fun DeckId.deckMaterial(): Material {
+    return Material.valueOf(getRunTypeById(this).deckMaterial)
+}

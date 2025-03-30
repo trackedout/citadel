@@ -11,7 +11,7 @@ import org.bukkit.Material
 import org.bukkit.Sound
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.canTakeIntoDungeon
-import org.trackedout.citadel.commands.GiveShulkerCommand.Companion.createCard
+import org.trackedout.citadel.commands.createCard
 import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.getCard
 import org.trackedout.citadel.getDeckId
@@ -159,7 +159,7 @@ open class DeckInventoryView : DeckManagementView() {
                 return@forEach
             }
 
-            val itemStack = entry.value.itemStack(deckId.fullRunType().lowercase(), count).withTradeMeta(deckId.shortRunType(), entry.key)
+            val itemStack = entry.value.itemStack(deckId.displayName().lowercase(), count).withTradeMeta(deckId.shortRunType(), entry.key)
             render.availableSlot(itemStack)
         }
     }

@@ -65,7 +65,7 @@ open class MoveCardView : DeckManagementView() {
                 render,
                 "Move to Deck #${deckId} (contains $cardCount cards)",
                 deckId,
-                Material.CYAN_SHULKER_BOX
+                deckId.deckMaterial(),
             )
         }
     }

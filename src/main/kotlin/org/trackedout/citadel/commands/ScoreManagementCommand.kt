@@ -2,22 +2,21 @@ package org.trackedout.citadel.commands
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.CommandAlias
+import co.aikar.commands.annotation.CommandCompletion
 import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Description
 import co.aikar.commands.annotation.Subcommand
 import co.aikar.commands.annotation.Syntax
-import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.command.CommandSender
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
+import org.trackedout.citadel.displayNamedText
 import org.trackedout.citadel.getInventoryRelatedScores
 import org.trackedout.citadel.inventory.Trade
 import org.trackedout.citadel.inventory.intoDungeonItems
-import org.trackedout.citadel.inventory.shortRunType
 import org.trackedout.citadel.isInventoryRelatedScore
 import org.trackedout.citadel.sendGreenMessage
-import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.citadel.sendMessage
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.EventsApi
@@ -25,6 +24,8 @@ import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Card
 import org.trackedout.client.models.Event
+import org.trackedout.data.RunType
+import org.trackedout.data.runTypes
 
 @CommandAlias("decked-out|do")
 class ScoreManagementCommand(
@@ -35,16 +36,11 @@ class ScoreManagementCommand(
     private val inventoryApi: InventoryApi,
 ) : BaseCommand() {
     @Subcommand("list-scores")
-    @Syntax("[player]")
+    @Syntax("<player>")
     @CommandPermission("decked-out.inventory.admin")
     @Description("List scoreboard values for a player")
-    fun listScores(source: CommandSender, args: Array<String>) {
-        if (args.size != 1) {
-            source.sendGreyMessage("Usage: /decked-out list-scores <Player>")
-            return
-        }
-
-        val playerName = args[0]
+    @CommandCompletion("@dbPlayers")
+    fun listScores(source: CommandSender, playerName: String) {
         plugin.async(source) {
             val scores = scoreApi.getInventoryRelatedScores(playerName)
 
@@ -61,51 +57,35 @@ class ScoreManagementCommand(
     }
 
     private fun listScores(source: CommandSender, scores: Map<String, Int>, key: String, value: Int) {
-        when (key) {
-            // Shards
-            "do2.inventory.shards.practice" -> {
-                source.sendGreenMessage("- Practice Shards (${key}) = $value")
-            }
+        for (runType in runTypes) {
+            when (key) {
+                // Shards
+                "do2.inventory.shards.${runType.longId}" -> {
+                    source.sendMessage("- ${runType.displayName} Shards (${key}) = $value", runType.displayNamedText())
+                }
 
-            "do2.inventory.shards.competitive" -> {
-                source.sendMessage("- Competitive Shards (${key}) = $value", NamedTextColor.AQUA)
-            }
+                // Crowns
+                "${runType.longId}-do2.lifetime.escaped.crowns" -> {
+                    val itemCount = value - scores.getOrDefault("${runType.longId}-do2.lifetime.spent.crowns", 0)
+                    source.sendMessage("- ${runType.displayName} Crowns (${key}) = $itemCount", runType.displayNamedText())
+                }
 
-            // Crowns
-            "practice-do2.lifetime.escaped.crowns" -> {
-                val itemCount = value - scores.getOrDefault("practice-do2.lifetime.spent.crowns", 0)
-                source.sendGreenMessage("- Practice Crowns (${key}) = $itemCount")
-            }
-
-            "competitive-do2.lifetime.escaped.crowns" -> {
-                val itemCount = value - scores.getOrDefault("competitive-do2.lifetime.spent.crowns", 0)
-                source.sendMessage("- Competitive Crowns (${key}) = $itemCount", NamedTextColor.AQUA)
-            }
-
-            // Tomes
-            "practice-do2.lifetime.escaped.tomes" -> {
-                val itemCount = value - scores.getOrDefault("practice-do2.lifetime.spent.tomes", 0)
-                source.sendGreenMessage("- Practice Tomes (${key}) = $itemCount")
-            }
-
-            "competitive-do2.lifetime.escaped.tomes" -> {
-                val itemCount = value - scores.getOrDefault("competitive-do2.lifetime.spent.tomes", 0)
-                source.sendMessage("- Competitive Tomes (${key}) = $itemCount", NamedTextColor.AQUA)
+                // Tomes
+                "${runType.longId}-do2.lifetime.escaped.tomes" -> {
+                    val itemCount = value - scores.getOrDefault("${runType.longId}-do2.lifetime.spent.tomes", 0)
+                    source.sendMessage("- ${runType.displayName} Tomes (${key}) = $itemCount", runType.displayNamedText())
+                }
             }
         }
-    }
-
-    enum class RunTypes(val runType: String) {
-        PRACTICE("practice"),
-        COMPETITIVE("competitive"),
     }
 
     @Subcommand("give-item")
     @CommandPermission("decked-out.shop.admin")
     @Description("Update player's score to give them more items")
-    fun giveScore(source: CommandSender, playerName: String, runType: RunTypes, item: String, count: Int, reason: String) {
+    @CommandCompletion("@dbPlayers @runTypes @items @range:1-100 @nothing")
+    fun giveScore(source: CommandSender, playerName: String, runType: RunType, item: String, count: Int, reason: String) {
         val trade = Trade(
-            runType = runType.runType,
+            runType = runType.longId,
             sourceType = "dummy",
             sourceItemCount = 0,
             targetType = item,
@@ -142,14 +122,14 @@ class ScoreManagementCommand(
 
                 val targetItem = item
                 val itemsToAdd = count
-                plugin.logger.info("Adding ${itemsToAdd}x $targetItem (item) to ${playerName}'s deck")
-                source.sendGreenMessage("Added ${itemsToAdd}x $targetItem to ${playerName}'s ${runType.runType} deck")
+                plugin.logger.info("Adding ${itemsToAdd}x $targetItem (item) to ${playerName}'s ${runType.displayName} deck")
+                source.sendGreenMessage("Added ${itemsToAdd}x $targetItem to ${playerName}'s ${runType.displayName} deck")
                 (0 until itemsToAdd).map {
                     inventoryApi.inventoryAddCardPost(
                         Card(
                             player = playerName,
                             name = targetItem,
-                            deckType = runType.runType.shortRunType(),
+                            deckType = runType.deckType(),
                             server = plugin.serverName,
                         )
                     )
@@ -159,7 +139,7 @@ class ScoreManagementCommand(
             plugin.server.onlinePlayers.find { it.name == playerName }?.let { player ->
                 inventoryManager.updateInventoryBasedOnScore(player)
             }
-            source.sendGreenMessage("Successfully added ${count}x${item} (${runType.runType}) to ${playerName}'s inventory")
+            source.sendGreenMessage("Successfully added ${count}x${item} (${runType.longId}) to ${playerName}'s inventory")
         }
     }
 }

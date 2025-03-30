@@ -6,19 +6,17 @@ import org.bukkit.NamespacedKey
 import org.bukkit.advancement.Advancement
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-import org.trackedout.citadel.commands.GiveShulkerCommand.Companion.createCard
-import org.trackedout.citadel.commands.ScoreManagementCommand
+import org.trackedout.citadel.commands.createCard
 import org.trackedout.citadel.config.cardConfig
+import org.trackedout.citadel.config.legacyRunTypes
 import org.trackedout.citadel.inventory.ScoreboardDescriber
 import org.trackedout.citadel.inventory.Trade
 import org.trackedout.citadel.inventory.baseTradeItems
-import org.trackedout.citadel.inventory.competitiveDeck
-import org.trackedout.citadel.inventory.fullRunType
+import org.trackedout.citadel.inventory.displayName
+import org.trackedout.citadel.inventory.dungeonDeck
 import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.citadel.inventory.oldCards
 import org.trackedout.citadel.inventory.oldDungeonItem
-import org.trackedout.citadel.inventory.practiceDeck
-import org.trackedout.citadel.inventory.shortRunType
 import org.trackedout.citadel.inventory.tradeItems
 import org.trackedout.citadel.inventory.withTradeMeta
 import org.trackedout.client.apis.EventsApi
@@ -26,6 +24,8 @@ import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Event
 import org.trackedout.client.models.Score
+import org.trackedout.data.RunType
+import org.trackedout.data.runTypes
 import org.trackedout.data.sortedList
 
 class InventoryManager(
@@ -66,16 +66,16 @@ class InventoryManager(
         // For each card in the player's inventory, ensure they only have the correct amount
         val deckItems = inventoryApi.inventoryCardsGet(player = player.name, limit = 200).results!!
 
-        ScoreManagementCommand.RunTypes.entries.forEach { runType ->
+        runTypes.forEach { runType ->
 
             // Check cards against contents of player's deck
             cardConfig.sortedList().forEach { card ->
                 val maxCardsThatShouldBeInInventory = deckItems.count {
-                    it.name == card.shorthand && it.deckType == runType.runType.shortRunType() && it.hiddenInDecks?.isNotEmpty() == true
+                    it.name == card.shorthand && it.deckType == runType.deckType() && it.hiddenInDecks?.isNotEmpty() == true
                 }
 
-                plugin.logger.fine("${player.name} should have ${maxCardsThatShouldBeInInventory}x${card.shorthand} in their inventory (runType: ${runType.runType})")
-                val itemStack = createCard(plugin, null, card.shorthand, 1, "${runType.runType.shortRunType()}1")
+                plugin.logger.fine("${player.name} should have ${maxCardsThatShouldBeInInventory}x${card.shorthand} in their inventory (runType: ${runType.longId})")
+                val itemStack = createCard(plugin, null, card.shorthand, 1, "${runType.shortId}1")
 
                 itemStack?.let {
                     player.ensureInventoryContains(it.clone().apply { amount = zeroSupportedItemCount(maxCardsThatShouldBeInInventory) })
@@ -85,13 +85,13 @@ class InventoryManager(
             // Check items against contents of player's deck
             intoDungeonItems.entries.forEach { (itemKey, scoreboardDescriber) ->
                 val maxItemsThatShouldBeInInventory = deckItems.count {
-                    it.name == itemKey && it.deckType == runType.runType.shortRunType() && it.hiddenInDecks?.isNotEmpty() == true
+                    it.name == itemKey && it.deckType == runType.deckType() && it.hiddenInDecks?.isNotEmpty() == true
                 }
-                plugin.logger.fine("${player.name} should have ${maxItemsThatShouldBeInInventory}x${itemKey} in their inventory (runType: ${runType.runType})")
-                val itemStack = scoreboardDescriber.itemStack(runType.runType, 1)
+                plugin.logger.fine("${player.name} should have ${maxItemsThatShouldBeInInventory}x${itemKey} in their inventory (runType: ${runType.longId})")
+                val itemStack = scoreboardDescriber.itemStack(runType.longId, 1)
 
                 itemStack.let {
-                    player.ensureInventoryContains(it.withTradeMeta(runType.runType, itemKey).clone().apply { amount = zeroSupportedItemCount(maxItemsThatShouldBeInInventory) })
+                    player.ensureInventoryContains(it.withTradeMeta(runType.longId, itemKey).clone().apply { amount = zeroSupportedItemCount(maxItemsThatShouldBeInInventory) })
                 }
             }
         }
@@ -143,7 +143,7 @@ class InventoryManager(
 
     private fun cleanUpOldItems(player: Player) {
         plugin.logger.info("Cleaning up old items for ${player.name}")
-        for (runType in listOf("practice", "competitive")) {
+        for (runType in legacyRunTypes) {
             baseTradeItems.plus(intoDungeonItems).values.forEach { trade ->
                 val itemStack = trade.itemStack(runType, 0)
                 if (!listOf(Material.AIR, Material.STICK).contains(itemStack.type)) {
@@ -157,7 +157,7 @@ class InventoryManager(
 
     private fun removeLegacyCardsFromInventory(player: Player) {
         plugin.logger.info("Cleaning up legacy cards for ${player.name}")
-        for (runType in listOf("practice", "competitive")) {
+        for (runType in legacyRunTypes) {
             oldCards().values.forEach { trade ->
                 val itemStack = trade.itemStack(runType, 999)
                 plugin.logger.fine("Cleaning up old card: $itemStack")
@@ -172,7 +172,7 @@ class InventoryManager(
     private fun updatePlayerInventoryForState(player: Player, scores: Map<String, Int>, key: String, value: Int) {
         plugin.logger.info("Player ${player.name} has inventory score $key=$value")
 
-        for (runType in listOf("practice", "competitive")) {
+        for (runType in runTypes.map { it.longId }) {
             baseTradeItems.forEach { it: Map.Entry<String, ScoreboardDescriber> ->
                 val sb = it.value
                 val sourceScoreKey = sb.sourceScoreboardName(runType)
@@ -190,14 +190,12 @@ class InventoryManager(
             }
         }
 
-        when (key) {
-            // Shards
-            "do2.inventory.shards.practice" -> {
-                player.ensureInventoryContains(practiceDeck())
-            }
-
-            "do2.inventory.shards.competitive" -> {
-                player.ensureInventoryContains(competitiveDeck())
+        for (runType in runTypes) {
+            when (key) {
+                // Shards
+                "do2.inventory.shards.${runType.longId}" -> {
+                    player.ensureInventoryContains(dungeonDeck(runType))
+                }
             }
         }
     }
@@ -245,7 +243,7 @@ class InventoryManager(
         val playerName = player.name
 
         try {
-            val runType = "c".fullRunType().lowercase()
+            val runType = "c".displayName().lowercase()
             val advancementFilter = "$runType-advancement-"
 
             plugin.logger.info("Score filter for advancements: $advancementFilter")
@@ -320,13 +318,13 @@ class InventoryManager(
     }
 }
 
-val tradeSourceScores = baseTradeItems.values.flatMap {
-    listOf(
-        it.sourceScoreboardName("competitive"),
-        it.sourceScoreboardName("practice"),
-        it.sourceInversionScoreboardName("competitive"),
-        it.sourceInversionScoreboardName("practice"),
-    )
+val tradeSourceScores = baseTradeItems.values.flatMap { it ->
+    runTypes.map(RunType::longId).map { runType ->
+        listOf(
+            it.sourceScoreboardName(runType),
+            it.sourceInversionScoreboardName(runType),
+        )
+    }.flatten()
 }.filterNot { it.isBlank() }.distinct()
 
 fun ScoreApi.getInventoryRelatedScores(playerName: String): List<Score> {

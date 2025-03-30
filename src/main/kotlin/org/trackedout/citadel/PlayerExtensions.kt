@@ -14,7 +14,9 @@ import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.inventory.DeckId
 import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.data.BrillianceCard
+import org.trackedout.data.RunType
 import org.trackedout.data.find
+import org.trackedout.data.runTypes
 
 val debugTag = "debug"
 
@@ -45,7 +47,15 @@ fun HumanEntity.debug(message: String, tag: String = "debug.click") {
     }
 }
 
-fun ItemStack.isDeckedOutShulker() = (this.type == Material.CYAN_SHULKER_BOX || this.type == Material.LIME_SHULKER_BOX) && getDeckId() != null
+fun ItemStack.isDeckedOutShulker(): Boolean {
+    for (runType in runTypes) {
+        if (this.type == Material.valueOf(runType.deckMaterial) && getDeckId() != null) {
+            return true
+        }
+    }
+
+    return false
+}
 
 fun ItemStack.hasDeckId(): Boolean = RtagItem(this).hasTag("deckId")
 
@@ -104,4 +114,8 @@ fun ItemStack.getCard(): BrillianceCard? {
 
 fun ItemStack.name(): String? {
     return (this.itemMeta?.displayName() as TextComponent?)?.content()
+}
+
+fun RunType.displayNamedText(): NamedTextColor {
+    return NamedTextColor.namedColor(this.displayColour) ?: NamedTextColor.GRAY
 }

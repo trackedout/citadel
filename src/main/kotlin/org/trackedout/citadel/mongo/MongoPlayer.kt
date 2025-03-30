@@ -22,6 +22,6 @@ data class LastLocation(
     @BsonId val id: ObjectId,
 
     val x: Double,
-    val y: Long,
+    val y: Double,
     val z: Double,
 )

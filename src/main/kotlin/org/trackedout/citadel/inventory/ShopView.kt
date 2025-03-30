@@ -20,6 +20,9 @@ import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.models.Card
 import org.trackedout.data.find
+import org.trackedout.data.getRunTypeById
+import org.trackedout.data.runTypes
+import org.trackedout.data.unknownRunType
 import java.util.function.BiConsumer
 import java.util.function.Consumer
 
@@ -66,7 +69,8 @@ class ShopView : View() {
         const val SHOP_RULES: String = "shop-rules-list"
         const val TRADE_FUNC: String = "trade-func"
         const val UPDATE_INVENTORY_FUNC: String = "update-inventory-func"
-        val SHOP_RULES_REGEX = "^(?<repeat>r|)(?<type>[pc])(?<sourceType>.+?)x(?<sourceCount>\\d{1,3})=[pc](?<targetTypes>(?:.+?x\\d{1,3},?)+)$".toRegex()
+        val runTypeKeys = runTypes.map { it.shortId }.joinToString("")
+        val SHOP_RULES_REGEX = "^(?<repeat>r|)(?<type>[${runTypeKeys}])(?<sourceType>.+?)x(?<sourceCount>\\d{1,3})=[${runTypeKeys}](?<targetTypes>(?:.+?x\\d{1,3},?)+)$".toRegex()
         val SHOP_RULE_TARGET_REGEX = "^(?<targetType>.+?)x(?<targetCount>\\d{1,3})$".toRegex()
     }
 
@@ -95,11 +99,7 @@ class ShopView : View() {
                 SHOP_RULES_REGEX.matchEntire(rule)?.let { matchResult ->
                     val groups = matchResult.groups
                     val shortType = groups["type"]
-                    val longType = when (shortType?.value) {
-                        "p" -> "practice"
-                        "c" -> "competitive"
-                        else -> null
-                    }
+                    val longType = getRunTypeById(shortType?.value ?: "u").longId
 
                     val sourceType = groups["sourceType"]?.value
                     val sourceCount = groups["sourceCount"]?.value
@@ -107,7 +107,7 @@ class ShopView : View() {
                     val repeat = groups["repeat"]?.value?.let { it == "r" } ?: false
 
                     println("Rule: Convert { type=$longType, sourceType=$sourceType, sourceCount=$sourceCount, targetTypes=$targetTypes)")
-                    if (longType == null || sourceType == null || sourceCount == null || targetTypes == null) {
+                    if (longType == unknownRunType.longId || sourceType == null || sourceCount == null || targetTypes == null) {
                         System.err.println("An expected regex group is missing from match, skipping rule: $rule")
                         return@let
                     }

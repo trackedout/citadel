@@ -6,7 +6,7 @@ import me.devnatan.inventoryframework.state.State
 import me.devnatan.inventoryframework.state.StateValueHost
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Material
-import org.trackedout.citadel.commands.GiveShulkerCommand
+import org.trackedout.citadel.commands.createCard
 import org.trackedout.client.models.Card
 import kotlin.math.max
 
@@ -34,7 +34,7 @@ class CardActionView : DeckManagementView() {
 
         // Current count item
         render.layoutSlot('#')
-            .withItem(GiveShulkerCommand.createCard(null, null, card.name!!, count))
+            .withItem(createCard(null, null, card.name!!, count))
 
         // Decrement button
         render.layoutSlot('-')

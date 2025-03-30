@@ -48,7 +48,6 @@ import org.trackedout.citadel.inventory.DeckManagementView.Companion.PLAYER_NAME
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.PLUGIN
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.SELECTED_DECK
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.UPDATE_CARD_VISIBILITY_FUNC
-import org.trackedout.citadel.inventory.EnterQueueView
 import org.trackedout.citadel.inventory.ShopView
 import org.trackedout.citadel.inventory.ShopView.Companion.SHOP_NAME
 import org.trackedout.citadel.inventory.ShopView.Companion.SHOP_RULES
@@ -56,7 +55,6 @@ import org.trackedout.citadel.inventory.ShopView.Companion.SHOP_RULES_REGEX
 import org.trackedout.citadel.inventory.ShopView.Companion.TRADE_FUNC
 import org.trackedout.citadel.inventory.ShopView.Companion.UPDATE_INVENTORY_FUNC
 import org.trackedout.citadel.inventory.Trade
-import org.trackedout.citadel.inventory.fullRunType
 import org.trackedout.citadel.inventory.isPractice
 import org.trackedout.citadel.inventory.shortRunType
 import org.trackedout.citadel.isDeckedOutCard
@@ -68,6 +66,8 @@ import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Card
 import org.trackedout.client.models.Event
+import org.trackedout.data.RunType
+import org.trackedout.data.runTypes
 import java.text.SimpleDateFormat
 import java.util.function.BiConsumer
 import java.util.function.Consumer
@@ -95,13 +95,7 @@ class EchoShardListener(
                 block.customName()?.let { customName ->
                     val title = (customName as TextComponent).content()
 
-                    // Should be at -538 112 1980
-                    if (title == "Enter Queue") {
-                        event.isCancelled = true
-                        playSoundForOpeningBlock(location.block.state, player)
-
-                        showQueueBarrel(player)
-                    } else if (title.startsWith("Shop ")) {
+                    if (title.startsWith("Shop ")) {
                         event.isCancelled = true
                         playSoundForOpeningBlock(location.block.state, player)
 
@@ -113,7 +107,7 @@ class EchoShardListener(
                                 player.sendRedMessage("This shop is not currently open")
                             } else {
 
-                                val prices = mutableMapOf("p" to 10, "c" to 10) // Default prices
+                                val prices = runTypes.associateWith { runType -> 10 }.toMutableMap() // Default price is 10 for all run types
                                 // Get player overrides for shop trades
                                 for (runType in prices.keys) {
                                     val crownTrade = "${runType}CROWNx10=${runType}SHARDx1"
@@ -121,7 +115,7 @@ class EchoShardListener(
                                         shopData.name = "{p} prac / {c} comp Crowns"
                                         getCostForCrownTrade(player.name, runType)?.let { cost ->
                                             shopData.trades -= crownTrade
-                                            val updatedTrade = "${runType.shortRunType()}CROWNx${cost}=${runType.shortRunType()}SHARDx1"
+                                            val updatedTrade = "${runType.shortId}CROWNx${cost}=${runType.shortId}SHARDx1"
                                             shopData.trades += updatedTrade
                                             prices[runType] = cost
                                         }
@@ -141,7 +135,7 @@ class EchoShardListener(
         }
     }
 
-    private fun getCostForCrownTrade(playerName: String, runType: String): Int? {
+    private fun getCostForCrownTrade(playerName: String, runType: RunType): Int? {
         val database = MongoDBManager.getDatabase("dunga-dunga")
         val collection = database.getCollection("events")
 
@@ -173,7 +167,7 @@ class EchoShardListener(
 
         // Lobby is running on UTC time
         val phase7StartDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse("2025-03-01T16:00:00")
-        val fullRunType = runType.fullRunType().lowercase()
+        val fullRunType = runType.longId
         val filter = Filters.and(
             eq("name", "trade-requested"),
             eq("player", playerName),
@@ -221,16 +215,6 @@ class EchoShardListener(
                 player.playSound(player.location, Sound.BLOCK_CHEST_OPEN, 1f, 1f)
             }
         }
-    }
-
-    private fun showQueueBarrel(player: Player) {
-        val joinQueueFunc = createJoinQueueFunc(plugin, eventsApi, player)
-
-        val context = mutableMapOf(
-            PLUGIN to plugin,
-            JOIN_QUEUE_FUNC to joinQueueFunc,
-        )
-        viewFrame.open(EnterQueueView::class.java, player, context)
     }
 
     private fun showShopView(player: Player, shopName: String, shopRules: List<String>) {

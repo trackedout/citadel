@@ -5,6 +5,7 @@ import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.config.cardConfig
 import org.trackedout.data.Cards
+import org.trackedout.data.getRunTypeById
 import org.trackedout.fs.logger
 
 interface ScoreboardDescriber {
@@ -37,10 +38,7 @@ val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
         }
 
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return when (runType) {
-                "competitive" -> competitiveCrown(count)
-                else -> practiceCrown(count)
-            }
+            return dungeonCrown(getRunTypeById(runType), count)
         }
     },
 
@@ -54,10 +52,7 @@ val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
         }
 
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return when (runType) {
-                "competitive" -> competitiveTome(count)
-                else -> practiceTome(count)
-            }
+            return dungeonTome(getRunTypeById(runType), count)
         }
     },
 
@@ -67,10 +62,7 @@ val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
         }
 
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return when (runType) {
-                "competitive" -> competitiveShard(count)
-                else -> practiceShard(count)
-            }
+            return dungeonShard(getRunTypeById(runType), count)
         }
     },
 )
@@ -82,10 +74,7 @@ val intoDungeonItems: Map<String, ScoreboardDescriber> = mapOf(
         }
 
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return when (runType) {
-                "competitive" -> competitiveSlownessPotion(count)
-                else -> practiceSlownessPotion(count)
-            }
+            return dungeonSlownessPotion(getRunTypeById(runType), count)
         }
     },
 
@@ -95,10 +84,7 @@ val intoDungeonItems: Map<String, ScoreboardDescriber> = mapOf(
         }
 
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return when (runType) {
-                "competitive" -> key1Competitive(count)
-                else -> key1Practice(count)
-            }
+            return dungeonKeyLevel1(getRunTypeById(runType), count)
         }
     },
 
@@ -108,10 +94,7 @@ val intoDungeonItems: Map<String, ScoreboardDescriber> = mapOf(
         }
 
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return when (runType) {
-                "competitive" -> key2Competitive(count)
-                else -> key2Practice(count)
-            }
+            return dungeonKeyLevel2(getRunTypeById(runType), count)
         }
     },
 
@@ -121,10 +104,7 @@ val intoDungeonItems: Map<String, ScoreboardDescriber> = mapOf(
         }
 
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return when (runType) {
-                "competitive" -> key3Competitive(count)
-                else -> key3Practice(count)
-            }
+            return dungeonKeyLevel3(getRunTypeById(runType), count)
         }
     },
 
@@ -134,10 +114,7 @@ val intoDungeonItems: Map<String, ScoreboardDescriber> = mapOf(
         }
 
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return when (runType) {
-                "competitive" -> competitiveCoin(count)
-                else -> practiceCoin(count)
-            }
+            return dungeonCoin(getRunTypeById(runType), count)
         }
     },
 
@@ -147,10 +124,7 @@ val intoDungeonItems: Map<String, ScoreboardDescriber> = mapOf(
         }
 
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return when (runType) {
-                "competitive" -> competitiveRepairKit(count)
-                else -> practiceRepairKit(count)
-            }
+            return repairKit(getRunTypeById(runType), count)
         }
     }
 

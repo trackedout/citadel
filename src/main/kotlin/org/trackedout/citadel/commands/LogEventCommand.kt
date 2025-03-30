@@ -29,7 +29,7 @@ class LogEventCommand(
 
 
     @Default
-    @Syntax("[event] [count] [player]")
+    @Syntax("<event> [count] [player]")
     @CommandPermission("decked-out.log-event")
     @Description("Send an event to Dunga Dunga")
     fun logEvent(sender: CommandSender, eventName: String, @Default("1") count: Int, @Optional target: OnlinePlayer?) {

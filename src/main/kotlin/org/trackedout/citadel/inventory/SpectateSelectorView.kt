@@ -60,7 +60,7 @@ open class SpectateSelectorView : View() {
             val itemStack = RtagItem.edit(item, fun(tag: RtagItem): ItemStack {
                 tag.set(game.playerName, "SkullOwner")
 
-                val itemName = "Spectate ${game.playerName}'s ${game.shortRunType.fullRunType().lowercase()} game"
+                val itemName = "Spectate ${game.playerName}'s ${game.shortRunType.displayName().lowercase()} game"
                 val nameJson = "{\"color\":\"${nameColour}\",\"text\":\"$itemName\"}"
                 tag.set(nameJson, "display", "Name")
                 tag.set("{\"color\":\"${nameColour}\",\"OriginalName\":\"${nameJson}\"}", "display", "NameFormat");
