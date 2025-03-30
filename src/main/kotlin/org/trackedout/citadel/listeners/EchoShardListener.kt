@@ -110,9 +110,9 @@ class EchoShardListener(
                                 val prices = runTypes.associateWith { runType -> 10 }.toMutableMap() // Default price is 10 for all run types
                                 // Get player overrides for shop trades
                                 for (runType in prices.keys) {
-                                    val crownTrade = "${runType}CROWNx10=${runType}SHARDx1"
+                                    val crownTrade = "${runType.shortId}CROWNx10=${runType.shortId}SHARDx1"
                                     if (shopData.trades.contains(crownTrade)) {
-                                        shopData.name = "{p} prac / {c} comp Crowns"
+                                        shopData.name = "{p}p/{c}c/{h}h Crowns"
                                         getCostForCrownTrade(player.name, runType)?.let { cost ->
                                             shopData.trades -= crownTrade
                                             val updatedTrade = "${runType.shortId}CROWNx${cost}=${runType.shortId}SHARDx1"
@@ -123,7 +123,7 @@ class EchoShardListener(
                                 }
 
                                 for (runType in prices.keys) {
-                                    shopData.name = shopData.name.replace("{$runType}", prices[runType].toString())
+                                    shopData.name = shopData.name.replace("{${runType.shortId}}", prices[runType].toString())
                                 }
 
                                 showShopView(player, shopData.name.ifEmpty { shopName }, shopData.trades)
