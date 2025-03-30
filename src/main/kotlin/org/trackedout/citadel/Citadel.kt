@@ -37,6 +37,7 @@ import org.trackedout.citadel.inventory.SpectateSelectorView
 import org.trackedout.citadel.inventory.baseTradeItems
 import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.citadel.listeners.EchoShardListener
+import org.trackedout.citadel.listeners.PlayedDeathListener
 import org.trackedout.citadel.listeners.PlayedJoinedListener
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoPlayer
@@ -147,6 +148,7 @@ class Citadel : JavaPlugin() {
         leaderboardTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 20 * 15) // Repeat every 300 ticks (15 seconds)
 
         server.pluginManager.registerEvents(PlayedJoinedListener(this, eventsApi, scoreApi, inventoryManager), this)
+        server.pluginManager.registerEvents(PlayedDeathListener(this, eventsApi), this)
 
         val viewFrame: ViewFrame = ViewFrame.create(this)
             .with(
