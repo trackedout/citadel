@@ -35,6 +35,7 @@ class ScoreManagementCommand(
     private val inventoryManager: InventoryManager,
     private val inventoryApi: InventoryApi,
 ) : BaseCommand() {
+
     @Subcommand("list-scores")
     @Syntax("<player>")
     @CommandPermission("decked-out.inventory.admin")
