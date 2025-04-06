@@ -6,6 +6,7 @@ import com.mongodb.client.model.Aggregates
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Filters.eq
 import com.mongodb.client.model.Filters.gte
+import com.mongodb.client.model.Filters.or
 import me.devnatan.inventoryframework.ViewFrame
 import net.kyori.adventure.text.TextComponent
 import org.apache.logging.log4j.util.TriConsumer
@@ -113,7 +114,7 @@ class EchoShardListener(
                                     val crownTrade = "${runType.shortId}CROWNx10=${runType.shortId}SHARDx1"
                                     if (shopData.trades.contains(crownTrade)) {
                                         shopData.name = "{p}p/{c}c/{h}h Crowns"
-                                        getCostForCrownTrade(player.name, runType)?.let { cost ->
+                                        getCostForCrownTrade(plugin, player.name, runType)?.let { cost ->
                                             shopData.trades -= crownTrade
                                             val updatedTrade = "${runType.shortId}CROWNx${cost}=${runType.shortId}SHARDx1"
                                             shopData.trades += updatedTrade
@@ -133,72 +134,6 @@ class EchoShardListener(
                 }
             }
         }
-    }
-
-    private fun getCostForCrownTrade(playerName: String, runType: RunType): Int? {
-        val database = MongoDBManager.getDatabase("dunga-dunga")
-        val collection = database.getCollection("events")
-
-        /*
-        {
-            _id: ObjectId('674ab5561ff9633efca83191'),
-            name: 'trade-requested',
-            player: '4Ply',
-            count: 1,
-            server: 'lobby',
-            x: -507.1552836355466,
-            y: 113,
-            z: 1976.750589514206,
-            sourceIP: '10.42.4.196',
-            metadata: {
-              'run-type': 'competitive',
-              'source-scoreboard': 'competitive-do2.lifetime.escaped.crowns',
-              'source-inversion-scoreboard': 'competitive-do2.lifetime.spent.crowns',
-              'source-count': '1',
-              'target-scoreboard': 'do2.inventory.shards.competitive',
-              'target-count': '1'
-            },
-            processingFailed: false,
-            createdAt: ISODate('2024-11-30T06:48:54.961Z'),
-            updatedAt: ISODate('2024-11-30T06:48:54.961Z'),
-            __v: 0
-        }
-         */
-
-        // Lobby is running on UTC time
-        val phase7StartDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse("2025-03-01T16:00:00")
-        val fullRunType = runType.longId
-        val filter = Filters.and(
-            eq("name", "trade-requested"),
-            eq("player", playerName),
-            eq("metadata.run-type", fullRunType),
-            eq("metadata.source-scoreboard", "$fullRunType-do2.lifetime.escaped.crowns"),
-            eq("metadata.target-scoreboard", "do2.inventory.shards.$fullRunType"),
-            gte("createdAt", phase7StartDate)
-        )
-
-        val group = Aggregates.group(
-            "\$player", Accumulators.sum("totalShardsBought", Document("\$toInt", "\$metadata.target-count"))
-        )
-        println(group.toBsonDocument())
-        val doc = collection.aggregate(
-            listOf(
-                Aggregates.match(filter), group
-            )
-        ).firstOrNull()
-
-        if (doc != null) {
-            println(doc)
-            val shardsBought = doc["totalShardsBought"].toString().toInt()
-            plugin.logger.info("Total $fullRunType shards bought: $shardsBought")
-            val cost = 10 + (shardsBought.toDouble().pow(2.0)).toInt()
-            plugin.logger.info("Cost for $fullRunType shards: $cost")
-            return cost
-        } else {
-            plugin.logger.warning("No matching documents found, not overriding formula")
-        }
-
-        return null
     }
 
     private fun playSoundForOpeningBlock(state: BlockState, player: Player) {
@@ -554,4 +489,107 @@ class EchoShardListener(
     private fun isRestrictedItem(it: ItemStack) = it.itemMeta != null && it.hasDeckId()
 
     private fun isPracticeCard(it: ItemStack) = isRestrictedItem(it) && it.isDeckedOutCard() && it.getDeckId()?.isPractice() == true
+}
+
+fun getCostForCrownTrade(plugin: Citadel, playerName: String, runType: RunType): Int? {
+    return if (runType.shortId == 'h') {
+        getHardcoreShardCost(plugin, playerName)
+    } else {
+        getStandardShardCost(plugin, playerName, runType)
+    }
+}
+
+private fun getHardcoreShardCost(plugin: Citadel, playerName: String): Int? {
+    val database = MongoDBManager.getDatabase("dunga-dunga")
+    val scoresCollection = database.getCollection("scores")
+    val claimsCollection = database.getCollection("claims")
+
+    // Hardcore shards bought = 10 - (do2.inventory.shards.hardcore + hardcore-do2.runs)
+    // First we count the number of hardcore shards the player has / has used
+    val filter = Filters.and(
+        eq("player", playerName),
+        or(
+            eq("key", "hardcore-do2.runs"),
+            eq("key", "do2.inventory.shards.hardcore")
+        ),
+        gte("value", 0)
+    )
+    val group = Aggregates.group(
+        "\$player", Accumulators.sum("shardsForThisStreak", Document("\$toInt", "\$value"))
+    )
+
+    val doc = scoresCollection.aggregate(
+        listOf(
+            Aggregates.match(filter), group
+        )
+    ).firstOrNull()
+
+    // If the player has an active claim, count that as a run
+    val activeClaimCount = claimsCollection.countDocuments(
+        Filters.and(
+            eq("player", playerName),
+            eq("type", "dungeon"),
+            or(
+                eq("state", "pending"),
+                eq("state", "acquired"),
+                eq("state", "in-use"),
+            )
+        )
+    ).toInt()
+
+    if (doc != null) {
+        println(doc)
+        val shardsForThisStreak = doc["shardsForThisStreak"].toString().toInt() + activeClaimCount
+        plugin.logger.info("Total hardcore shards for this streak: $shardsForThisStreak")
+        val shardsBought = 10 - shardsForThisStreak
+        val cost = 10 + (shardsBought.toDouble().pow(2.0)).toInt()
+        plugin.logger.info("Cost for hardcore shards: $cost")
+        return cost
+    } else {
+        plugin.logger.warning("No matching documents found, not overriding formula")
+    }
+
+    return null
+}
+
+private fun getStandardShardCost(plugin: Citadel, playerName: String, runType: RunType): Int? {
+    val database = MongoDBManager.getDatabase("dunga-dunga")
+    val eventsCollection = database.getCollection("events")
+
+    // Lobby is running on UTC time
+    val phase7StartDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse("2025-03-01T16:00:00")
+
+    val fullRunType = runType.longId
+    val filter = Filters.and(
+        eq("name", "trade-requested"),
+        eq("player", playerName),
+        eq("metadata.run-type", fullRunType),
+        eq("metadata.source-scoreboard", "$fullRunType-do2.lifetime.escaped.crowns"),
+        eq("metadata.target-scoreboard", "do2.inventory.shards.$fullRunType"),
+        gte("createdAt", phase7StartDate)
+    )
+
+    val group = Aggregates.group(
+        "\$player", Accumulators.sum("totalShardsBought", Document("\$toInt", "\$metadata.target-count"))
+    )
+//    println(group.toBsonDocument())
+
+    val doc = eventsCollection.aggregate(
+        listOf(
+            Aggregates.match(filter), group
+        )
+    ).firstOrNull()
+
+    if (doc != null) {
+        println(doc)
+        val shardsBought = doc["totalShardsBought"].toString().toInt()
+        plugin.logger.info("Total $fullRunType shards bought: $shardsBought")
+        val cost = 10 + (shardsBought.toDouble().pow(2.0)).toInt()
+        plugin.logger.info("Cost for $fullRunType shards: $cost")
+        return cost
+    } else {
+        plugin.logger.warning("No matching documents found, not overriding formula")
+    }
+
+    return null
 }

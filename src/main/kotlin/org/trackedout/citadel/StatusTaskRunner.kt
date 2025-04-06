@@ -29,6 +29,9 @@ class StatusTaskRunner(
         val statusSections = statusApi.getStatus()
         val mm = MiniMessage.miniMessage();
 
+        if (sidebar.closed()) {
+            return
+        }
         sidebar.clearLines()
         sidebar.title(Component.text("Network Status"))
 
