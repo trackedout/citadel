@@ -25,6 +25,7 @@ import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Card
 import org.trackedout.client.models.Event
+import org.trackedout.client.models.Score
 import org.trackedout.data.RunType
 import org.trackedout.data.runTypes
 
@@ -51,9 +52,16 @@ class ScoreManagementCommand(
                 source.sendRedMessage("No applicable scores found for $playerName")
                 return@async
             }
-            source.sendMessage("$playerName has the following scores:")
-            applicableScores.sortedBy { it.key }.forEach { score ->
-                listScores(source, scores.associate { it.key!! to it.value!!.toInt() }, score.key!!, score.value!!.toInt())
+
+            source.sendMessage("$playerName has the following scores (minus spent):")
+            for (runType in runTypes) {
+                fun sortKey(score: Score): String? {
+                    return score.key?.replace("${runType.longId}-", "")?.replace(runType.longId, "")
+                }
+
+                applicableScores.filter { it.key?.contains(runType.longId) == true }.sortedBy { sortKey(it) }.forEach { score->
+                    listScores(source, scores.associate { it.key!! to it.value!!.toInt() }, score.key!!, score.value!!.toInt())
+                }
             }
         }
     }
@@ -66,13 +74,13 @@ class ScoreManagementCommand(
                     source.sendMessage("- ${runType.displayName} Shards (${key}) = $value", runType.displayNamedText())
                 }
 
-                // Crowns
+                // Crowns (escaped minus spent)
                 "${runType.longId}-do2.lifetime.escaped.crowns" -> {
                     val itemCount = value - scores.getOrDefault("${runType.longId}-do2.lifetime.spent.crowns", 0)
                     source.sendMessage("- ${runType.displayName} Crowns (${key}) = $itemCount", runType.displayNamedText())
                 }
 
-                // Tomes
+                // Tomes (escaped minus spent)
                 "${runType.longId}-do2.lifetime.escaped.tomes" -> {
                     val itemCount = value - scores.getOrDefault("${runType.longId}-do2.lifetime.spent.tomes", 0)
                     source.sendMessage("- ${runType.displayName} Tomes (${key}) = $itemCount", runType.displayNamedText())
