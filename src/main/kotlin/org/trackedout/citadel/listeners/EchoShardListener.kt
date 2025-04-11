@@ -542,7 +542,7 @@ private fun getHardcoreShardCost(plugin: Citadel, playerName: String): Int? {
         val shardsForThisStreak = doc["shardsForThisStreak"].toString().toInt() + activeClaimCount
         plugin.logger.info("Total hardcore shards for this streak: $shardsForThisStreak")
         val shardsBought = 10 - shardsForThisStreak
-        val cost = 10 + (shardsBought.toDouble().pow(2.0)).toInt()
+        val cost = 10 + shardsBought
         plugin.logger.info("Cost for hardcore shards: $cost")
         return cost
     } else {
