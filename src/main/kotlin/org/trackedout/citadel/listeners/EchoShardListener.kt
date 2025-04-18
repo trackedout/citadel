@@ -541,10 +541,8 @@ private fun getHardcoreShardCost(plugin: Citadel, playerName: String): Int? {
         println(doc)
         val shardsForThisStreak = doc["shardsForThisStreak"].toString().toInt() + activeClaimCount
         plugin.logger.info("Total hardcore shards for this streak: $shardsForThisStreak")
-        val shardsBought = 10 - shardsForThisStreak
-        val cost = 10 + shardsBought
-        plugin.logger.info("Cost for hardcore shards: $cost")
-        return cost
+        plugin.logger.info("Cost for hardcore shards: $shardsForThisStreak")
+        return shardsForThisStreak
     } else {
         plugin.logger.warning("No matching documents found, not overriding formula")
     }
