@@ -28,21 +28,6 @@ class PlayedJoinedListener(
         }
         plugin.logger.info("${player.name} joined at location: ${player.location}")
 
-        plugin.async(player) {
-            eventsApi.eventsPost(
-                Event(
-                    player = player.name,
-                    server = plugin.serverName,
-                    name = "joined-network",
-                    x = player.x,
-                    y = player.y,
-                    z = player.z,
-                )
-            )
-
-            plugin.logger.info("${player.name} joined the server. Dunga Dunga has been notified")
-        }
-
         inventoryManager.updateInventoryBasedOnScore(player)
     }
 
