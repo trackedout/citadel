@@ -26,9 +26,25 @@ class PlayedJoinedListener(
             plugin.logger.info("${player.name} is within dungeon entrance at ${player.location}, teleporting them out")
             player.teleport(Location(player.world, -512.0, 114.0, 1980.0, 90f, 0f))
         }
-        plugin.logger.info("${player.name} joined at location: ${player.location}")
 
         inventoryManager.updateInventoryBasedOnScore(player)
+
+        val protocolStr = event.player.playerProfile.properties
+            .firstOrNull { it.name == "clientProtocol" }
+            ?.value
+
+        val proxyProtocol = protocolStr?.toInt()
+        plugin.logger.info("${player.name} (proxyProtocol: ${proxyProtocol}) joined at location: ${player.location}")
+
+        // https://minecraft.wiki/w/Minecraft_Wiki:Projects/wiki.vg_merge/Protocol_version_numbers
+        // 769 = 1.21.4
+        if (proxyProtocol != null && proxyProtocol > 769) {
+            plugin.logger.info("Player client version is using 1.21.4 or higher, sending the newer datapack")
+            // Override resource pack to use newer version
+            plugin.async(player) {
+                event.getPlayer().setResourcePack("https://mc.trackedout.org/brilliance-pack-1.21.4.zip", "b9b4b625e2f3c3c3162842ee528e6b38500a8161");
+            }
+        }
     }
 
     private fun insideDungeonEntrance(player: Player): Boolean {
