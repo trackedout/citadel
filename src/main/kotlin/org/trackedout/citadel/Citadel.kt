@@ -24,6 +24,7 @@ import org.trackedout.citadel.commands.ShowArtifakesCommand
 import org.trackedout.citadel.commands.ShutdownDungeonsCommand
 import org.trackedout.citadel.commands.SpectateCommand
 import org.trackedout.citadel.commands.StatusCommand
+import org.trackedout.citadel.commands.TestQueueCommand
 import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.inventory.AddACardView
 import org.trackedout.citadel.inventory.BasicItemView
@@ -114,12 +115,14 @@ class Citadel : JavaPlugin() {
         registerCommandCompletions()
 
         // https://github.com/aikar/commands/wiki/Real-World-Examples
+        manager.enableUnstableAPI("help")
         manager.registerCommand(InventoryCommand(eventsApi, inventoryApi, inventoryManager))
         manager.registerCommand(LogEventCommand(eventsApi))
         manager.registerCommand(StatusCommand())
         manager.registerCommand(ScoreManagementCommand(this, scoreApi, eventsApi, inventoryManager, inventoryApi))
         manager.registerCommand(ShutdownDungeonsCommand(this, eventsApi))
         manager.registerCommand(ShopCommand(this))
+        manager.registerCommand(TestQueueCommand(eventsApi))
 
         manager.setDefaultExceptionHandler { _, _, sender, _, throwable ->
             sender.sendMessage("Error executing command: ${throwable.message}")
