@@ -11,11 +11,12 @@ import org.trackedout.citadel.async
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.models.Event
 
-@CommandAlias("decked-out|do")
+@CommandAlias("decked-out|do|k8s")
 class ShutdownDungeonsCommand(
     private val plugin: Citadel,
     private val eventsApi: EventsApi,
 ) : BaseCommand() {
+
     @Subcommand("shutdown-all-empty-dungeons")
     @CommandPermission("decked-out.inventory.admin")
     @Description("Shutdown all empty dungeons")
@@ -34,4 +35,5 @@ class ShutdownDungeonsCommand(
             )
         }
     }
+
 }

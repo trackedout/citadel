@@ -25,6 +25,7 @@ import org.trackedout.citadel.commands.ShutdownDungeonsCommand
 import org.trackedout.citadel.commands.SpectateCommand
 import org.trackedout.citadel.commands.StatusCommand
 import org.trackedout.citadel.commands.TestQueueCommand
+import org.trackedout.citadel.commands.ScheduleJobCommand
 import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.inventory.AddACardView
 import org.trackedout.citadel.inventory.BasicItemView
@@ -121,6 +122,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(StatusCommand())
         manager.registerCommand(ScoreManagementCommand(this, scoreApi, eventsApi, inventoryManager, inventoryApi))
         manager.registerCommand(ShutdownDungeonsCommand(this, eventsApi))
+        manager.registerCommand(ScheduleJobCommand(this, tasksApi))
         manager.registerCommand(ShopCommand(this))
         manager.registerCommand(TestQueueCommand(eventsApi))
 
