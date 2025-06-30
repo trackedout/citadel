@@ -28,6 +28,7 @@ class ScheduleJobCommand(
                     type = "run-job",
                     arguments = listOf(
                         "create-builders-snapshot", "wait-for-builders-snapshot",
+                        "create-builders2-snapshot", "wait-for-builders2-snapshot",
                         "upload-backups-to-s3", "wait-for-backup-upload",
                         "import-latest-snapshot-from-s3", "wait-for-snapshot-import"
                     ),
