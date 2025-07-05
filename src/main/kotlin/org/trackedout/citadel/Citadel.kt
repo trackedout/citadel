@@ -19,13 +19,13 @@ import org.trackedout.citadel.commands.InventoryCommand
 import org.trackedout.citadel.commands.LeaderboardCommand
 import org.trackedout.citadel.commands.LogEventCommand
 import org.trackedout.citadel.commands.ManageDeckCommand
+import org.trackedout.citadel.commands.ScheduleJobCommand
 import org.trackedout.citadel.commands.ScoreManagementCommand
 import org.trackedout.citadel.commands.ShowArtifakesCommand
 import org.trackedout.citadel.commands.ShutdownDungeonsCommand
 import org.trackedout.citadel.commands.SpectateCommand
 import org.trackedout.citadel.commands.StatusCommand
 import org.trackedout.citadel.commands.TestQueueCommand
-import org.trackedout.citadel.commands.ScheduleJobCommand
 import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.inventory.AddACardView
 import org.trackedout.citadel.inventory.BasicItemView
@@ -219,17 +219,17 @@ class Citadel : JavaPlugin() {
             logger.info(message)
         }
     }
-
-    private fun getEnvOrDefault(key: String, default: String): String {
-        var value = System.getenv(key)
-        if (value == null || value.isEmpty()) {
-            value = default
-        }
-        return value
-    }
 }
 
 private val gson = Gson()
+
+fun getEnvOrDefault(key: String, default: String): String {
+    var value = System.getenv(key)
+    if (value == null || value.isEmpty()) {
+        value = default
+    }
+    return value
+}
 
 fun Citadel.async(source: CommandSender, unit: () -> Unit) {
     if (source is Player) {

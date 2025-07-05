@@ -9,6 +9,7 @@ import org.bukkit.event.player.PlayerJoinEvent
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
+import org.trackedout.citadel.getEnvOrDefault
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Event
@@ -19,6 +20,19 @@ class PlayedJoinedListener(
     private val scoreApi: ScoreApi,
     private val inventoryManager: InventoryManager,
 ) : Listener {
+    val modernResourcePackUrl by lazy {
+        getEnvOrDefault(
+            "RESOURCE_PACK_MODERN",
+            "https://mc.trackedout.org/brilliance-pack-1.21.4.zip"
+        )
+    }
+    val modernResourcePackChecksum by lazy {
+        getEnvOrDefault(
+            "RESOURCE_PACK_MODERN_SHA1",
+            "ba2cb5b5646e9e7f3954173576cbacf4ce54ddae"
+        )
+    }
+
     @EventHandler(ignoreCancelled = true)
     fun onPlayerJoin(event: PlayerJoinEvent) {
         val player = event.player
@@ -42,14 +56,17 @@ class PlayedJoinedListener(
             plugin.logger.info("Player client version is using 1.21.4 or higher, sending the newer datapack")
             // Override resource pack to use newer version
             plugin.async(player) {
-                event.getPlayer().setResourcePack("https://mc.trackedout.org/brilliance-pack-1.21.4.zip", "b9b4b625e2f3c3c3162842ee528e6b38500a8161");
+                event.getPlayer().setResourcePack(
+                    modernResourcePackUrl,
+                    modernResourcePackChecksum
+                );
             }
         }
     }
 
     private fun insideDungeonEntrance(player: Player): Boolean {
         return -553 <= player.x && player.x <= -542
-            && 1977 <= player.z && player.z <= 1983
+                && 1977 <= player.z && player.z <= 1983
     }
 
     @EventHandler(ignoreCancelled = true)
