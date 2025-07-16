@@ -66,7 +66,8 @@ class PlayedJoinedListener(
 
     private fun insideDungeonEntrance(player: Player): Boolean {
         return -553 <= player.x && player.x <= -542
-                && 1977 <= player.z && player.z <= 1983
+            && 1977 <= player.z && player.z <= 1983
+            && 112 <= player.y && player.y <= 119
     }
 
     @EventHandler(ignoreCancelled = true)
