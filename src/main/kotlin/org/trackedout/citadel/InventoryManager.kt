@@ -318,7 +318,7 @@ class InventoryManager(
     }
 }
 
-val tradeSourceScores = baseTradeItems.values.flatMap { it ->
+val tradeSourceScores = baseTradeItems.values.flatMap {
     runTypes.map(RunType::longId).map { runType ->
         listOf(
             it.sourceScoreboardName(runType),

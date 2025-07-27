@@ -188,7 +188,7 @@ class Citadel : JavaPlugin() {
         }
 
         manager.commandCompletions.registerAsyncCompletion("items") { c ->
-            baseTradeItems.plus(intoDungeonItems).minus(listOf("DUMMY", "QUEUE")).map { it.key }
+            baseTradeItems.plus(intoDungeonItems).map { it.key }
         }
 
         manager.commandCompletions.registerAsyncCompletion("dbPlayers") { c ->

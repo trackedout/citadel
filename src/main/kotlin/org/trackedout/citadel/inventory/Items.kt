@@ -20,6 +20,16 @@ fun dungeonShard(
     itemCount: Int = 1,
 ) = dungeonItem(name, 7, textColor, itemCount = itemCount)
 
+fun dungeonShardFragment(runType: RunType, itemCount: Int): ItemStack {
+    return dungeonShardFragment("❄☠ Shard Fragment (${runType.displayName}) ☠❄", runType.displayNamedText(), itemCount)
+}
+
+fun dungeonShardFragment(
+    name: String,
+    textColor: NamedTextColor = NamedTextColor.AQUA,
+    itemCount: Int = 1,
+) = dungeonItem(name, 1, textColor, Material.AMETHYST_SHARD, itemCount)
+
 fun dungeonCrown(runType: RunType, itemCount: Int) = dungeonCrown(runType.displayName, runType.displayNamedText(), itemCount)
 
 fun dungeonCrown(

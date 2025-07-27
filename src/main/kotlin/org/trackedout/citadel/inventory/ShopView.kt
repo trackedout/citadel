@@ -36,19 +36,19 @@ data class Trade(
     val targetItemCount: Int,
 ) {
     fun sourceScoreboardName(): String {
-        return tradeItems.getOrElse(sourceType.uppercase()) {
+        return tradeItemsWithQueueTypes.getOrElse(sourceType.uppercase()) {
             throw Exception("Unknown source type '$sourceType', unable to determine source scoreboard")
         }.sourceScoreboardName(this.runType)
     }
 
     fun sourceInversionScoreboardName(): String {
-        return tradeItems.getOrElse(sourceType.uppercase()) {
+        return tradeItemsWithQueueTypes.getOrElse(sourceType.uppercase()) {
             throw Exception("Unknown source type '$sourceType', unable to determine source inversion scoreboard")
         }.sourceInversionScoreboardName(this.runType)
     }
 
     fun targetScoreboardName(): String {
-        return tradeItems.getOrElse(targetType.uppercase()) {
+        return tradeItemsWithQueueTypes.getOrElse(targetType.uppercase()) {
             throw Exception("Unknown target type '$targetType', unable to determine target scoreboard")
         }.targetScoreboardName(this.runType)
     }

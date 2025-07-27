@@ -74,6 +74,12 @@ class ScoreManagementCommand(
                     source.sendMessage("- ${runType.displayName} Shards (${key}) = $value", runType.displayNamedText())
                 }
 
+                // Shard Fragments (escaped minus spent)
+                "${runType.longId}-do2.lifetime.escaped.shard_fragments" -> {
+                    val itemCount = value - scores.getOrDefault("${runType.longId}-do2.lifetime.spent.shard_fragments", 0)
+                    source.sendMessage("- ${runType.displayName} Shard Fragments (${key}) = $itemCount", runType.displayNamedText())
+                }
+
                 // Crowns (escaped minus spent)
                 "${runType.longId}-do2.lifetime.escaped.crowns" -> {
                     val itemCount = value - scores.getOrDefault("${runType.longId}-do2.lifetime.spent.crowns", 0)

@@ -15,7 +15,7 @@ interface ScoreboardDescriber {
     fun itemStack(runType: String, count: Int): ItemStack
 }
 
-val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
+val queueItems: Map<String, ScoreboardDescriber> = mapOf(
     "DUMMY" to object : ScoreboardDescriber {
         override fun sourceScoreboardName(runType: String): String = ""
 
@@ -26,8 +26,10 @@ val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
         override fun sourceScoreboardName(runType: String): String = "queue"
 
         override fun itemStack(runType: String, count: Int): ItemStack = ItemStack(Material.STICK)
-    },
+    }
+)
 
+val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
     "CROWN" to object : ScoreboardDescriber {
         override fun sourceScoreboardName(runType: String): String {
             return "${runType}-do2.lifetime.escaped.crowns"
@@ -63,6 +65,20 @@ val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
 
         override fun itemStack(runType: String, count: Int): ItemStack {
             return dungeonShard(getRunTypeById(runType), count)
+        }
+    },
+
+    "SHARD_FRAGMENT" to object : ScoreboardDescriber {
+        override fun sourceScoreboardName(runType: String): String {
+            return "${runType}-do2.lifetime.escaped.shard_fragments"
+        }
+
+        override fun sourceInversionScoreboardName(runType: String): String {
+            return "${runType}-do2.lifetime.spent.shard_fragments"
+        }
+
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return dungeonShardFragment(getRunTypeById(runType), count)
         }
     },
 )
@@ -132,6 +148,7 @@ val intoDungeonItems: Map<String, ScoreboardDescriber> = mapOf(
 
 val tradeItems = baseTradeItems.plus(cardDescribers()).plus(intoDungeonItems)
 
+val tradeItemsWithQueueTypes = tradeItems.plus(queueItems)
 
 fun cardDescribers(): Map<String, ScoreboardDescriber> {
     return cardConfig.entries.associate {
@@ -162,7 +179,11 @@ fun oldCards(): Map<String, ScoreboardDescriber> {
                         tag.customModelData = it.modelData
                         val nameJson = "{\"color\":\"${it.colour}\",\"text\":\"${it.displayName}\"}"
                         tag.set(nameJson, "display", "Name")
-                        tag.set("{\"color\":\"${it.colour}\",\"OriginalName\":\"${nameJson}\"}", "display", "NameFormat");
+                        tag.set(
+                            "{\"color\":\"${it.colour}\",\"OriginalName\":\"${nameJson}\"}",
+                            "display",
+                            "NameFormat"
+                        );
                         tag.set("${runType.shortRunType()}1", "deckId")
 
                         return tag.load()
