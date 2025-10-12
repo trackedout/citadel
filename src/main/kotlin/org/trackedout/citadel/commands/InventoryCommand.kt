@@ -14,6 +14,7 @@ import net.kyori.adventure.text.format.TextColor
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.INVENTORY_FILTER_MODE_SCOREBOARD
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
 import org.trackedout.citadel.config.cardConfig
@@ -23,7 +24,9 @@ import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
+import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Card
+import org.trackedout.client.models.Score
 import org.trackedout.data.RunType
 import org.trackedout.data.find
 import org.trackedout.data.sortedList
@@ -33,6 +36,7 @@ class InventoryCommand(
     private val eventsApi: EventsApi,
     private val inventoryApi: InventoryApi,
     private val inventoryManager: InventoryManager,
+    private val scoreApi: ScoreApi,
 ) : BaseCommand() {
     @Dependency
     private lateinit var plugin: Citadel
@@ -45,6 +49,27 @@ class InventoryCommand(
         plugin.server.onlinePlayers.filter { it.name == target || target == "ALL" }.forEach { player ->
             inventoryManager.updateInventoryBasedOnScore(player)
             source.sendGreenMessage("Updated ${player.name}'s inventory")
+        }
+    }
+
+    @Subcommand("run-mode")
+    @CommandPermission("decked-out.inventory.set-run-mode")
+    @Description("Set run mode for inventory filtering")
+    @CommandCompletion("@runTypes")
+    fun setRunMode(source: Player, runType: RunType) {
+        plugin.async(source) {
+            scoreApi.scoresPost(
+                listOf(
+                    Score(
+                        player = source.name,
+                        key = INVENTORY_FILTER_MODE_SCOREBOARD,
+                        value = runType.runTypeId.toBigDecimal(),
+                    )
+                )
+            )
+
+            inventoryManager.updateInventoryBasedOnScore(source)
+            source.sendGreenMessage("Your inventory will now only show ${runType.displayName} items")
         }
     }
 
@@ -168,7 +193,13 @@ class InventoryCommand(
         }
     }
 
-    private fun mutateInventory(action: String, source: CommandSender, target: String, cardName: String, runType: RunType) {
+    private fun mutateInventory(
+        action: String,
+        source: CommandSender,
+        target: String,
+        cardName: String,
+        runType: RunType
+    ) {
         val cardName = cardName.let {
             try {
                 cardConfig.find(it)!!.shorthand

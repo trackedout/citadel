@@ -4,14 +4,19 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.INVENTORY_FILTER_MODE_SCOREBOARD
 import org.trackedout.citadel.async
 import org.trackedout.client.apis.EventsApi
+import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Event
+import org.trackedout.client.models.Score
+import org.trackedout.data.getRunTypeById
 import org.trackedout.fs.logger
 
 class PlayedDeathListener(
     private val plugin: Citadel,
     private val eventsApi: EventsApi,
+    private val scoreApi: ScoreApi,
 ) : Listener {
 
     @EventHandler(ignoreCancelled = true)
@@ -36,6 +41,16 @@ class PlayedDeathListener(
                     metadata = mapOf(
                         "reason" to "void_death",
                         "run-type" to "h",
+                    )
+                )
+            )
+
+            scoreApi.scoresPost(
+                listOf(
+                    Score(
+                        player = player.name,
+                        key = INVENTORY_FILTER_MODE_SCOREBOARD,
+                        value = getRunTypeById("hardcore").runTypeId.toBigDecimal(),
                     )
                 )
             )

@@ -121,12 +121,13 @@ fun dungeonItem(
     })
 }
 
-fun dungeonDeck(runType: RunType): ItemStack {
+fun dungeonDeck(runType: RunType, itemCount: Int = 1): ItemStack {
     return dungeonDeck(
         "❄☠ Frozen Assets (${runType.displayName} Deck #1) ☠❄",
         textColor = runType.displayNamedText(),
         material = Material.valueOf(runType.deckMaterial),
-        deckId = "${runType.shortId}1"
+        deckId = "${runType.shortId}1",
+        itemCount = itemCount,
     )
 }
 
@@ -135,7 +136,8 @@ fun dungeonDeck(
     textColor: NamedTextColor = NamedTextColor.AQUA,
     material: Material,
     deckId: String,
-) = dungeonItem(name, 7, textColor, material = material, metadata = mapOf("deckId" to deckId))
+    itemCount: Int = 1,
+) = dungeonItem(name, 7, textColor, material = material, metadata = mapOf("deckId" to deckId), itemCount = itemCount)
 
 
 fun ItemStack.withTradeMeta(runType: String, tradeId: String): ItemStack {

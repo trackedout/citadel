@@ -117,7 +117,7 @@ class Citadel : JavaPlugin() {
 
         // https://github.com/aikar/commands/wiki/Real-World-Examples
         manager.enableUnstableAPI("help")
-        manager.registerCommand(InventoryCommand(eventsApi, inventoryApi, inventoryManager))
+        manager.registerCommand(InventoryCommand(eventsApi, inventoryApi, inventoryManager, scoreApi))
         manager.registerCommand(LogEventCommand(eventsApi))
         manager.registerCommand(StatusCommand())
         manager.registerCommand(ScoreManagementCommand(this, scoreApi, eventsApi, inventoryManager, inventoryApi))
@@ -153,7 +153,7 @@ class Citadel : JavaPlugin() {
         leaderboardTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 20 * 15) // Repeat every 300 ticks (15 seconds)
 
         server.pluginManager.registerEvents(PlayedJoinedListener(this, eventsApi, scoreApi, inventoryManager), this)
-        server.pluginManager.registerEvents(PlayedDeathListener(this, eventsApi), this)
+        server.pluginManager.registerEvents(PlayedDeathListener(this, eventsApi, scoreApi), this)
 
         val viewFrame: ViewFrame = ViewFrame.create(this)
             .with(
