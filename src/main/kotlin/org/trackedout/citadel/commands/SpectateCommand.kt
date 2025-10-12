@@ -63,11 +63,18 @@ class SpectateCommand(
                 claims.firstOrNull()?.let { claim ->
                     val runType = claim.metadata["run-type"]
                     val deckId = claim.metadata["deck-id"]
+                    val dungeonType = claim.metadata["dungeon-type"]
                     val server = claim.claimant
                     val runId = claim.id()
 
                     if (runId == null || runType == null || deckId == null || server == null) {
                         plugin.logger.warning("Something is null for this claim: { runId=$runId, runType=$runType, deckId=$deckId, claimant=$server }")
+                        return@forEach
+                    }
+
+                    // TODO: Remove this check when season-2 is allowed to be spectated
+                    if (dungeonType == "season-2") {
+                        plugin.logger.info("Not allowing spectating of season-2 dungeons")
                         return@forEach
                     }
 
