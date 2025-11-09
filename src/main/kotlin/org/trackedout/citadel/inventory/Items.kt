@@ -30,7 +30,10 @@ fun dungeonShardFragment(
     itemCount: Int = 1,
 ) = dungeonItem(name, 1, textColor, Material.AMETHYST_SHARD, itemCount)
 
-fun dungeonCrown(runType: RunType, itemCount: Int) = dungeonCrown(runType.displayName, runType.displayNamedText(), itemCount)
+fun dungeonCrown(
+    runType: RunType,
+    itemCount: Int,
+) = dungeonCrown(runType.displayName, runType.displayNamedText(), itemCount)
 
 fun dungeonCrown(
     crownType: String,
@@ -38,7 +41,10 @@ fun dungeonCrown(
     itemCount: Int = 1,
 ) = dungeonItem("❄☠ Decked Out Crown (${crownType}) ☠❄", 2, textColor, itemCount = itemCount)
 
-fun dungeonTome(runType: RunType, itemCount: Int) = dungeonTome(runType.displayName, runType.displayNamedText(), itemCount)
+fun dungeonTome(
+    runType: RunType,
+    itemCount: Int,
+) = dungeonTome(runType.displayName, runType.displayNamedText(), itemCount)
 
 fun dungeonTome(
     runType: String,
@@ -46,15 +52,18 @@ fun dungeonTome(
     itemCount: Int = 1,
 ) = dungeonItem("❄☠ Victory Tome (${runType}) ☠❄", 6, textColor, itemCount = itemCount)
 
-fun dungeonSlownessPotion(runType: RunType, itemCount: Int) = dungeonSlownessPotion(runType.displayName, runType.displayNamedText(), itemCount)
+fun dungeonSlownessPotion(
+    runType: RunType,
+    itemCount: Int,
+) = dungeonSlownessPotion(runType.displayName, runType.displayNamedText(), itemCount)
 
 fun dungeonSlownessPotion(
     runType: String,
     textColor: NamedTextColor = NamedTextColor.AQUA,
     itemCount: Int = 1,
 ): ItemStack {
-    val potion = Potion(PotionType.SLOWNESS, 2);
-    potion.isSplash = true;
+    val potion = Potion(PotionType.SLOWNESS, 2)
+    potion.isSplash = true
     val itemStack = potion.toItemStack(if (itemCount <= 0) 999 else itemCount)
 
     val meta = itemStack.itemMeta
@@ -69,7 +78,7 @@ fun dungeonSlownessPotion(
     )
     return RtagItem.edit(itemStack, fun(tag: RtagItem): ItemStack {
         metadata.entries.forEach { entry -> tag.set(entry.value, entry.key) }
-        return tag.loadCopy();
+        return tag.loadCopy()
     })
 }
 
@@ -97,7 +106,13 @@ fun dungeonKey(
 ) = dungeonItem(name, customModelData, textColor, itemCount = itemCount)
 
 fun repairKit(runType: RunType, count: Int): ItemStack {
-    return dungeonItem("❄☠ Rusty Repair Kit (${runType.displayName}) ☠❄", 2, runType.displayNamedText(), Material.IRON_INGOT, count)
+    return dungeonItem(
+        "❄☠ Rusty Repair Kit (${runType.displayName}) ☠❄",
+        2,
+        runType.displayNamedText(),
+        Material.IRON_INGOT,
+        count
+    )
 }
 
 fun dungeonItem(
@@ -117,28 +132,26 @@ fun dungeonItem(
 
     return RtagItem.edit(itemStack, fun(tag: RtagItem): ItemStack {
         metadata.entries.forEach { entry -> tag.set(entry.value, entry.key) }
-        return tag.loadCopy();
+        return tag.loadCopy()
     })
 }
 
-fun dungeonDeck(runType: RunType, itemCount: Int = 1): ItemStack {
-    return dungeonDeck(
-        "❄☠ Frozen Assets (${runType.displayName} Deck #1) ☠❄",
-        textColor = runType.displayNamedText(),
-        material = Material.valueOf(runType.deckMaterial),
-        deckId = "${runType.shortId}1",
-        itemCount = itemCount,
-    )
-}
+fun dungeonDeck(runType: RunType, itemCount: Int = 1): ItemStack = dungeonItem(
+    name = "❄☠ Frozen Assets (${runType.displayName} Deck #1) ☠❄",
+    customModelData = 7,
+    textColor = runType.displayNamedText(),
+    material = Material.valueOf(runType.deckMaterial),
+    metadata = mapOf("deckId" to "${runType.shortId}1"),
+    itemCount = itemCount,
+)
 
-fun dungeonDeck(
-    name: String = "❄☠ Frozen Assets ☠❄",
-    textColor: NamedTextColor = NamedTextColor.AQUA,
-    material: Material,
-    deckId: String,
-    itemCount: Int = 1,
-) = dungeonItem(name, 7, textColor, material = material, metadata = mapOf("deckId" to deckId), itemCount = itemCount)
-
+fun dungeonArtifacts(runType: RunType, itemCount: Int = 1): ItemStack = dungeonItem(
+    name = "❄☠ Collected Artifakes (${runType.displayName}) ☠❄",
+    customModelData = 36,
+    textColor = runType.displayNamedText(),
+    metadata = mapOf("deckId" to "${runType.shortId}1", "action" to "show-artifakes"),
+    itemCount = itemCount,
+)
 
 fun ItemStack.withTradeMeta(runType: String, tradeId: String): ItemStack {
     var metadata = mapOf(
@@ -152,16 +165,16 @@ fun ItemStack.withTradeMeta(runType: String, tradeId: String): ItemStack {
 
     return RtagItem.edit(this, fun(tag: RtagItem): ItemStack {
         metadata.entries.forEach { entry -> tag.set(entry.value, entry.key) }
-        return tag.loadCopy();
+        return tag.loadCopy()
     })
 }
 
 fun ItemStack.oldDungeonItem(): ItemStack {
     this.amount = 999
     return RtagItem.edit(this, fun(tag: RtagItem): ItemStack {
-        tag.remove("deckId");
-        tag.remove("tradeId");
-        tag.remove("canTakeIntoDungeon");
-        return tag.loadCopy();
+        tag.remove("deckId")
+        tag.remove("tradeId")
+        tag.remove("canTakeIntoDungeon")
+        return tag.loadCopy()
     })
 }

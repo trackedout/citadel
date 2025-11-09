@@ -13,6 +13,7 @@ import org.trackedout.citadel.inventory.ScoreboardDescriber
 import org.trackedout.citadel.inventory.Trade
 import org.trackedout.citadel.inventory.baseTradeItems
 import org.trackedout.citadel.inventory.displayName
+import org.trackedout.citadel.inventory.dungeonArtifacts
 import org.trackedout.citadel.inventory.dungeonDeck
 import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.citadel.inventory.oldCards
@@ -51,7 +52,7 @@ class InventoryManager(
             }
 
             scores = scores.filter(::isInventoryRelatedScore)
-            val inventoryFilterRunType = getInventoryFilterForPlayer(player)
+            val inventoryFilterRunType = getInventoryFilterForPlayer(this.plugin, this.scoreApi, player.name)
             if (inventoryFilterRunType != null) {
                 val tradeSourcesForFilter = getTradeSourcesForRunTypes(listOf(inventoryFilterRunType))
                 scores = scores.map { score: Score ->
@@ -78,24 +79,6 @@ class InventoryManager(
             ensurePlayerInventoryReflectsItemsOutsideOfDeck(player, inventoryFilterRunType)
             syncAdvancements(player)
         }
-    }
-
-    private fun getInventoryFilterForPlayer(player: Player): RunType? {
-        // RunType filter (if any) to select which run type we display
-        val inventoryFilterMode = scoreApi.scoresGet(
-            player.name,
-            prefixFilter = INVENTORY_FILTER_MODE_SCOREBOARD
-        ).results!!.firstOrNull()
-
-        // If the filter is set, only include scores for that run type
-        plugin.logger.info("Inventory filter for ${player.name} is ${inventoryFilterMode?.value}")
-        val inventoryFilterRunType = inventoryFilterMode?.let { runTypeId: Score ->
-            val runType = findRunTypeById(runTypeId.value.toString())
-            plugin.logger.info("Run type for ${player.name} is $runType")
-
-            runType
-        }
-        return inventoryFilterRunType
     }
 
     private fun ensurePlayerInventoryReflectsItemsOutsideOfDeck(player: Player, inventoryFilterRunType: RunType?) {
@@ -255,6 +238,7 @@ class InventoryManager(
                         itemCount = 0
                     }
                     player.ensureInventoryContains(dungeonDeck(runType, itemCount))
+                    player.ensureInventoryContains(dungeonArtifacts(runType, itemCount))
                 }
             }
         }
@@ -398,4 +382,25 @@ fun ScoreApi.getInventoryRelatedScores(playerName: String): List<Score> {
 
 fun isInventoryRelatedScore(score: Score): Boolean {
     return tradeSourceScores.contains(score.key!!)
+}
+
+fun getInventoryFilterForPlayer(
+    plugin: Citadel, scoreApi: ScoreApi, playerName: String
+): RunType? {
+    // RunType filter (if any) to select which run type we display
+    val inventoryFilterMode = scoreApi.scoresGet(
+        playerName,
+        prefixFilter = INVENTORY_FILTER_MODE_SCOREBOARD
+    ).results!!.firstOrNull()
+
+    // If the filter is set, only include scores for that run type
+    plugin.logger.info("Inventory filter for $playerName is ${inventoryFilterMode?.value}")
+    val inventoryFilterRunType = inventoryFilterMode?.let { runTypeId: Score ->
+        val runType = findRunTypeById(runTypeId.value.toString())
+        plugin.logger.info("Run type for $playerName is $runType")
+
+        runType
+    }
+
+    return inventoryFilterRunType
 }

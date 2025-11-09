@@ -65,6 +65,8 @@ fun ItemStack.withDeckId(deckId: DeckId): ItemStack {
     return this.withTags(mapOf("deckId" to deckId))
 }
 
+fun ItemStack.getAction(): String? = RtagItem(this).get<String>("action")
+
 fun ItemStack.withTags(tags: Map<String, String>): ItemStack {
     return RtagItem.edit(this) { tag ->
         tags.forEach { (key, value) ->

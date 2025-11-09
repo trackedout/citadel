@@ -35,7 +35,9 @@ import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
+import org.trackedout.citadel.commands.showArtifakeUIForPlayer
 import org.trackedout.citadel.debug
+import org.trackedout.citadel.getAction
 import org.trackedout.citadel.getCard
 import org.trackedout.citadel.getDeckId
 import org.trackedout.citadel.hasDeckId
@@ -65,6 +67,7 @@ import org.trackedout.citadel.sendRedMessage
 import org.trackedout.citadel.shop.getShopData
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
+import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Card
 import org.trackedout.client.models.Event
 import org.trackedout.data.RunType
@@ -78,6 +81,7 @@ class EchoShardListener(
     private val plugin: Citadel,
     private val inventoryApi: InventoryApi,
     private val eventsApi: EventsApi,
+    private val scoreApi: ScoreApi,
     private val viewFrame: ViewFrame,
     private val inventoryManager: InventoryManager,
 ) : BaseCommand(), Listener {
@@ -282,6 +286,10 @@ class EchoShardListener(
             item.getDeckId()?.let {
                 if (item.isDeckedOutShulker() || item.isDeckedOutCard()) {
                     showDeckInventory(event, player, it)
+                }
+
+                if (item.getAction() == "show-artifakes") {
+                    showArtifakeUIForPlayer(plugin, viewFrame, player, player.name, scoreApi)
                 }
             }
         }

@@ -174,7 +174,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(CubbyManagementCommand(this, eventsApi, scoreApi, viewFrame))
         manager.registerCommand(LeaderboardCommand(this))
 
-        val echoShardListener = EchoShardListener(this, inventoryApi, eventsApi, viewFrame, inventoryManager)
+        val echoShardListener = EchoShardListener(this, inventoryApi, eventsApi, scoreApi, viewFrame, inventoryManager)
         server.pluginManager.registerEvents(echoShardListener, this)
 
         logger.info("Citadel has been enabled. Server name: $serverName")
