@@ -58,6 +58,19 @@ class InventoryCommand(
     @CommandCompletion("@runTypes")
     fun setRunMode(source: Player, runType: RunType) {
         plugin.async(source) {
+
+            if (runType.shortId == 'h') {
+                val hardcoreShards = scoreApi.scoresGet(
+                    source.name,
+                    prefixFilter = "do2.inventory.shards.hardcore"
+                ).results!!.firstOrNull()
+
+                if (hardcoreShards == null) {
+                    source.sendRedMessage("You cannot set your inventory filter to Hardcore until you unlock it. The entrance to Hardcore mode is hidden somewhere in the lobby world!")
+                    return@async
+                }
+            }
+
             scoreApi.scoresPost(
                 listOf(
                     Score(
