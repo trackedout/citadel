@@ -1,7 +1,8 @@
 package org.trackedout.citadel.inventory
 
 import com.saicone.rtag.RtagItem
-import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.Component.text
+import net.kyori.adventure.text.TextComponent
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
@@ -9,6 +10,7 @@ import org.bukkit.potion.Potion
 import org.bukkit.potion.PotionType
 import org.trackedout.citadel.displayNamedText
 import org.trackedout.data.RunType
+
 
 fun dungeonShard(runType: RunType, itemCount: Int): ItemStack {
     return dungeonShard("${runType.displayName} runs", runType.displayNamedText(), itemCount)
@@ -67,7 +69,7 @@ fun dungeonSlownessPotion(
     val itemStack = potion.toItemStack(if (itemCount <= 0) 999 else itemCount)
 
     val meta = itemStack.itemMeta
-    meta.displayName(Component.text("Splash Potion of Slowness (${runType})", textColor))
+    meta.displayName(text("Splash Potion of Slowness (${runType})", textColor))
     meta.setCustomModelData(-1)
 
     itemStack.itemMeta = meta
@@ -125,7 +127,7 @@ fun dungeonItem(
 ): ItemStack {
     val itemStack = ItemStack(material, if (itemCount <= 0) 999 else itemCount)
     val meta = itemStack.itemMeta
-    meta.displayName(Component.text(name, textColor))
+    meta.displayName(text(name, textColor))
     meta.setCustomModelData(customModelData)
 
     itemStack.itemMeta = meta
@@ -160,7 +162,7 @@ fun menuBook(): ItemStack = dungeonItem(
     metadata = mapOf("deckId" to "", "action" to "show-main-menu"),
     itemCount = 1,
     customModelData = 0,
-)
+).withLore(text("An introduction to our server!", NamedTextColor.GOLD))
 
 fun ItemStack.withTradeMeta(runType: String, tradeId: String): ItemStack {
     var metadata = mapOf(
@@ -176,6 +178,14 @@ fun ItemStack.withTradeMeta(runType: String, tradeId: String): ItemStack {
         metadata.entries.forEach { entry -> tag.set(entry.value, entry.key) }
         return tag.loadCopy()
     })
+}
+
+fun ItemStack.withLore(vararg lore: TextComponent): ItemStack {
+    return this.apply {
+        val meta = this.itemMeta
+        meta.lore(lore.toList())
+        this.itemMeta = meta
+    }
 }
 
 fun ItemStack.oldDungeonItem(): ItemStack {
