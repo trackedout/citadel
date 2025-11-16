@@ -2,6 +2,7 @@ package org.trackedout.citadel
 
 import com.mongodb.client.model.Filters
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.Component.text
 import net.kyori.adventure.text.TextComponent
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.minimessage.MiniMessage
@@ -33,7 +34,7 @@ class StatusTaskRunner(
             return
         }
         sidebar.clearLines()
-        sidebar.title(Component.text("Network Status"))
+        sidebar.title(text("Network Status"))
 
         var lines = 0
         for (statusSection in statusSections) {
@@ -45,8 +46,12 @@ class StatusTaskRunner(
             statusSection.lines?.forEach {
                 val parsed = mm.deserialize(it.key!!)
 
-                val textComponent: TextComponent =
-                    Component.text().append(parsed).append(Component.text(": ")).append(Component.text("${it.value!!}").colorIfAbsent(NamedTextColor.AQUA)).build()
+                val textComponent: TextComponent = text()
+                    .append(parsed)
+                    .append(text(": "))
+                    .append(
+                        text("${it.value!!}").colorIfAbsent(NamedTextColor.AQUA)
+                    ).build()
                 sidebar.line(lines++, textComponent)
             }
         }
@@ -120,26 +125,7 @@ class StatusTaskRunner(
 
             val lines = signConfig.text(instances)
             plugin.runOnNextTick {
-                updateSign(signConfig.x, signConfig.y, signConfig.z, lines)
-            }
-        }
-    }
-
-    private fun updateSign(x: Int, y: Int, z: Int, lines: List<String>) {
-        logger.debug("Updating sign at $x, $y, $z with lines: $lines")
-
-        plugin.server.worlds.find { it.name == "world" }?.let { world ->
-            val signBlock: Block = world.getBlockAt(x, y, z)
-
-            if (signBlock.type == Material.WARPED_WALL_SIGN) {
-                val sign = signBlock.state as org.bukkit.block.Sign
-                val signSide = sign.getSide(Side.FRONT)
-
-                intArrayOf(0, 1, 2, 3).forEach { i ->
-                    signSide.line(i, Component.text(lines.getOrNull(i) ?: "").color(NamedTextColor.WHITE))
-                }
-
-                sign.update()
+                updateSign(plugin, signConfig.x, signConfig.y, signConfig.z, lines)
             }
         }
     }
@@ -151,4 +137,23 @@ class StatusTaskRunner(
         // Takes in the list of instances, and returns a list of up to 4 strings to display on the sign
         val text: (instances: List<MongoDungeon>) -> List<String>,
     )
+}
+
+fun updateSign(plugin: Citadel, x: Int, y: Int, z: Int, lines: List<String>) {
+    logger.debug("Updating sign at {}, {}, {} with lines: {}", x, y, z, lines)
+
+    plugin.server.worlds.find { it.name == "world" }?.let { world ->
+        val signBlock: Block = world.getBlockAt(x, y, z)
+
+        if (signBlock.type == Material.WARPED_WALL_SIGN) {
+            val sign = signBlock.state as org.bukkit.block.Sign
+            val signSide = sign.getSide(Side.FRONT)
+
+            intArrayOf(0, 1, 2, 3).forEach { i ->
+                signSide.line(i, text(lines.getOrNull(i) ?: "").color(NamedTextColor.WHITE))
+            }
+
+            sign.update()
+        }
+    }
 }
