@@ -36,6 +36,7 @@ import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
 import org.trackedout.citadel.commands.showArtifakeUIForPlayer
+import org.trackedout.citadel.commands.showBookUI
 import org.trackedout.citadel.debug
 import org.trackedout.citadel.getAction
 import org.trackedout.citadel.getCard
@@ -296,6 +297,10 @@ class EchoShardListener(
 
         // Cancel interaction events for restricted items
         if ((event.action == Action.RIGHT_CLICK_AIR || event.action == Action.RIGHT_CLICK_BLOCK)) {
+            if (item.getAction() == "show-main-menu") {
+                showBookUI(plugin, player)
+            }
+
             if (isRestrictedItem(item) && !player.scoreboardTags.contains("nocheck")) {
                 event.setUseItemInHand(org.bukkit.event.Event.Result.DENY)
                 player.debug("Preventing item consumption on interact event ${event.action}")

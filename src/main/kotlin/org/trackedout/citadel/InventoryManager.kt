@@ -14,6 +14,7 @@ import org.trackedout.citadel.inventory.displayName
 import org.trackedout.citadel.inventory.dungeonArtifacts
 import org.trackedout.citadel.inventory.dungeonDeck
 import org.trackedout.citadel.inventory.intoDungeonItems
+import org.trackedout.citadel.inventory.menuBook
 import org.trackedout.citadel.inventory.tradeItems
 import org.trackedout.citadel.inventory.withTradeMeta
 import org.trackedout.client.apis.EventsApi
@@ -223,6 +224,8 @@ class InventoryManager(
                 }
             }
         }
+
+        player.ensureInventoryContains(knownItemTracker, menuBook())
     }
 
     private fun cleanUpOldItems(player: Player, knownItemTracker: MutableSet<ItemStack>) {

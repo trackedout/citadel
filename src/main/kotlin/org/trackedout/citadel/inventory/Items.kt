@@ -153,6 +153,15 @@ fun dungeonArtifacts(runType: RunType, itemCount: Int = 1): ItemStack = dungeonI
     itemCount = itemCount,
 )
 
+fun menuBook(): ItemStack = dungeonItem(
+    name = "❄☠ Welcome to Tracked Out ☠❄",
+    material = Material.WRITTEN_BOOK,
+    textColor = NamedTextColor.GOLD,
+    metadata = mapOf("deckId" to "", "action" to "show-main-menu"),
+    itemCount = 1,
+    customModelData = 0,
+)
+
 fun ItemStack.withTradeMeta(runType: String, tradeId: String): ItemStack {
     var metadata = mapOf(
         "deckId" to "${runType.shortRunType()}1",
