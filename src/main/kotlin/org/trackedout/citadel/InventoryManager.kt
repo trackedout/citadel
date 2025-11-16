@@ -1,14 +1,12 @@
 package org.trackedout.citadel
 
 import org.bukkit.GameRule
-import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.advancement.Advancement
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.commands.createCard
 import org.trackedout.citadel.config.cardConfig
-import org.trackedout.citadel.config.legacyRunTypes
 import org.trackedout.citadel.inventory.ScoreboardDescriber
 import org.trackedout.citadel.inventory.Trade
 import org.trackedout.citadel.inventory.baseTradeItems
@@ -16,8 +14,6 @@ import org.trackedout.citadel.inventory.displayName
 import org.trackedout.citadel.inventory.dungeonArtifacts
 import org.trackedout.citadel.inventory.dungeonDeck
 import org.trackedout.citadel.inventory.intoDungeonItems
-import org.trackedout.citadel.inventory.oldCards
-import org.trackedout.citadel.inventory.oldDungeonItem
 import org.trackedout.citadel.inventory.tradeItems
 import org.trackedout.citadel.inventory.withTradeMeta
 import org.trackedout.client.apis.EventsApi
@@ -39,20 +35,20 @@ class InventoryManager(
     private val eventsApi: EventsApi,
 ) {
     fun updateInventoryBasedOnScore(player: Player) {
-        cleanUpOldItems(player)
-        removeLegacyCardsFromInventory(player)
+        val knownItemTracker = mutableSetOf<ItemStack>()
 
         plugin.async(player) {
-            plugin.logger.info("Fetching scores for ${player.name} (filtering for prefixes: ${tradeSourceScores})")
-            var scores = scoreApi.getInventoryRelatedScores(player.name)
+            val playerName = player.name
+            plugin.logger.info("Fetching scores for $playerName (filtering for prefixes: ${tradeSourceScores})")
+            var scores = scoreApi.getInventoryRelatedScores(playerName)
 
-            if (ensurePlayerHasPracticeShards(player, scores)) {
+            if (ensurePlayerHasPracticeShards(playerName, scores)) {
                 // Update scores again to reflect new shard count
-                scores = scoreApi.getInventoryRelatedScores(player.name)
+                scores = scoreApi.getInventoryRelatedScores(playerName)
             }
 
             scores = scores.filter(::isInventoryRelatedScore)
-            val inventoryFilterRunType = getInventoryFilterForPlayer(this.plugin, this.scoreApi, player.name)
+            val inventoryFilterRunType = getInventoryFilterForPlayer(this.plugin, this.scoreApi, playerName)
             if (inventoryFilterRunType != null) {
                 val tradeSourcesForFilter = getTradeSourcesForRunTypes(listOf(inventoryFilterRunType))
                 scores = scores.map { score: Score ->
@@ -69,6 +65,7 @@ class InventoryManager(
                 .forEach { score ->
                     updatePlayerInventoryForState(
                         player,
+                        knownItemTracker,
                         inventoryFilterRunType,
                         scores.associate { it.key!! to it.value!!.toInt() },
                         score.key!!,
@@ -76,12 +73,18 @@ class InventoryManager(
                     )
                 }
 
-            ensurePlayerInventoryReflectsItemsOutsideOfDeck(player, inventoryFilterRunType)
+            ensurePlayerInventoryReflectsItemsOutsideOfDeck(player, knownItemTracker, inventoryFilterRunType)
             syncAdvancements(player)
+
+            cleanUpOldItems(player, knownItemTracker)
         }
     }
 
-    private fun ensurePlayerInventoryReflectsItemsOutsideOfDeck(player: Player, inventoryFilterRunType: RunType?) {
+    private fun ensurePlayerInventoryReflectsItemsOutsideOfDeck(
+        player: Player,
+        knownItemTracker: MutableSet<ItemStack>,
+        inventoryFilterRunType: RunType?
+    ) {
         // For each card in the player's inventory, ensure they only have the correct amount
         val deckItems = inventoryApi.inventoryCardsGet(player = player.name, limit = 200).results!!
 
@@ -102,6 +105,7 @@ class InventoryManager(
 
                 itemStack?.let {
                     player.ensureInventoryContains(
+                        knownItemTracker,
                         it.clone().apply { amount = zeroSupportedItemCount(maxCardsThatShouldBeInInventory) }
                     )
                 }
@@ -122,6 +126,7 @@ class InventoryManager(
 
                 itemStack.let {
                     player.ensureInventoryContains(
+                        knownItemTracker,
                         it.withTradeMeta(runType.longId, itemKey).clone()
                             .apply { amount = zeroSupportedItemCount(maxItemsThatShouldBeInInventory) }
                     )
@@ -131,7 +136,7 @@ class InventoryManager(
 
     }
 
-    private fun ensurePlayerHasPracticeShards(player: Player, scores: List<Score>): Boolean {
+    private fun ensurePlayerHasPracticeShards(playerName: String, scores: List<Score>): Boolean {
         tradeItems["SHARD"]?.let { tradeItem ->
             scores.find { score -> score.key == tradeItem.sourceScoreboardName("practice") }?.let { score ->
                 if (score.value!!.toInt() <= 10) {
@@ -147,7 +152,7 @@ class InventoryManager(
                         Event(
                             name = "trade-requested",
                             server = plugin.serverName,
-                            player = player.name,
+                            player = playerName,
                             count = 1,
                             x = 0.0,
                             y = 0.0,
@@ -174,36 +179,9 @@ class InventoryManager(
 
     private fun zeroSupportedItemCount(count: Int) = if (count <= 0) 999 else count
 
-    private fun cleanUpOldItems(player: Player) {
-        plugin.logger.info("Cleaning up old items for ${player.name}")
-        for (runType in legacyRunTypes) {
-            baseTradeItems.plus(intoDungeonItems).values.forEach { trade ->
-                val itemStack = trade.itemStack(runType, 0)
-                if (!listOf(Material.AIR, Material.STICK).contains(itemStack.type)) {
-                    val oldDungeonItem = itemStack.oldDungeonItem()
-                    player.ensureInventoryContains(oldDungeonItem)
-                }
-            }
-        }
-        plugin.logger.info("Finished cleaning up old items")
-    }
-
-    private fun removeLegacyCardsFromInventory(player: Player) {
-        plugin.logger.info("Cleaning up legacy cards for ${player.name}")
-        for (runType in legacyRunTypes) {
-            oldCards().values.forEach { trade ->
-                val itemStack = trade.itemStack(runType, 999)
-                plugin.logger.fine("Cleaning up old card: $itemStack")
-                if (!listOf(Material.AIR, Material.STICK).contains(itemStack.type)) {
-                    player.ensureInventoryContains(itemStack)
-                }
-            }
-        }
-        plugin.logger.info("Finished cleaning up legacy cards for ${player.name}")
-    }
-
     private fun updatePlayerInventoryForState(
         player: Player,
+        knownItemTracker: MutableSet<ItemStack>,
         inventoryFilterRunType: RunType?,
         scores: Map<String, Int>,
         key: String,
@@ -224,7 +202,10 @@ class InventoryManager(
                         itemCount -= scores.getOrDefault(inversionScoreKey, 0)
                     }
 
-                    player.ensureInventoryContains(sb.itemStack(runType, itemCount).withTradeMeta(runType, it.key))
+                    player.ensureInventoryContains(
+                        knownItemTracker,
+                        sb.itemStack(runType, itemCount).withTradeMeta(runType, it.key)
+                    )
                 }
             }
         }
@@ -237,14 +218,32 @@ class InventoryManager(
                     if (inventoryFilterRunType != null && inventoryFilterRunType != runType) {
                         itemCount = 0
                     }
-                    player.ensureInventoryContains(dungeonDeck(runType, itemCount))
-                    player.ensureInventoryContains(dungeonArtifacts(runType, itemCount))
+                    player.ensureInventoryContains(knownItemTracker, dungeonDeck(runType, itemCount))
+                    player.ensureInventoryContains(knownItemTracker, dungeonArtifacts(runType, itemCount))
                 }
             }
         }
     }
 
-    private fun Player.ensureInventoryContains(itemStack: ItemStack) {
+    private fun cleanUpOldItems(player: Player, knownItemTracker: MutableSet<ItemStack>) {
+        plugin.logger.info("Cleaning up old items for ${player.name}")
+
+        val itemsToRemove = player.inventory.filter { inventoryItem ->
+            inventoryItem?.hasDeckId() == true && knownItemTracker.none { knownItem -> knownItem.isSimilar(inventoryItem) }
+        }
+
+        plugin.logger.info("Removing ${itemsToRemove.size} old items from ${player.name}'s inventory:")
+        itemsToRemove.forEach { item ->
+            plugin.logger.info(" - Removing old item: $item")
+            player.ensureInventoryContains(knownItemTracker, item!!.apply { amount = 0 })
+        }
+
+        plugin.logger.info("Finished cleaning up old items for ${player.name}")
+    }
+
+    private fun Player.ensureInventoryContains(knownItemTracker: MutableSet<ItemStack>, itemStack: ItemStack) {
+        knownItemTracker.add(itemStack)
+
         val targetAmount = if (itemStack.amount == 999) 0 else itemStack.amount
         plugin.logger.fine("Ensuring ${this.name} has ${targetAmount}x ${itemStack.type.name} (name: ${itemStack.name()})")
 
