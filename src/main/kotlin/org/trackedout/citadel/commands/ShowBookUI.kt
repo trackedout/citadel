@@ -33,7 +33,7 @@ fun showBookUI(
 
 - <u><blue><click:open_url:'https://trackedout.org'>Tracked Out Website</click></blue></u>
 
-- <u><blue><click:open_url:'https://trackedout.org'>Player Stats</click></blue></u>
+- <u><blue><click:open_url:'https://stats.trackedout.org'>Player Stats</click></blue></u>
 
 - <u><blue><click:open_url:'https://trackedout.org/discord'>Discord</click></blue></u>
 
