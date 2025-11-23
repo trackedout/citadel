@@ -117,6 +117,16 @@ fun repairKit(runType: RunType, count: Int): ItemStack {
     )
 }
 
+fun basicDungeonItem(name: String, material: Material, runType: RunType, count: Int): ItemStack {
+    return dungeonItem(
+        name = "❄☠ $name (${runType.displayName}) ☠❄",
+        customModelData = 0,
+        textColor = runType.displayNamedText(),
+        material = material,
+        itemCount = count
+    )
+}
+
 fun dungeonItem(
     name: String,
     customModelData: Int,

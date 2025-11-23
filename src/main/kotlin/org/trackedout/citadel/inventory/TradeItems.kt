@@ -1,18 +1,21 @@
 package org.trackedout.citadel.inventory
 
-import com.saicone.rtag.RtagItem
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.config.cardConfig
-import org.trackedout.data.Cards
 import org.trackedout.data.getRunTypeById
-import org.trackedout.fs.logger
 
 interface ScoreboardDescriber {
     fun sourceScoreboardName(runType: String): String
     fun sourceInversionScoreboardName(runType: String): String = sourceScoreboardName(runType)
     fun targetScoreboardName(runType: String): String = sourceScoreboardName(runType)
     fun itemStack(runType: String, count: Int): ItemStack
+}
+
+interface ItemWithoutScoreboard : ScoreboardDescriber {
+    override fun sourceScoreboardName(runType: String): String {
+        return ""
+    }
 }
 
 val queueItems: Map<String, ScoreboardDescriber> = mapOf(
@@ -84,65 +87,83 @@ val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
 )
 
 val intoDungeonItems: Map<String, ScoreboardDescriber> = mapOf(
-    "SLOWNESS_POTION" to object : ScoreboardDescriber {
-        override fun sourceScoreboardName(runType: String): String {
-            return ""
-        }
-
+    "SLOWNESS_POTION" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
             return dungeonSlownessPotion(getRunTypeById(runType), count)
         }
     },
 
-    "CAVES_OF_CARNAGE_KEY" to object : ScoreboardDescriber {
-        override fun sourceScoreboardName(runType: String): String {
-            return ""
-        }
-
+    "CAVES_OF_CARNAGE_KEY" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
             return dungeonKeyLevel1(getRunTypeById(runType), count)
         }
     },
 
-    "BLACK_MINES_KEY" to object : ScoreboardDescriber {
-        override fun sourceScoreboardName(runType: String): String {
-            return ""
-        }
-
+    "BLACK_MINES_KEY" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
             return dungeonKeyLevel2(getRunTypeById(runType), count)
         }
     },
 
-    "BURNING_DARK_KEY" to object : ScoreboardDescriber {
-        override fun sourceScoreboardName(runType: String): String {
-            return ""
-        }
-
+    "BURNING_DARK_KEY" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
             return dungeonKeyLevel3(getRunTypeById(runType), count)
         }
     },
 
-    "COIN" to object : ScoreboardDescriber {
-        override fun sourceScoreboardName(runType: String): String {
-            return ""
-        }
-
+    "COIN" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
             return dungeonCoin(getRunTypeById(runType), count)
         }
     },
 
-    "RUSTY_REPAIR_KIT" to object : ScoreboardDescriber {
-        override fun sourceScoreboardName(runType: String): String {
-            return ""
-        }
-
+    "RUSTY_REPAIR_KIT" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
             return repairKit(getRunTypeById(runType), count)
         }
-    }
+    },
+
+    "COPPER_BLOCK" to object : ItemWithoutScoreboard {
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return basicDungeonItem("Copper Block", Material.COPPER_BLOCK, getRunTypeById(runType), count)
+        }
+    },
+
+    "EXPOSED_COPPER" to object : ItemWithoutScoreboard {
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return basicDungeonItem("Exposed Copper", Material.EXPOSED_COPPER, getRunTypeById(runType), count)
+        }
+    },
+
+    "WEATHERED_COPPER" to object : ItemWithoutScoreboard {
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return basicDungeonItem("Weathered Copper", Material.WEATHERED_COPPER, getRunTypeById(runType), count)
+        }
+    },
+
+    "OXIDIZED_COPPER" to object : ItemWithoutScoreboard {
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return basicDungeonItem("Oxidized Copper", Material.OXIDIZED_COPPER, getRunTypeById(runType), count)
+        }
+    },
+
+    "ICE" to object : ItemWithoutScoreboard {
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return basicDungeonItem("Ice", Material.ICE, getRunTypeById(runType), count)
+        }
+    },
+
+    "PACKED_ICE" to object : ItemWithoutScoreboard {
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return basicDungeonItem("Packed Ice", Material.PACKED_ICE, getRunTypeById(runType), count)
+        }
+    },
+
+    "BLUE_ICE" to object : ItemWithoutScoreboard {
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return basicDungeonItem("Blue Ice", Material.BLUE_ICE, getRunTypeById(runType), count)
+        }
+    },
 
 )
 
@@ -159,44 +180,6 @@ fun cardDescribers(): Map<String, ScoreboardDescriber> {
 
             override fun itemStack(runType: String, count: Int): ItemStack {
                 TODO("Not yet implemented")
-            }
-        }
-    }
-}
-
-fun oldCards(): Map<String, ScoreboardDescriber> {
-    return Cards.Companion.Card.entries.associate { card ->
-        card.key.uppercase() to object : ScoreboardDescriber {
-            override fun sourceScoreboardName(runType: String): String {
-                return ""
-            }
-
-            override fun itemStack(runType: String, count: Int): ItemStack {
-                val nugget = ItemStack(Material.IRON_NUGGET, count)
-
-                val cardItem = Cards.findCard(card.key)?.let {
-                    return@let RtagItem.edit(nugget, fun(tag: RtagItem): ItemStack {
-                        tag.customModelData = it.modelData
-                        val nameJson = "{\"color\":\"${it.colour}\",\"text\":\"${it.displayName}\"}"
-                        tag.set(nameJson, "display", "Name")
-                        tag.set(
-                            "{\"color\":\"${it.colour}\",\"OriginalName\":\"${nameJson}\"}",
-                            "display",
-                            "NameFormat"
-                        );
-                        tag.set("${runType.shortRunType()}1", "deckId")
-
-                        return tag.load()
-                    })
-                }
-
-                if (cardItem == null) {
-                    logger.warn("Failed to create legacy card item for ${card.key}")
-                    return nugget
-                } else {
-                    logger.debug("Created legacy card item for ${card.key} with count $count: $cardItem")
-                    return cardItem
-                }
             }
         }
     }

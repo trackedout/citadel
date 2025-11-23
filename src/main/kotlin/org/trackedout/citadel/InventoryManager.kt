@@ -87,7 +87,7 @@ class InventoryManager(
         inventoryFilterRunType: RunType?
     ) {
         // For each card in the player's inventory, ensure they only have the correct amount
-        val deckItems = inventoryApi.inventoryCardsGet(player = player.name, limit = 200).results!!
+        val deckItems = inventoryApi.inventoryCardsGet(player = player.name, limit = 1000).results!!
 
         runTypes.forEach { runType ->
 
