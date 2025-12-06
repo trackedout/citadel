@@ -152,6 +152,9 @@ class Citadel : JavaPlugin() {
         val leaderboardTaskRunner = LeaderboardTaskRunner(this, scoreApi)
         leaderboardTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 20 * 15) // Repeat every 300 ticks (15 seconds)
 
+        val trophyTaskRunner = TrophyTaskRunner(this)
+        trophyTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 20 * 60) // Repeat every 1200 ticks (1 minute)
+
         server.pluginManager.registerEvents(PlayedJoinedListener(this, eventsApi, scoreApi, inventoryManager), this)
         server.pluginManager.registerEvents(PlayedDeathListener(this, eventsApi, scoreApi), this)
 

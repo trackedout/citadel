@@ -28,6 +28,9 @@ repositories {
     maven {
         url = "https://maven.enginehub.org/repo/"
     }
+    maven {
+        url = "https://repo.fancyinnovations.com/releases"
+    }
 }
 
 println "Agronet jar: ${property('agronet_jar')}"
@@ -65,6 +68,7 @@ dependencies {
     implementation 'xyz.upperlevel.spigot.book:spigot-book-api:1.6'
 
     compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.9'
+    compileOnly 'de.oliver:FancyHolograms:2.8.0'
 
     // https://github.com/MegavexNetwork/scoreboard-library/blob/main/INSTALLATION.md
     var scoreboardLibraryVersion = "2.1.6"

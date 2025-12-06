@@ -71,7 +71,8 @@ class LeaderboardTaskRunner(
 
             activePlayers.values.toList().slice(startIndex until upperIndex).forEachIndexed { index, player ->
                 val playerName = player.player
-                val offlinePlayer = plugin.server.getOfflinePlayer(playerName)
+                val offlinePlayer = plugin.server.getOfflinePlayerIfCached(playerName) ?: plugin.server.getOfflinePlayer(playerName)
+
                 val points = player.totalPoints
                 val rank = totalPointsRank.indexOf(points) + 1
                 val snowLayers = player.totalPoints / 4 // Divide by 4 to make the snow layers look nicer

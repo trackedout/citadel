@@ -20,6 +20,8 @@ import org.trackedout.data.runTypes
 
 val debugTag = "debug"
 
+val playerNameRegex = Regex("^[a-zA-Z0-9_]{2,16}$")
+
 fun Player.sendMiniMessage(message: String) {
     val parsed = MiniMessage.miniMessage().deserialize(message)
     this.sendMessage(parsed)

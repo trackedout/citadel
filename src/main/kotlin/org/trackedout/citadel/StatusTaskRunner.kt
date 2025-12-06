@@ -15,7 +15,6 @@ import org.trackedout.citadel.mongo.DungeonState
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoDungeon
 import org.trackedout.client.apis.StatusApi
-import org.trackedout.fs.logger
 
 // WARNING: This task is processed *asynchronously*, and thus most interactions with the main Minecraft thread
 // must go through a sync task scheduler. The Scoreboard lib is thread-safe, so it doesn't require a sync task.
@@ -28,7 +27,7 @@ class StatusTaskRunner(
         plugin.debug("[Async task ${this.taskId}] Fetching network status from Dunga Dunga")
 
         val statusSections = statusApi.getStatus()
-        val mm = MiniMessage.miniMessage();
+        val mm = MiniMessage.miniMessage()
 
         if (sidebar.closed()) {
             return
@@ -68,8 +67,8 @@ class StatusTaskRunner(
     }
 
     private fun updateDungeonStatusSigns() {
-        logger.debug("Starting dungeon status sign updater")
-        val database = MongoDBManager.getDatabase("dunga-dunga");
+        plugin.logger.fine("Starting dungeon status sign updater")
+        val database = MongoDBManager.getDatabase("dunga-dunga")
         val instanceCollection = database.getCollection("instances", MongoDungeon::class.java)
         val instancesByState = instanceCollection.find(
             Filters.and(
@@ -140,7 +139,7 @@ class StatusTaskRunner(
 }
 
 fun updateSign(plugin: Citadel, x: Int, y: Int, z: Int, lines: List<String>) {
-    logger.debug("Updating sign at {}, {}, {} with lines: {}", x, y, z, lines)
+    plugin.logger.fine("Updating sign at ${x}, ${y}, $z with lines: $lines")
 
     plugin.server.worlds.find { it.name == "world" }?.let { world ->
         val signBlock: Block = world.getBlockAt(x, y, z)
@@ -154,6 +153,8 @@ fun updateSign(plugin: Citadel, x: Int, y: Int, z: Int, lines: List<String>) {
             }
 
             sign.update()
+        } else {
+            plugin.logger.warning("Block at ${x}, ${y}, $z is not a sign, cannot update")
         }
     }
 }

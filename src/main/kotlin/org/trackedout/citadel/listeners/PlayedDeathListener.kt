@@ -11,7 +11,6 @@ import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Event
 import org.trackedout.client.models.Score
 import org.trackedout.data.getRunTypeById
-import org.trackedout.fs.logger
 
 class PlayedDeathListener(
     private val plugin: Citadel,
@@ -24,12 +23,12 @@ class PlayedDeathListener(
         val player = event.player
         val playerName = player.name
 
-        logger.info("$playerName (tags: ${player.scoreboardTags}) died at location: ${player.location} with message: ${event.deathMessage()}")
+        plugin.logger.info("$playerName (tags: ${player.scoreboardTags}) died at location: ${player.location} with message: ${event.deathMessage()}")
         if (!player.scoreboardTags.contains("void_death")) {
             return
         }
 
-        logger.info("$playerName died to the pit, resetting their hardcore deck")
+        plugin.logger.info("$playerName died to the pit, resetting their hardcore deck")
         plugin.async(player) {
             eventsApi.eventsPost(
                 Event(
