@@ -29,7 +29,7 @@ class PlayedJoinedListener(
     val modernResourcePackChecksum by lazy {
         getEnvOrDefault(
             "RESOURCE_PACK_MODERN_SHA1",
-            "ba2cb5b5646e9e7f3954173576cbacf4ce54ddae"
+            ""
         )
     }
 
@@ -54,20 +54,19 @@ class PlayedJoinedListener(
         // 769 = 1.21.4
         if (proxyProtocol != null && proxyProtocol > 769) {
             plugin.logger.info("Player client version is using 1.21.4 or higher, sending the newer datapack")
-            // Override resource pack to use newer version
             plugin.async(player) {
                 event.getPlayer().setResourcePack(
                     modernResourcePackUrl,
                     modernResourcePackChecksum
-                );
+                )
             }
         }
     }
 
     private fun insideDungeonEntrance(player: Player): Boolean {
         return -553 <= player.x && player.x <= -542
-            && 1977 <= player.z && player.z <= 1983
-            && 112 <= player.y && player.y <= 119
+                && 1977 <= player.z && player.z <= 1983
+                && 112 <= player.y && player.y <= 119
     }
 
     @EventHandler(ignoreCancelled = true)
