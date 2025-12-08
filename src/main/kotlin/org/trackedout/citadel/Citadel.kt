@@ -14,6 +14,7 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
+import org.trackedout.citadel.commands.ConfigCommand
 import org.trackedout.citadel.commands.CubbyManagementCommand
 import org.trackedout.citadel.commands.InventoryCommand
 import org.trackedout.citadel.commands.LeaderboardCommand
@@ -26,6 +27,8 @@ import org.trackedout.citadel.commands.ShutdownDungeonsCommand
 import org.trackedout.citadel.commands.SpectateCommand
 import org.trackedout.citadel.commands.StatusCommand
 import org.trackedout.citadel.commands.TestQueueCommand
+import org.trackedout.citadel.commands.editableConfigs
+import org.trackedout.citadel.commands.toggleableConfigs
 import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.inventory.AddACardView
 import org.trackedout.citadel.inventory.BasicItemView
@@ -42,8 +45,10 @@ import org.trackedout.citadel.listeners.EchoShardListener
 import org.trackedout.citadel.listeners.PlayedDeathListener
 import org.trackedout.citadel.listeners.PlayedJoinedListener
 import org.trackedout.citadel.mongo.MongoDBManager
+import org.trackedout.citadel.mongo.MongoDungeon
 import org.trackedout.citadel.mongo.MongoPlayer
 import org.trackedout.citadel.shop.ShopCommand
+import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.ScoreApi
@@ -102,6 +107,14 @@ class Citadel : JavaPlugin() {
         )
 
         val statusApi = StatusApi(
+            basePath = dungaAPIPath,
+            client = OkHttpClient.Builder()
+                .connectTimeout(5.seconds.toJavaDuration())
+                .callTimeout(60.seconds.toJavaDuration())
+                .build()
+        )
+
+        val configApi = ConfigApi(
             basePath = dungaAPIPath,
             client = OkHttpClient.Builder()
                 .connectTimeout(5.seconds.toJavaDuration())
@@ -173,6 +186,7 @@ class Citadel : JavaPlugin() {
             .register()
         manager.registerCommand(ManageDeckCommand(this, inventoryApi, eventsApi, viewFrame))
         manager.registerCommand(SpectateCommand(this, eventsApi, viewFrame))
+        manager.registerCommand(ConfigCommand(this, configApi))
         manager.registerCommand(ShowArtifakesCommand(this, eventsApi, scoreApi, viewFrame))
         manager.registerCommand(CubbyManagementCommand(this, eventsApi, scoreApi, viewFrame))
         manager.registerCommand(LeaderboardCommand(this))
@@ -185,21 +199,30 @@ class Citadel : JavaPlugin() {
 
     private fun registerCommandCompletions() {
         manager.commandCompletions.registerStaticCompletion("runTypes", runTypes.map { it.longId })
+        manager.commandCompletions.registerStaticCompletion("toggleableConfigs", toggleableConfigs)
+        manager.commandCompletions.registerStaticCompletion("editableConfigs", editableConfigs)
 
-        manager.commandCompletions.registerAsyncCompletion("cards") { c ->
+        manager.commandCompletions.registerAsyncCompletion("cards") { _ ->
             cardConfig.entries.map { it.key }
         }
 
-        manager.commandCompletions.registerAsyncCompletion("items") { c ->
+        manager.commandCompletions.registerAsyncCompletion("items") { _ ->
             baseTradeItems.plus(intoDungeonItems).map { it.key }
         }
 
-        manager.commandCompletions.registerAsyncCompletion("dbPlayers") { c ->
+        manager.commandCompletions.registerAsyncCompletion("dbPlayers") { _ ->
             val database = MongoDBManager.getDatabase("dunga-dunga")
             val playerCollection = database.getCollection("players", MongoPlayer::class.java)
 
             val players = playerCollection.find().map { it.playerName }.toList()
             players
+        }
+
+        manager.commandCompletions.registerAsyncCompletion("dungeonNames") { _ ->
+            val database = MongoDBManager.getDatabase("dunga-dunga")
+            val collection = database.getCollection("instances", MongoDungeon::class.java)
+
+            collection.find().map { it.name }.toList()
         }
 
         manager.commandContexts.registerContext(RunType::class.java) { context ->

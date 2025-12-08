@@ -2,6 +2,7 @@ package org.trackedout.citadel.commands
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.CommandAlias
+import co.aikar.commands.annotation.CommandCompletion
 import co.aikar.commands.annotation.Description
 import co.aikar.commands.annotation.Subcommand
 import me.devnatan.inventoryframework.ViewFrame
@@ -68,6 +69,7 @@ class CubbyManagementCommand(
 
     @Subcommand("cubby locate")
     @Description("Locate a cubby owned by another player")
+    @CommandCompletion("@dbPlayers")
     fun locateCubbyOtherPlayer(source: CommandSender, targetPlayer: String) {
         if (source is Player) {
             val playerCubby = source.world.getCubbyForPlayer(targetPlayer)

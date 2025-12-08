@@ -8,7 +8,6 @@ import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.Material
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.HumanEntity
-import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.inventory.DeckId
@@ -22,7 +21,7 @@ val debugTag = "debug"
 
 val playerNameRegex = Regex("^[a-zA-Z0-9_]{2,16}$")
 
-fun Player.sendMiniMessage(message: String) {
+fun CommandSender.sendMiniMessage(message: String) {
     val parsed = MiniMessage.miniMessage().deserialize(message)
     this.sendMessage(parsed)
 }
