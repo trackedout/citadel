@@ -5,6 +5,7 @@ import co.aikar.commands.annotation.CommandAlias
 import co.aikar.commands.annotation.CommandCompletion
 import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Description
+import co.aikar.commands.annotation.Optional
 import co.aikar.commands.annotation.Subcommand
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.Filters.eq
@@ -25,7 +26,10 @@ val toggleableConfigs = listOf(
     "skip-door"
 )
 
-val editableConfigs = listOf("dungeon-type")
+val editableConfigs = listOf(
+    "dungeon-type",
+    "datapack-version"
+)
 
 private val configDescriptions = mapOf(
     "skip-door" to "Enable this to skip the door animation",
@@ -83,9 +87,9 @@ class ConfigCommand(
     @Subcommand("config set")
     @CommandPermission("decked-out.config.edit")
     @Description("Set config for target entity")
-    @CommandCompletion("@dbPlayers @editableConfigs @nothing")
-    fun setConfigForEntity(source: CommandSender, targetName: String, configKey: String, configValue: String) {
-        if (configKey !in editableConfigs) {
+    @CommandCompletion("@dbPlayers @editableConfigs @nothing @nothing")
+    fun setConfigForEntity(source: CommandSender, targetName: String, configKey: String, configValue: String, @Optional arg: String?) {
+        if (configKey !in editableConfigs && arg != "--force") {
             source.sendRedMessage("Config key $configKey is not editable")
             return
         }
@@ -95,6 +99,7 @@ class ConfigCommand(
                 entity = targetName,
                 key = configKey,
                 value = configValue,
+                metadata = mapOf("set-by" to source.name)
             )
         )
 
