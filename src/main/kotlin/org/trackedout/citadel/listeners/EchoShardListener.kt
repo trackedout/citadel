@@ -283,7 +283,7 @@ class EchoShardListener(
             return
         }
 
-        if (event.action == Action.RIGHT_CLICK_AIR) {
+        if (event.action == Action.RIGHT_CLICK_AIR || event.action == Action.RIGHT_CLICK_BLOCK) {
             item.getDeckId()?.let {
                 if (item.isDeckedOutShulker() || item.isDeckedOutCard()) {
                     showDeckInventory(event, player, it)

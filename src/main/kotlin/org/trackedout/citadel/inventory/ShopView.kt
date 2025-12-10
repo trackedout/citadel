@@ -179,7 +179,6 @@ class ShopView : View() {
                         sendToDummy = true
                         eventToSend = {
                             println("Adding ${itemsToAdd}x $targetItem (item) to ${player.name}'s deck")
-                            player.sendGreenMessage("Added ${itemsToAdd}x $targetItem to your $longType deck")
                             (0 until itemsToAdd).map {
                                 val newCard = Card(
                                     player = player.name,
@@ -188,6 +187,7 @@ class ShopView : View() {
 
                                 addCardFunc[event].accept(longType[0].toString(), newCard)
                             }
+                            player.sendGreenMessage("Added ${itemsToAdd}x $targetItem to your $longType deck")
                         }
                     }
 
