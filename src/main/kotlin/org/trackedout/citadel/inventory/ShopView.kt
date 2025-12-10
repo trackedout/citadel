@@ -148,8 +148,7 @@ class ShopView : View() {
                         sendToDummy = true
                         eventToSend = {
                             println("Adding ${cardsToAdd}x $targetCard (card) to ${player.name}'s deck")
-                            player.sendGreenMessage("Added ${cardsToAdd}x $targetCard to your $longType deck")
-                            (0 until cardsToAdd).map {
+                            (0..cardsToAdd).forEach {
                                 val newCard = Card(
                                     player = player.name,
                                     name = targetCard.replace("-", "_"),
@@ -157,6 +156,7 @@ class ShopView : View() {
 
                                 addCardFunc[event].accept(longType[0].toString(), newCard)
                             }
+                            player.sendGreenMessage("Added ${cardsToAdd}x ${card.name} to your $longType deck")
                         }
                     } else if (targetType.equals("QUEUE", ignoreCase = true)) {
                         sendTradeMessage = false
