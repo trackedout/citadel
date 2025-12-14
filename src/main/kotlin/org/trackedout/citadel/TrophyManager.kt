@@ -46,13 +46,13 @@ fun applyTOTs(plugin: Citadel) {
 fun duplicateSignText(plugin: Citadel, x: Int, y: Int, z: Int) {
     val sourceSignBlock = plugin.server.worlds.find { it.name == "world" }?.getBlockAt(x, y + 7, z)
     if (sourceSignBlock == null || sourceSignBlock.type == Material.AIR) {
-        plugin.logger.warning("Source sign at ${x}, ${y + 7}, $z does not exist or is not a wall sign")
+        plugin.logger.fine("Source sign at ${x}, ${y + 7}, $z does not exist or is not a wall sign")
         return
     }
 
     val state = sourceSignBlock.state
     if (state !is org.bukkit.block.Sign) {
-        plugin.logger.warning("Source sign at ${x}, ${y + 7}, $z is not a sign state")
+        plugin.logger.fine("Source sign at ${x}, ${y + 7}, $z is not a sign state")
         return
     }
 
@@ -178,8 +178,6 @@ fun updateHologram(plugin: Citadel, x: Int, y: Int, z: Int, playerName: String?,
                 "<gold>${playerName}",
                 "",
                 "<light_purple>${lines[2]}",
-                "",
-                "<dark_aqua>${lines[3]}",
             )
             hologramData.visibilityDistance = 8
 
