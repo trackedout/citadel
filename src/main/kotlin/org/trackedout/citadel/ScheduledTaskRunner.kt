@@ -3,6 +3,9 @@ package org.trackedout.citadel
 import com.google.common.io.ByteStreams
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.minimessage.MiniMessage
+import net.kyori.adventure.title.Title
+import org.bukkit.entity.Player
 import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.client.apis.TasksApi
 import org.trackedout.client.models.Task
@@ -61,24 +64,47 @@ class ScheduledTaskRunner(
                         }
 
                         "message-player" -> {
-                            val targetPlayer = plugin.server.worlds.find { it.name == "world" }?.players?.find { it.name == task.targetPlayer }
-                            if (targetPlayer != null) {
-                                task.arguments?.forEach(targetPlayer::sendMiniMessage)
-                            } else {
-                                val message = "Task type is '${task.type}' which targets a player, but the player was not found"
-                                plugin.logger.warning(message)
-                                throw Exception(message)
+                            executeOnPlayer(task) { player ->
+                                task.arguments?.forEach(player::sendMiniMessage)
+                            }
+                        }
+
+                        "send-title" -> {
+                            executeOnPlayer(task) { player ->
+                                var title = task.arguments?.getOrNull(0) ?: ""
+                                var subtitle = task.arguments?.getOrNull(1) ?: ""
+
+                                if (title.isEmpty() && subtitle.isEmpty()) {
+                                    val message = "Task type is '${task.type}' but no title or subtitle was provided"
+                                    plugin.logger.warning(message)
+                                    throw Exception(message)
+                                }
+
+                                // Wrap in default colours
+                                title = "<aqua>${title}</aqua>"
+                                subtitle = "<red>${subtitle}</red>"
+
+                                val mm = MiniMessage.miniMessage()
+                                player.showTitle(
+                                    Title.title(
+                                        mm.deserialize(title).asComponent(),
+                                        mm.deserialize(subtitle).asComponent()
+                                    )
+                                )
+                            }
+                        }
+
+                        "play-sound" -> {
+                            executeOnPlayer(task) { player ->
+                                task.arguments?.forEach { sound ->
+                                    player.playSound(player.location, sound, 1f, 1f)
+                                }
                             }
                         }
 
                         "update-inventory" -> {
-                            val targetPlayer = plugin.server.worlds.find { it.name == "world" }?.players?.find { it.name == task.targetPlayer }
-                            if (targetPlayer != null) {
-                                inventoryManager.updateInventoryBasedOnScore(targetPlayer)
-                            } else {
-                                val message = "Task type is '${task.type}' which targets a player, but the player was not found"
-                                plugin.logger.warning(message)
-                                throw Exception(message)
+                            executeOnPlayer(task) { player ->
+                                inventoryManager.updateInventoryBasedOnScore(player)
                             }
                         }
 
@@ -109,6 +135,17 @@ class ScheduledTaskRunner(
                 }
             }
         }.runTask(plugin)
+    }
+
+    private fun executeOnPlayer(task: Task, handler: (player: Player) -> Unit) {
+        val player = plugin.server.worlds.find { it.name == "world" }?.players?.find { it.name == task.targetPlayer }
+        if (player != null) {
+            handler(player)
+        } else {
+            val message = "Task type is '${task.type}' which targets a player, but the player was not found"
+            plugin.logger.warning(message)
+            throw Exception(message)
+        }
     }
 
     private fun runCommandsOnSubsequentTicks(commands: ArrayDeque<String>) {
