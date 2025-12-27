@@ -148,7 +148,7 @@ class ShopView : View() {
                         sendToDummy = true
                         eventToSend = {
                             println("Adding ${cardsToAdd}x $targetCard (card) to ${player.name}'s deck")
-                            (0..cardsToAdd).forEach {
+                            (0.until(cardsToAdd)).forEach { _ ->
                                 val newCard = Card(
                                     player = player.name,
                                     name = targetCard.replace("-", "_"),
@@ -179,7 +179,7 @@ class ShopView : View() {
                         sendToDummy = true
                         eventToSend = {
                             println("Adding ${itemsToAdd}x $targetItem (item) to ${player.name}'s deck")
-                            (0 until itemsToAdd).map {
+                            (0.until(itemsToAdd)).forEach { _ ->
                                 val newCard = Card(
                                     player = player.name,
                                     name = targetItem,

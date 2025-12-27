@@ -140,7 +140,7 @@ class ScoreManagementCommand(
                 val itemsToAdd = count
                 plugin.logger.info("Adding ${itemsToAdd}x $targetItem (item) to ${playerName}'s ${runType.displayName} deck")
                 source.sendGreenMessage("Added ${itemsToAdd}x $targetItem to ${playerName}'s ${runType.displayName} deck")
-                (0 until itemsToAdd).map {
+                (0.until(itemsToAdd)).forEach { _ ->
                     inventoryApi.inventoryAddCardPost(
                         Card(
                             player = playerName,
