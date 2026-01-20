@@ -3,6 +3,7 @@ package org.trackedout.citadel.inventory
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.config.cardConfig
+import org.trackedout.citadel.inventory.dungeonWeaknessPotion
 import org.trackedout.data.getRunTypeById
 
 interface ScoreboardDescriber {
@@ -93,6 +94,18 @@ val intoDungeonItems: Map<String, ScoreboardDescriber> = mapOf(
         }
     },
 
+    "WEAKNESS_POTION" to object : ItemWithoutScoreboard {
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return dungeonWeaknessPotion(getRunTypeById(runType), count)
+        }
+    },
+
+    "HEALTH_POTION" to object : ItemWithoutScoreboard {
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return dungeonHealthPotion(getRunTypeById(runType), count)
+        }
+    },
+
     "CAVES_OF_CARNAGE_KEY" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
             return dungeonKeyLevel1(getRunTypeById(runType), count)
@@ -162,6 +175,12 @@ val intoDungeonItems: Map<String, ScoreboardDescriber> = mapOf(
     "BLUE_ICE" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
             return basicDungeonItem("Blue Ice", Material.BLUE_ICE, getRunTypeById(runType), count)
+        }
+    },
+
+    "RED_DYE" to object : ItemWithoutScoreboard {
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return basicDungeonItem("Red Dye", Material.RED_DYE, getRunTypeById(runType), count)
         }
     },
 

@@ -36,7 +36,7 @@ repositories {
 println "Agronet jar: ${property('agronet_jar')}"
 
 dependencies {
-    compileOnly "io.papermc.paper:paper-api:1.20.2-R0.1-SNAPSHOT"
+    compileOnly "io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT"
     implementation "commons-io:commons-io:2.13.0"
     implementation "co.aikar:acf-paper:0.5.1-SNAPSHOT"
 

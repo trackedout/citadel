@@ -6,8 +6,10 @@ import net.kyori.adventure.text.TextComponent
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.meta.PotionMeta
 import org.bukkit.potion.Potion
 import org.bukkit.potion.PotionType
+import org.bukkit.potion.PotionData
 import org.trackedout.citadel.displayNamedText
 import org.trackedout.data.RunType
 
@@ -57,19 +59,31 @@ fun dungeonTome(
 fun dungeonSlownessPotion(
     runType: RunType,
     itemCount: Int,
-) = dungeonSlownessPotion(runType.displayName, runType.displayNamedText(), itemCount)
+) = dungeonPotion(runType.displayName, PotionType.SLOWNESS, "Splash Potion of Slowness", false, true, runType.displayNamedText(), itemCount)
 
-fun dungeonSlownessPotion(
+fun dungeonWeaknessPotion(
+    runType: RunType,
+    itemCount: Int,
+) = dungeonPotion(runType.displayName, PotionType.WEAKNESS, "Splash Potion of Weakness", false, false, runType.displayNamedText(), itemCount)
+
+fun dungeonHealthPotion(
+    runType: RunType,
+    itemCount: Int,
+) = dungeonPotion(runType.displayName, PotionType.INSTANT_HEAL, "Potion of Healing", false, true, runType.displayNamedText(), itemCount)
+
+fun dungeonPotion(
     runType: String,
+    potionType: PotionType,
+    displayName: String,
+    extended: Boolean = false,
+    upgraded: Boolean = false,
     textColor: NamedTextColor = NamedTextColor.AQUA,
     itemCount: Int = 1,
 ): ItemStack {
-    val potion = Potion(PotionType.SLOWNESS, 2)
-    potion.isSplash = true
-    val itemStack = potion.toItemStack(if (itemCount <= 0) 999 else itemCount)
-
-    val meta = itemStack.itemMeta
-    meta.displayName(text("Splash Potion of Slowness (${runType})", textColor))
+    val itemStack = ItemStack(Material.POTION, if (itemCount <= 0) 999 else itemCount)
+    val meta = itemStack.itemMeta as PotionMeta
+    meta.basePotionData = PotionData(potionType, extended, upgraded)
+    meta.displayName(text("${displayName} (${runType})", textColor))
     meta.setCustomModelData(-1)
 
     itemStack.itemMeta = meta
