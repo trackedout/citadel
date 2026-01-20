@@ -23,7 +23,8 @@ import org.trackedout.client.infrastructure.ClientException
 import org.trackedout.client.models.Config
 
 val toggleableConfigs = listOf(
-    "skip-door"
+    "skip-door",
+    "allow-spectating"
 )
 
 val editableConfigs = listOf(
@@ -34,6 +35,7 @@ val editableConfigs = listOf(
 private val configDescriptions = mapOf(
     "skip-door" to "Enable this to skip the door animation",
     "dungeon-type" to "The type of dungeon to generate (default / season-2)",
+    "allow-spectating" to "Allow players to spectate your runs",
 )
 
 private fun configDescription(key: String?): String = configDescriptions[key]?.let { "<gray>$it</gray>" } ?: ""

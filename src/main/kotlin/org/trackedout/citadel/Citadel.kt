@@ -185,7 +185,7 @@ class Citadel : JavaPlugin() {
             )
             .register()
         manager.registerCommand(ManageDeckCommand(this, inventoryApi, eventsApi, viewFrame))
-        manager.registerCommand(SpectateCommand(this, eventsApi, viewFrame))
+        manager.registerCommand(SpectateCommand(this, eventsApi, configApi, viewFrame))
         manager.registerCommand(ConfigCommand(this, configApi))
         manager.registerCommand(ShowArtifakesCommand(this, eventsApi, scoreApi, viewFrame))
         manager.registerCommand(CubbyManagementCommand(this, eventsApi, scoreApi, viewFrame))

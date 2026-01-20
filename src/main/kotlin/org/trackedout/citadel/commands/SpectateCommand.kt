@@ -21,13 +21,16 @@ import org.trackedout.citadel.runOnNextTick
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.EventsApi
+import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.models.Event
+import org.trackedout.client.infrastructure.ClientException
 import java.util.function.BiConsumer
 
 @CommandAlias("decked-out|do")
 class SpectateCommand(
     private val plugin: Citadel,
     private val eventsApi: EventsApi,
+    private val configApi: ConfigApi,
     private val viewFrame: ViewFrame,
 ) : BaseCommand() {
 
@@ -75,6 +78,18 @@ class SpectateCommand(
                     // TODO: Remove this check when season-2 is allowed to be spectated
                     if (dungeonType == "season-2") {
                         plugin.logger.info("Not allowing spectating of season-2 dungeons")
+                        return@forEach
+                    }
+
+                    val isSpectatingEnabled = try {
+                        configApi.configsGet(mongoPlayer.playerName, "allow-spectating").let { it.value == "true" }
+                    } catch (e: ClientException) {
+                        e.printStackTrace()
+                        true // true by default
+                    }
+
+                    if (!isSpectatingEnabled) {
+                        plugin.logger.info("${mongoPlayer.playerName} does not allow spectating")
                         return@forEach
                     }
 
