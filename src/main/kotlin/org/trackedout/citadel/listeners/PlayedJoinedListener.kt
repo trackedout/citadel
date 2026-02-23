@@ -6,6 +6,7 @@ import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerJoinEvent
+import org.bukkit.event.player.PlayerQuitEvent
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
@@ -36,6 +37,11 @@ class PlayedJoinedListener(
     @EventHandler(ignoreCancelled = true)
     fun onPlayerJoin(event: PlayerJoinEvent) {
         val player = event.player
+
+        // Log but don't broadcast the player's join message
+        plugin.logger.info(event.joinMessage)
+        event.joinMessage = ""
+
         if (insideDungeonEntrance(player)) {
             plugin.logger.info("${player.name} is within dungeon entrance at ${player.location}, teleporting them out")
             player.teleport(Location(player.world, -512.0, 114.0, 1980.0, 90f, 0f))
@@ -61,6 +67,13 @@ class PlayedJoinedListener(
                 )
             }
         }
+    }
+
+    @EventHandler
+    fun onPlayerQuit(event: PlayerQuitEvent) {
+        // Log but don't broadcast the player's quit message
+        plugin.logger.info(event.quitMessage)
+        event.quitMessage = ""
     }
 
     private fun insideDungeonEntrance(player: Player): Boolean {
