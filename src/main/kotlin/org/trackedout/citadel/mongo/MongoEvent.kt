@@ -5,7 +5,7 @@ import org.bson.types.ObjectId
 import java.time.Instant
 
 data class MongoEvent(
-    @BsonId val id: ObjectId,
+    @param:BsonId val id: ObjectId,
     val name: String,
     val player: String,
     val count: Long,

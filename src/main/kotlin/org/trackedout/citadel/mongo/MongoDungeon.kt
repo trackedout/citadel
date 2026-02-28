@@ -5,7 +5,7 @@ import org.bson.types.ObjectId
 import java.time.Instant
 
 data class MongoDungeon(
-    @BsonId val id: ObjectId,
+    @param:BsonId val id: ObjectId,
 
     val name: String,
     val ip: String,
@@ -14,6 +14,9 @@ data class MongoDungeon(
     val activePlayers: Long,
     val requiresRebuild: Boolean,
     val inUseDate: Instant? = null,
+
+    val claimFilters: Map<String, String>?,
+    val reservedBy: String?,
 
     val healthySince: Instant? = null,
     val unhealthySince: Instant? = null,

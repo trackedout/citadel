@@ -18,6 +18,7 @@ import org.trackedout.data.find
 import org.trackedout.data.runTypes
 
 val debugTag = "debug"
+val debugDetailsTag = "details"
 
 val playerNameRegex = Regex("^[a-zA-Z0-9_]{2,16}$")
 

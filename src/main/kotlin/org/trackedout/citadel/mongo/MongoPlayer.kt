@@ -5,7 +5,7 @@ import org.bson.types.ObjectId
 import java.time.Instant
 
 data class MongoPlayer(
-    @BsonId val id: ObjectId,
+    @param:BsonId val id: ObjectId,
 
     val playerName: String,
     val server: String,
@@ -19,7 +19,7 @@ data class MongoPlayer(
 )
 
 data class LastLocation(
-    @BsonId val id: ObjectId,
+    @param:BsonId val id: ObjectId,
 
     val x: Double,
     val y: Double,

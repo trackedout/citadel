@@ -22,6 +22,7 @@ class StatusTaskRunner(
     private val plugin: Citadel,
     private val statusApi: StatusApi,
     private val sidebar: Sidebar,
+    private val sidebar2: Sidebar,
 ) : BukkitRunnable() {
     override fun run() {
         plugin.debug("[Async task ${this.taskId}] Fetching network status from Dunga Dunga")
@@ -55,15 +56,51 @@ class StatusTaskRunner(
             }
         }
 
+        updateSecondarySidebar()
+        updateDungeonStatusSigns()
+
         plugin.server.onlinePlayers.forEach {
-            if (it.scoreboardTags.contains(debugTag)) {
+            if (it.scoreboardTags.contains(debugDetailsTag)) {
+                sidebar2.addPlayer(it)
+                sidebar.removePlayer(it)
+            } else if (it.scoreboardTags.contains(debugTag)) {
                 sidebar.addPlayer(it)
+                sidebar2.removePlayer(it)
             } else {
                 sidebar.removePlayer(it)
+                sidebar2.removePlayer(it)
             }
         }
+    }
 
-        updateDungeonStatusSigns()
+    private fun updateSecondarySidebar() {
+        if (sidebar2.closed()) {
+            return
+        }
+        sidebar2.clearLines()
+        sidebar2.title(text("Network Details").color(NamedTextColor.WHITE))
+
+        val database = MongoDBManager.getDatabase("dunga-dunga")
+        val instanceCollection = database.getCollection("instances", MongoDungeon::class.java)
+        val instances = instanceCollection.find(
+            Filters.and(
+                Filters.regex("name", "^d[0-9]{3}"),
+            )
+        ).sortedBy { it.name }
+
+        instances.forEachIndexed { index, dungeon ->
+            var textComponent = text("${dungeon.name}: ").color(NamedTextColor.AQUA)
+                .append(text("${dungeon.claimFilters?.get("dungeon-type")}").color(NamedTextColor.GRAY))
+                .append(text(" (${dungeon.state})").color(NamedTextColor.GRAY))
+
+            dungeon.reservedBy?.let {
+                textComponent = textComponent.append(text(" [${it}]").color(NamedTextColor.GOLD))
+            }
+
+            if (index < 15) {
+                sidebar2.line(index, textComponent)
+            }
+        }
     }
 
     private fun updateDungeonStatusSigns() {

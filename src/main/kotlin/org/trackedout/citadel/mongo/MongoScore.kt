@@ -5,7 +5,7 @@ import org.bson.types.ObjectId
 import java.time.Instant
 
 data class MongoScore(
-    @BsonId val id: ObjectId,
+    @param:BsonId val id: ObjectId,
 
     val player: String,
     val key: String,

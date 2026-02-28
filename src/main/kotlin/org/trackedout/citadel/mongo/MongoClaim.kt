@@ -5,7 +5,7 @@ import org.bson.types.ObjectId
 import java.time.Instant
 
 data class MongoClaim(
-    @BsonId private val id: ObjectId,
+    @param:BsonId private val id: ObjectId,
     val player: String,
     val type: String,
     val state: String,

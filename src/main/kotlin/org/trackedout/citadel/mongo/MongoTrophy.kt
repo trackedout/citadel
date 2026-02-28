@@ -5,12 +5,13 @@ import org.bson.types.ObjectId
 import java.time.Instant
 
 data class MongoTrophy(
-    @BsonId val id: ObjectId = ObjectId(),
+    @param:BsonId val id: ObjectId = ObjectId(),
 
     val totKey: String,
     val armorStand: ArmorStand? = null,
     val sign: Sign,
     val player: String? = null,
+    val description: String? = null,
 
     val createdAt: Instant,
     val updatedAt: Instant,

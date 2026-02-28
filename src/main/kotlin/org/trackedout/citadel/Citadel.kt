@@ -8,6 +8,7 @@ import me.devnatan.inventoryframework.ViewFrame
 import net.megavex.scoreboardlibrary.api.ScoreboardLibrary
 import net.megavex.scoreboardlibrary.api.exception.NoPacketAdapterAvailableException
 import net.megavex.scoreboardlibrary.api.noop.NoopScoreboardLibrary
+import net.megavex.scoreboardlibrary.api.sidebar.Sidebar
 import okhttp3.OkHttpClient
 import org.bukkit.Bukkit
 import org.bukkit.command.CommandSender
@@ -66,6 +67,8 @@ import kotlin.time.toJavaDuration
 class Citadel : JavaPlugin() {
     private val manager: PaperCommandManager by lazy { PaperCommandManager(this) }
     private lateinit var scoreboardLibrary: ScoreboardLibrary
+    private lateinit var sidebar: Sidebar
+    private lateinit var sidebar2: Sidebar
     val serverName by lazy { getEnvOrDefault("SERVER_NAME", InetAddress.getLocalHost().hostName) }
     val dungaAPIPath by lazy { getEnvOrDefault("DUNGA_API", "http://localhost:3000/v1") }
     val mongoURI by lazy { getEnvOrDefault("MONGODB_URL", "") }
@@ -158,8 +161,9 @@ class Citadel : JavaPlugin() {
             logger.warning("No scoreboard packet adapter available!")
         }
 
-        val sidebar = scoreboardLibrary.createSidebar()
-        val statusTaskRunner = StatusTaskRunner(this, statusApi, sidebar)
+        sidebar = scoreboardLibrary.createSidebar()
+        sidebar2 = scoreboardLibrary.createSidebar()
+        val statusTaskRunner = StatusTaskRunner(this, statusApi, sidebar, sidebar2)
         statusTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 60) // Repeat every 60 ticks (3 seconds)
 
         val leaderboardTaskRunner = LeaderboardTaskRunner(this, scoreApi)
@@ -237,6 +241,8 @@ class Citadel : JavaPlugin() {
         Bukkit.getScheduler().cancelTasks(this)
         server.messenger.unregisterIncomingPluginChannel(this)
         scoreboardLibrary.close()
+        sidebar.close()
+        sidebar2.close()
         MongoDBManager.shutdown()
     }
 
