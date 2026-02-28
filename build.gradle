@@ -1,9 +1,9 @@
 plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.9.22'
-    id 'org.jetbrains.kotlin.plugin.serialization' version '2.0.20'
-    id "com.gradleup.shadow" version "8.3.0"
-    id "java"
-    id "xyz.jpenilla.run-paper" version "2.3.0" // https://github.com/jpenilla/run-task
+    id 'org.jetbrains.kotlin.jvm' version '2.3.10'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '2.3.10'
+    id 'com.gradleup.shadow' version '8.3.0'
+    id 'java'
+    id 'xyz.jpenilla.run-paper' version '3.0.2' // https://github.com/jpenilla/run-task
 }
 
 group = "org.trackedout"
@@ -37,17 +37,17 @@ println "Agronet jar: ${property('agronet_jar')}"
 
 dependencies {
     compileOnly "io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT"
-    implementation "commons-io:commons-io:2.13.0"
+    implementation 'commons-io:commons-io:2.14.0'
     implementation "co.aikar:acf-paper:0.5.1-SNAPSHOT"
 
-    implementation group: "org.apache.commons", name: "commons-lang3", version: "3.0"
+    implementation group: "org.apache.commons", name: "commons-lang3", version: '3.18.0'
     implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.22"
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1'
     implementation "com.charleskorn.kaml:kaml:0.61.0"
 
     // Dunga Dunga API client libraries
-    implementation "com.squareup.moshi:moshi-kotlin:1.14.0"
-    implementation "com.squareup.moshi:moshi-adapters:1.14.0"
+    implementation "com.squareup.moshi:moshi-kotlin:1.15.2"
+    implementation "com.squareup.moshi:moshi-adapters:1.15.2"
     implementation "com.squareup.okhttp3:okhttp:4.11.0"
 
     implementation files(property('agronet_jar'))
@@ -71,7 +71,7 @@ dependencies {
     compileOnly 'de.oliver:FancyHolograms:2.8.0'
 
     // https://github.com/MegavexNetwork/scoreboard-library/blob/main/INSTALLATION.md
-    var scoreboardLibraryVersion = "2.1.6"
+    var scoreboardLibraryVersion = "2.7.0"
     implementation "net.megavex:scoreboard-library-api:$scoreboardLibraryVersion"
     implementation "net.megavex:scoreboard-library-extra-kotlin:$scoreboardLibraryVersion" // Kotlin specific extensions (optional)
     runtimeOnly "net.megavex:scoreboard-library-implementation:$scoreboardLibraryVersion"
