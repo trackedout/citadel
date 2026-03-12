@@ -277,7 +277,7 @@ object PageWatcher {
 }
 
 object FirstRun {
-    var showLeaderboard = true
+    var showLeaderboard = false
     var isFirstRun = false
     var skip: Int = 0
 }
