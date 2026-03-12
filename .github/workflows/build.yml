@@ -22,10 +22,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: validate gradle wrapper
-        uses: gradle/actions/wrapper-validation@v3
+        uses: gradle/actions/wrapper-validation@v5
 
       - name: setup jdk ${{ matrix.java }}
         uses: actions/setup-java@v4
@@ -38,7 +38,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: download latest agronet jar
-        uses: robinraju/release-downloader@v1.10
+        uses: robinraju/release-downloader@v1
         with:
           repository: 'trackedout/agronet-fabric'
           token: ${{ secrets.WORKER_PAT }}
@@ -47,7 +47,7 @@ jobs:
           out-file-path: 'agronet-fabric'
 
       - name: download config files from brilliance
-        uses: robinraju/release-downloader@v1.10
+        uses: robinraju/release-downloader@v1
         with:
           repository: 'trackedout/Brilliance'
           token: ${{ secrets.WORKER_PAT }}
@@ -64,7 +64,7 @@ jobs:
 
       - name: capture build artifacts
         if: ${{ runner.os == 'Linux' && matrix.java == '21' }} # Only upload artifacts built from latest java on one OS
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Artifacts
           path: build/libs/
