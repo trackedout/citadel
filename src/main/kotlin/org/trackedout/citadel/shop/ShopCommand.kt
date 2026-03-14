@@ -31,15 +31,6 @@ class ShopCommand(
     private val plugin: Citadel,
 ) : BaseCommand() {
 
-    @Subcommand("edit")
-    @CommandPermission("decked-out.shop.admin")
-    @Description("Shop management")
-    fun openShopEditor(player: Player) {
-        executeOnValidShop(player) { tileState, _ ->
-//            showShopEditor(tileState, player)
-        }
-    }
-
     @Subcommand("rename")
     @CommandPermission("decked-out.shop.admin")
     @Description("Shop management - set name")
