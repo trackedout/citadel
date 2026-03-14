@@ -17,8 +17,9 @@ import org.trackedout.data.RunType
 import org.trackedout.data.find
 import org.trackedout.data.runTypes
 
-val debugTag = "debug"
-val debugDetailsTag = "details"
+val opsLogsTag = "debug" // Show ops notification messages
+val disableScoreboardTag = "noscoreboard" // Disable scoreboard display
+val debugDetailsTag = "details" // Show detailed instance scoreboard
 
 val playerNameRegex = Regex("^[a-zA-Z0-9_]{2,16}$")
 

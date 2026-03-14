@@ -63,11 +63,13 @@ class StatusTaskRunner(
             if (it.scoreboardTags.contains(debugDetailsTag)) {
                 sidebar2.addPlayer(it)
                 sidebar.removePlayer(it)
-            } else if (it.scoreboardTags.contains(debugTag)) {
-                sidebar.addPlayer(it)
+            } else if (it.scoreboardTags.contains(disableScoreboardTag)) {
+                // Remove if unwanted
+                sidebar.removePlayer(it)
                 sidebar2.removePlayer(it)
             } else {
-                sidebar.removePlayer(it)
+                // Default to showing the scoreboard to all players
+                sidebar.addPlayer(it)
                 sidebar2.removePlayer(it)
             }
         }
@@ -87,6 +89,10 @@ class StatusTaskRunner(
                 Filters.regex("name", "^d[0-9]{3}"),
             )
         ).sortedBy { it.name }
+
+        if (instances.isEmpty()) {
+            sidebar2.line(0, text("No dungeons").color(NamedTextColor.RED))
+        }
 
         instances.forEachIndexed { index, dungeon ->
             var textComponent = text("${dungeon.name}: ").color(NamedTextColor.AQUA)
