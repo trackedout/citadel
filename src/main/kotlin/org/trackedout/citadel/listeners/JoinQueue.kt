@@ -6,7 +6,7 @@ import org.trackedout.citadel.async
 import org.trackedout.citadel.inventory.DeckId
 import org.trackedout.citadel.inventory.displayName
 import org.trackedout.citadel.inventory.id
-import org.trackedout.citadel.inventory.isPractice
+import org.trackedout.citadel.inventory.isCompetitive
 import org.trackedout.citadel.inventory.shortRunType
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.client.apis.EventsApi
@@ -29,7 +29,7 @@ fun createJoinQueueFunc(citadel: Citadel, eventsApi: EventsApi, player: Player):
                     metadata = mapOf(
                         "deck-id" to deckId,
                         "run-type" to deckId.shortRunType(),
-                        "dungeon-type" to if (deckId.isPractice()) "default" else "season-2",
+                        "dungeon-type" to if (deckId.isCompetitive()) "season-2" else "default",
                     )
                 )
             )
