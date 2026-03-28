@@ -8,9 +8,9 @@ import co.aikar.commands.annotation.Subcommand
 import org.bukkit.command.CommandSender
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
+import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.client.apis.TasksApi
 import org.trackedout.client.models.Task
-import org.trackedout.citadel.sendGreyMessage
 
 @CommandAlias("k8s")
 class ScheduleJobCommand(
@@ -18,19 +18,38 @@ class ScheduleJobCommand(
     private val tasksApi: TasksApi,
 ) : BaseCommand() {
 
-    @Subcommand("snapshot-dungeons")
+    @Subcommand("create-snapshot builders")
     @CommandPermission("decked-out.k8s.schedule-job.snapshot")
-    @Description("Snapshot dungeons")
-    fun snapshotDungeons(source: CommandSender) {
+    @Description("Create builders snapshot")
+    fun snapshotB1(source: CommandSender) {
         plugin.async(source) {
             tasksApi.tasksPost(
                 Task(
                     type = "run-job",
                     arguments = listOf(
                         "create-builders-snapshot", "wait-for-builders-snapshot",
-                        "create-builders2-snapshot", "wait-for-builders2-snapshot",
                         "upload-backups-to-s3", "wait-for-backup-upload",
                         "import-latest-snapshot-from-s3", "wait-for-snapshot-import"
+                    ),
+                    server = "job-scheduler",
+                )
+            )
+
+            source.sendGreyMessage("Scheduled snapshot jobs")
+        }
+    }
+
+    @Subcommand("create-snapshot builders2")
+    @CommandPermission("decked-out.k8s.schedule-job.snapshot")
+    @Description("Create builders2 snapshot")
+    fun snapshotB2(source: CommandSender) {
+        plugin.async(source) {
+            tasksApi.tasksPost(
+                Task(
+                    type = "run-job",
+                    arguments = listOf(
+                        "create-builders2-snapshot", "wait-for-builders2-snapshot",
+                        "upload-backups-to-s3", "wait-for-backup-upload",
                     ),
                     server = "job-scheduler",
                 )

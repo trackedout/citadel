@@ -18,7 +18,8 @@ import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoPlayerStats
 import org.trackedout.citadel.mongo.Stats
-import org.trackedout.client.apis.ScoreApi
+import org.trackedout.client.apis.ConfigApi
+import org.trackedout.client.infrastructure.ClientException
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
@@ -27,7 +28,7 @@ import kotlin.math.min
 // must go through a sync task scheduler. The Scoreboard lib is thread-safe, so it doesn't require a sync task.
 class LeaderboardTaskRunner(
     private val plugin: Citadel,
-    private val scoreApi: ScoreApi,
+    private val configApi: ConfigApi,
 ) : BukkitRunnable() {
     override fun run() {
         if (this.isCancelled) {
@@ -38,7 +39,7 @@ class LeaderboardTaskRunner(
         val pointsForPosition = arrayOf(25, 21, 18, 16, 14, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
 
         if (FirstRun.skip > 0) {
-            plugin.logger.info("Skipping this task (skip=${FirstRun.skip})")
+            plugin.logger.info("Skipping leaderboard task (skip=${FirstRun.skip})")
             FirstRun.skip--
             return
         }
@@ -46,8 +47,12 @@ class LeaderboardTaskRunner(
         plugin.server.worlds.find { it.name == "world" }?.let { world ->
             val activePlayers = mutableMapOf<String, PlayerWithPoints>()
             var maxPhase = 0
+
             if (FirstRun.showLeaderboard) {
-                maxPhase = parsePhaseDataForAllPlayers(activePlayers, pointsForPosition)
+                // If current-phase is set, use that. Otherwise, don't show any phase data
+                configApi.getInt("comp-season", "current-phase")?.let { currentPhase ->
+                    maxPhase = parsePhaseDataForAllPlayers(currentPhase, activePlayers, pointsForPosition)
+                }
             }
 
             // Calculate overall rank based on total points, allowing for multiple players to have the same rank
@@ -143,12 +148,26 @@ class LeaderboardTaskRunner(
                         if (rank == 1) {
                             plugin.runLaterOnATick(delay + 60) {
                                 plugin.server.onlinePlayers.forEach { onlinePlayer ->
-                                    onlinePlayer.showTitle(
-                                        Title.title(
-                                            Component.text(playerName).color(NamedTextColor.AQUA).decorate(TextDecoration.BOLD),
-                                            Component.text("Phase $maxPhase Winner!").color(NamedTextColor.AQUA)
+                                    val winners = activePlayers.values.filter { it.totalPoints == points }.map { it.player }
+
+                                    if (winners.size == 1) {
+                                        onlinePlayer.showTitle(
+                                            Title.title(
+                                                Component.text(playerName).color(NamedTextColor.AQUA).decorate(TextDecoration.BOLD),
+                                                Component.text("Phase $maxPhase Winner!").color(NamedTextColor.AQUA)
+                                            )
                                         )
-                                    )
+                                        onlinePlayer.sendMessage(Component.text("Congratulations to $playerName for being the Phase $maxPhase winner with $points points!").color(NamedTextColor.AQUA))
+                                    } else {
+                                        onlinePlayer.showTitle(
+                                            Title.title(
+                                                Component.text("Phase $maxPhase Winners!").color(NamedTextColor.AQUA),
+                                                Component.text(winners.joinToString(" and ")).color(NamedTextColor.AQUA).decorate(TextDecoration.BOLD),
+                                            )
+                                        )
+                                        onlinePlayer.sendMessage(Component.text("Congratulations to ${winners.joinToString(" and ")} for being the Phase $maxPhase winners with $points points!").color(NamedTextColor.AQUA))
+                                    }
+
                                     onlinePlayer.playSound(Sound.sound(Key.key("do2:events.artifact_retrived"), Sound.Source.MASTER, 1f, 0f))
                                 }
                             }
@@ -198,12 +217,13 @@ class LeaderboardTaskRunner(
     }
 
     private fun parsePhaseDataForAllPlayers(
+        currentPhase: Int,
         activePlayers: MutableMap<String, PlayerWithPoints>,
         pointsForPosition: Array<Int>,
     ): Int {
         val database = MongoDBManager.getDatabase("dunga-dunga");
         var maxPhase = 0
-        listOf(1, 2, 3, 4, 5, 6, 7).forEach { phase ->
+        (1..currentPhase).forEach { phase ->
             val playerStatsCollection = database.getCollection("playerStatsPhase${phase}", MongoPlayerStats::class.java)
 
             val activePlayersInPhase = playerStatsCollection.find().toList().filter { it.stats.tomesSubmitted > 0 }.sortedBy { it.player }
@@ -272,12 +292,22 @@ class LeaderboardTaskRunner(
     }
 }
 
+private fun ConfigApi.getInt(entity: String, key: String): Int? {
+    return try {
+        this.configsGet(entity, key).let { Integer.parseInt(it.value) }
+    } catch (e: ClientException) {
+        System.err.println("Error fetching config for $entity and key $key: ${e.message}")
+        e.printStackTrace()
+        null // default
+    }
+}
+
 object PageWatcher {
     var page: Int = 99
 }
 
 object FirstRun {
-    var showLeaderboard = false
+    var showLeaderboard = true
     var isFirstRun = false
     var skip: Int = 0
 }
