@@ -51,6 +51,19 @@ class CubbyManagementCommand(
                 player.sendGreenMessage("This cubby is now yours!")
             } else {
                 player.sendRedMessage("You need to be in a cubby to claim it")
+
+                // Find nearest available cubby
+                val allCubbies = player.world.regions()?.filter { it.id.startsWith(CUBBY_PREFIX) }
+                val availableCubbies = allCubbies?.filter { it.members.players.isEmpty() }
+
+                if (!availableCubbies.isNullOrEmpty()) {
+                    availableCubbies.minBy { it.getCenterLocation(player.world).distance(player.location) }.let {
+                        player.sendGreenMessage("Nearest available cubby is located at ${it.minimumPoint}, ${it.maximumPoint}. Teleporting you to it now")
+                        player.teleport(it.getCenterLocation(player.world))
+                    }
+                } else {
+                    player.sendRedMessage("No available cubbies found! Please contact a moderator to create more cubbies")
+                }
             }
         }
     }
