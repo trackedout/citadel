@@ -71,7 +71,7 @@ class CubbyManagementCommand(
     }
 
     @Subcommand("cubby tp")
-    @Description("Teleport a cubby")
+    @Description("Teleport to a player's cubby")
     @CommandCompletion("@dbPlayers")
     fun teleportToCubby(source: CommandSender, @Optional targetPlayer: String?) {
         val world = plugin.server.worlds.find { it.name == "world" } ?: throw IllegalArgumentException("World not found")

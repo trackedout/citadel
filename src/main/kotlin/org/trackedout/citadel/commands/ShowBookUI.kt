@@ -46,7 +46,7 @@ fun showBookUI(
        Run modes:
 
        <aqua>Competitive:</aqua>
-Limited shards, standard rules, currently closed.
+Limited shards, standard rules, and new content!
 
        <green>Practice:</green>
 Infinite runs, open access to all cards.
