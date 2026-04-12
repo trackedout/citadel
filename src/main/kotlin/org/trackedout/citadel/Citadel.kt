@@ -28,6 +28,7 @@ import org.trackedout.citadel.commands.ShutdownDungeonsCommand
 import org.trackedout.citadel.commands.SpectateCommand
 import org.trackedout.citadel.commands.StatusCommand
 import org.trackedout.citadel.commands.TestQueueCommand
+import org.trackedout.citadel.commands.UnstuckCommand
 import org.trackedout.citadel.commands.editableConfigs
 import org.trackedout.citadel.commands.toggleableConfigs
 import org.trackedout.citadel.config.cardConfig
@@ -194,6 +195,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(ShowArtifakesCommand(this, eventsApi, scoreApi, viewFrame))
         manager.registerCommand(CubbyManagementCommand(this, eventsApi, scoreApi, viewFrame))
         manager.registerCommand(LeaderboardCommand(this))
+        manager.registerCommand(UnstuckCommand(this))
 
         val echoShardListener = EchoShardListener(this, inventoryApi, eventsApi, scoreApi, viewFrame, inventoryManager)
         server.pluginManager.registerEvents(echoShardListener, this)

@@ -4,17 +4,20 @@ import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.CommandAlias
 import co.aikar.commands.annotation.CommandCompletion
 import co.aikar.commands.annotation.Description
+import co.aikar.commands.annotation.Optional
 import co.aikar.commands.annotation.Subcommand
 import me.devnatan.inventoryframework.ViewFrame
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.getApplicableRegions
+import org.trackedout.citadel.getCenterLocation
 import org.trackedout.citadel.getCubby
 import org.trackedout.citadel.getCubbyByName
 import org.trackedout.citadel.getCubbyForPlayer
 import org.trackedout.citadel.regions
 import org.trackedout.citadel.sendGreenMessage
+import org.trackedout.citadel.sendMiniMessage
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.ScoreApi
@@ -64,6 +67,28 @@ class CubbyManagementCommand(
             }
         } else {
             source.sendRedMessage("Cannot locate your cubby as you are not a player")
+        }
+    }
+
+    @Subcommand("cubby tp")
+    @Description("Teleport a cubby")
+    @CommandCompletion("@dbPlayers")
+    fun teleportToCubby(source: CommandSender, @Optional targetPlayer: String?) {
+        val world = plugin.server.worlds.find { it.name == "world" } ?: throw IllegalArgumentException("World not found")
+
+        if (source is Player) {
+            val playerName = targetPlayer ?: source.name
+            val playerCubby = source.world.getCubbyForPlayer(playerName)
+            if (playerCubby != null) {
+                val target = if (targetPlayer == null || targetPlayer == source.name) "your" else "${playerName}'s"
+                source.sendMiniMessage("<green>Teleporting you to $target cubby! Use <blue>/do unstuck</blue> if you get stuck</green>")
+
+                source.teleport(playerCubby.getCenterLocation(world))
+            } else {
+                source.sendRedMessage("$playerName does not have a cubby")
+            }
+        } else {
+            source.sendRedMessage("Cannot teleport to your cubby as you are not a player")
         }
     }
 

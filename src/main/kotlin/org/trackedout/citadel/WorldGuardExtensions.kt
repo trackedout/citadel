@@ -26,6 +26,15 @@ fun World.getCubbyForPlayer(playerName: String): ProtectedRegion? {
     }
 }
 
+fun ProtectedRegion.getCenterLocation(world: World): Location {
+    val min = this.minimumPoint.toVector3()
+    val max = this.maximumPoint.toVector3()
+
+    val center = min.add(max.add(1.0, 1.0, 1.0)).multiply(0.5)
+
+    return Location(world, center.x, center.y, center.z)
+}
+
 fun World.getApplicableRegions(location: Location): ApplicableRegionSet? {
     val playerLocation = BlockVector3.at(location.x, location.y, location.z)
     return this.regionManager()?.getApplicableRegions(playerLocation)
