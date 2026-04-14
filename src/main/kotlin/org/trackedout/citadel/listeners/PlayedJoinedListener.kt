@@ -1,6 +1,8 @@
 package org.trackedout.citadel.listeners
 
 import com.destroystokyo.paper.event.server.ServerTickStartEvent
+import net.kyori.adventure.text.minimessage.MiniMessage
+import net.kyori.adventure.title.Title
 import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -11,14 +13,19 @@ import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
 import org.trackedout.citadel.getEnvOrDefault
+import org.trackedout.citadel.getInt
+import org.trackedout.citadel.getRelativeFutureDate
+import org.trackedout.citadel.runLaterOnATick
+import org.trackedout.citadel.sendMiniMessage
+import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.EventsApi
-import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Event
+import java.time.Duration
 
 class PlayedJoinedListener(
     private val plugin: Citadel,
     private val eventsApi: EventsApi,
-    private val scoreApi: ScoreApi,
+    private val configApi: ConfigApi,
     private val inventoryManager: InventoryManager,
 ) : Listener {
     val modernResourcePackUrl by lazy {
@@ -65,6 +72,32 @@ class PlayedJoinedListener(
                     modernResourcePackUrl,
                     modernResourcePackChecksum
                 )
+            }
+        }
+
+        plugin.async(player) {
+            configApi.getInt("comp-season", "current-phase")?.let { currentPhase ->
+                val formattedPhase = "Competitive Phase <gold>#${currentPhase}</gold>"
+                configApi.getRelativeFutureDate("phase-${currentPhase}", "end-time")?.let { phaseEndRelativeDate ->
+                    val message = "<aqua>$formattedPhase ends in <gold>${phaseEndRelativeDate}</gold></aqua>"
+                    player.sendMiniMessage(message)
+
+                    plugin.runLaterOnATick(20 * 5) {
+                        player.showTitle(
+                            Title.title(
+                                MiniMessage.miniMessage().deserialize("<aqua>${formattedPhase}</aqua>"),
+                                MiniMessage.miniMessage().deserialize("<aqua>Ends in $phaseEndRelativeDate</aqua>"),
+                                Title.Times.times(
+                                    Duration.ofSeconds(1),
+                                    Duration.ofSeconds(3),
+                                    Duration.ofSeconds(2),
+                                )
+                            )
+                        )
+                    }
+                } ?: run {
+                    player.sendMiniMessage("<aqua>$formattedPhase has ended</aqua>")
+                }
             }
         }
     }

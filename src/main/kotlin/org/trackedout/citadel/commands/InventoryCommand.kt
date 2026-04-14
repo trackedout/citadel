@@ -22,7 +22,6 @@ import org.trackedout.citadel.inventory.displayName
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.citadel.sendRedMessage
-import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Card
@@ -33,7 +32,6 @@ import org.trackedout.data.sortedList
 
 @CommandAlias("decked-out|do")
 class InventoryCommand(
-    private val eventsApi: EventsApi,
     private val inventoryApi: InventoryApi,
     private val inventoryManager: InventoryManager,
     private val scoreApi: ScoreApi,

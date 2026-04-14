@@ -6,7 +6,6 @@ import co.aikar.commands.annotation.CommandCompletion
 import co.aikar.commands.annotation.Description
 import co.aikar.commands.annotation.Optional
 import co.aikar.commands.annotation.Subcommand
-import me.devnatan.inventoryframework.ViewFrame
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
@@ -19,17 +18,12 @@ import org.trackedout.citadel.regions
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendMiniMessage
 import org.trackedout.citadel.sendRedMessage
-import org.trackedout.client.apis.EventsApi
-import org.trackedout.client.apis.ScoreApi
 
 private const val CUBBY_PREFIX = "cubby-"
 
 @CommandAlias("decked-out|do")
 class CubbyManagementCommand(
     private val plugin: Citadel,
-    private val eventsApi: EventsApi,
-    private val scoreApi: ScoreApi,
-    private val viewFrame: ViewFrame,
 ) : BaseCommand() {
 
     @Subcommand("cubby claim")

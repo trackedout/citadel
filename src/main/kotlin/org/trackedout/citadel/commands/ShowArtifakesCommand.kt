@@ -22,7 +22,6 @@ import org.trackedout.citadel.getInventoryFilterForPlayer
 import org.trackedout.citadel.inventory.BasicItemView
 import org.trackedout.citadel.runOnNextTick
 import org.trackedout.citadel.sendRedMessage
-import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.data.RunType
 import org.trackedout.data.getRunTypeById
@@ -30,7 +29,6 @@ import org.trackedout.data.getRunTypeById
 @CommandAlias("decked-out|do")
 class ShowArtifakesCommand(
     private val plugin: Citadel,
-    private val eventsApi: EventsApi,
     private val scoreApi: ScoreApi,
     private val viewFrame: ViewFrame,
 ) : BaseCommand() {

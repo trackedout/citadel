@@ -134,7 +134,7 @@ class Citadel : JavaPlugin() {
 
         // https://github.com/aikar/commands/wiki/Real-World-Examples
         manager.enableUnstableAPI("help")
-        manager.registerCommand(InventoryCommand(eventsApi, inventoryApi, inventoryManager, scoreApi))
+        manager.registerCommand(InventoryCommand(inventoryApi, inventoryManager, scoreApi))
         manager.registerCommand(LogEventCommand(eventsApi))
         manager.registerCommand(StatusCommand())
         manager.registerCommand(ScoreManagementCommand(this, scoreApi, eventsApi, inventoryManager, inventoryApi))
@@ -173,7 +173,7 @@ class Citadel : JavaPlugin() {
         val trophyTaskRunner = TrophyTaskRunner(this)
         trophyTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 20 * 60) // Repeat every 1200 ticks (1 minute)
 
-        server.pluginManager.registerEvents(PlayedJoinedListener(this, eventsApi, scoreApi, inventoryManager), this)
+        server.pluginManager.registerEvents(PlayedJoinedListener(this, eventsApi, configApi, inventoryManager), this)
         server.pluginManager.registerEvents(PlayedDeathListener(this, eventsApi, scoreApi), this)
 
         val viewFrame: ViewFrame = ViewFrame.create(this)
@@ -192,8 +192,8 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(ManageDeckCommand(this, inventoryApi, eventsApi, viewFrame))
         manager.registerCommand(SpectateCommand(this, eventsApi, configApi, viewFrame))
         manager.registerCommand(ConfigCommand(this, configApi))
-        manager.registerCommand(ShowArtifakesCommand(this, eventsApi, scoreApi, viewFrame))
-        manager.registerCommand(CubbyManagementCommand(this, eventsApi, scoreApi, viewFrame))
+        manager.registerCommand(ShowArtifakesCommand(this, scoreApi, viewFrame))
+        manager.registerCommand(CubbyManagementCommand(this))
         manager.registerCommand(LeaderboardCommand(this))
         manager.registerCommand(UnstuckCommand(this))
 

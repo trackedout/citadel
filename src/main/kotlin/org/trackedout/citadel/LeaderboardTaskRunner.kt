@@ -19,7 +19,6 @@ import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoPlayerStats
 import org.trackedout.citadel.mongo.Stats
 import org.trackedout.client.apis.ConfigApi
-import org.trackedout.client.infrastructure.ClientException
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
@@ -289,16 +288,6 @@ class LeaderboardTaskRunner(
         val snow = snowBlock.blockData as Snow
         snow.layers = layersForBlock
         snowBlock.blockData = snow
-    }
-}
-
-private fun ConfigApi.getInt(entity: String, key: String): Int? {
-    return try {
-        this.configsGet(entity, key).let { Integer.parseInt(it.value) }
-    } catch (e: ClientException) {
-        System.err.println("Error fetching config for $entity and key $key: ${e.message}")
-        e.printStackTrace()
-        null // default
     }
 }
 
