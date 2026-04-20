@@ -15,7 +15,6 @@ import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.data.BrillianceCard
 import org.trackedout.data.RunType
 import org.trackedout.data.find
-import org.trackedout.data.runTypes
 
 val opsLogsTag = "debug" // Show ops notification messages
 val disableScoreboardTag = "noscoreboard" // Disable scoreboard display
@@ -51,13 +50,7 @@ fun HumanEntity.debug(message: String, tag: String = "debug.click") {
 }
 
 fun ItemStack.isDeckedOutShulker(): Boolean {
-    for (runType in runTypes) {
-        if (this.type == Material.valueOf(runType.deckMaterial) && getDeckId() != null) {
-            return true
-        }
-    }
-
-    return false
+    return this.type.name.endsWith("_SHULKER_BOX") && getDeckId() != null
 }
 
 fun ItemStack.hasDeckId(): Boolean = RtagItem(this).hasTag("deckId")

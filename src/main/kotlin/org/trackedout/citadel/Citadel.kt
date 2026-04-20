@@ -24,12 +24,14 @@ import org.trackedout.citadel.commands.ManageDeckCommand
 import org.trackedout.citadel.commands.ScheduleJobCommand
 import org.trackedout.citadel.commands.ScoreManagementCommand
 import org.trackedout.citadel.commands.ShowArtifakesCommand
+import org.trackedout.citadel.commands.ShulkerStyleCommand
 import org.trackedout.citadel.commands.ShutdownDungeonsCommand
 import org.trackedout.citadel.commands.SpectateCommand
 import org.trackedout.citadel.commands.StatusCommand
 import org.trackedout.citadel.commands.TestQueueCommand
 import org.trackedout.citadel.commands.UnstuckCommand
 import org.trackedout.citadel.commands.editableConfigs
+import org.trackedout.citadel.commands.shulkerColors
 import org.trackedout.citadel.commands.toggleableConfigs
 import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.inventory.AddACardView
@@ -126,7 +128,7 @@ class Citadel : JavaPlugin() {
                 .build()
         )
 
-        val inventoryManager = InventoryManager(this, inventoryApi, scoreApi, eventsApi)
+        val inventoryManager = InventoryManager(this, inventoryApi, scoreApi, eventsApi, configApi)
 
         MongoDBManager.initialize(mongoURI)
 
@@ -192,6 +194,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(ManageDeckCommand(this, inventoryApi, eventsApi, viewFrame))
         manager.registerCommand(SpectateCommand(this, eventsApi, configApi, viewFrame))
         manager.registerCommand(ConfigCommand(this, configApi))
+        manager.registerCommand(ShulkerStyleCommand(configApi, inventoryManager))
         manager.registerCommand(ShowArtifakesCommand(this, scoreApi, viewFrame))
         manager.registerCommand(CubbyManagementCommand(this))
         manager.registerCommand(LeaderboardCommand(this))
@@ -207,6 +210,7 @@ class Citadel : JavaPlugin() {
         manager.commandCompletions.registerStaticCompletion("runTypes", runTypes.map { it.longId })
         manager.commandCompletions.registerStaticCompletion("toggleableConfigs", toggleableConfigs)
         manager.commandCompletions.registerStaticCompletion("editableConfigs", editableConfigs)
+        manager.commandCompletions.registerStaticCompletion("shulkerColors", shulkerColors)
 
         manager.commandCompletions.registerAsyncCompletion("cards") { _ ->
             cardConfig.entries.map { it.key }

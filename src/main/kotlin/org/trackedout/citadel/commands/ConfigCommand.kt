@@ -36,6 +36,7 @@ private val configDescriptions = mapOf(
     "skip-door" to "Enable this to skip the door animation",
     "dungeon-type" to "The type of dungeon to generate (default / season-2)",
     "allow-spectating" to "Allow players to spectate your runs",
+    "shulker-style" to "Shulker box colour (in competitive mode)"
 )
 
 private fun configDescription(key: String?): String = configDescriptions[key]?.let { "<gray>$it</gray>" } ?: ""

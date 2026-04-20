@@ -1,6 +1,7 @@
 package org.trackedout.citadel
 
 import org.bukkit.GameRule
+import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.advancement.Advancement
 import org.bukkit.entity.Player
@@ -20,6 +21,8 @@ import org.trackedout.citadel.inventory.withTradeMeta
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.ScoreApi
+import org.trackedout.client.apis.ConfigApi
+import org.trackedout.client.infrastructure.ClientException
 import org.trackedout.client.models.Event
 import org.trackedout.client.models.Score
 import org.trackedout.data.RunType
@@ -34,6 +37,7 @@ class InventoryManager(
     private val inventoryApi: InventoryApi,
     private val scoreApi: ScoreApi,
     private val eventsApi: EventsApi,
+    private val configApi: ConfigApi,
 ) {
     fun updateInventoryBasedOnScore(player: Player) {
         val knownItemTracker = mutableSetOf<ItemStack>()
@@ -219,7 +223,16 @@ class InventoryManager(
                     if (inventoryFilterRunType != null && inventoryFilterRunType != runType) {
                         itemCount = 0
                     }
-                    player.ensureInventoryContains(knownItemTracker, dungeonDeck(runType, itemCount))
+                    val materialOverride = if (runType.shortId == 'c') {
+                        try {
+                            configApi.configsGet(player.name, "shulker-style").value
+                                ?.uppercase()
+                                ?.let { Material.valueOf("${it}_SHULKER_BOX") }
+                        } catch (e: ClientException) {
+                            null
+                        }
+                    } else null
+                    player.ensureInventoryContains(knownItemTracker, dungeonDeck(runType, itemCount, materialOverride))
                     player.ensureInventoryContains(knownItemTracker, dungeonArtifacts(runType, itemCount))
                 }
             }

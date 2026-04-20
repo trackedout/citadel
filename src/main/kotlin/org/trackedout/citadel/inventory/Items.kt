@@ -162,11 +162,11 @@ fun dungeonItem(
     })
 }
 
-fun dungeonDeck(runType: RunType, itemCount: Int = 1): ItemStack = dungeonItem(
+fun dungeonDeck(runType: RunType, itemCount: Int = 1, materialOverride: Material? = null): ItemStack = dungeonItem(
     name = "❄☠ Frozen Assets (${runType.displayName} Deck #1) ☠❄",
     customModelData = 7,
     textColor = runType.displayNamedText(),
-    material = Material.valueOf(runType.deckMaterial),
+    material = materialOverride ?: Material.valueOf(runType.deckMaterial),
     metadata = mapOf("deckId" to "${runType.shortId}1"),
     itemCount = itemCount,
 )
