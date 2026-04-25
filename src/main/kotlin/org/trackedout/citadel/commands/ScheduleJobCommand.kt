@@ -59,4 +59,24 @@ class ScheduleJobCommand(
         }
     }
 
+    @Subcommand("backup-database")
+    @CommandPermission("decked-out.k8s.schedule-job.mongo-backup")
+    @Description("Backup database")
+    fun backupDatabase(source: CommandSender) {
+        plugin.async(source) {
+            tasksApi.tasksPost(
+                Task(
+                    type = "run-job",
+                    arguments = listOf(
+                        "mongo-backup", "wait-for-mongo-backup",
+                        "upload-backups-to-s3-survival", "wait-for-survival-backup-upload",
+                    ),
+                    server = "job-scheduler",
+                )
+            )
+
+            source.sendGreyMessage("Scheduled backup jobs")
+        }
+    }
+
 }
