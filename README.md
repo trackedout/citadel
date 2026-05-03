@@ -44,6 +44,14 @@ For a list of changes, see the [latest release notes](https://github.com/tracked
 | `/do artifakes` | Show artifakes | `/do artifakes` | - |
 | `/do artifakes [playerName]` | Show artifakes for target player | `/do artifakes 4Ply` | `decked-out.artifakes.view.all` |
 
+#### Trophy of Trophies (ToTs):
+| Command | Description | Example | Permission Required |
+|---|---|---|---|
+| `/tots tp <name>` | Teleport to a trophy | `/tots tp "Card Collector"` | `decked-out.tots.tp` |
+| `/tots list <section>` | List all trophies in a section | `/tots list Embers` | `decked-out.tots.list` |
+| `/tots search <query>` | Search trophies by name, player, section, or description | `/tots search 4Ply` | `decked-out.tots.search` |
+| `/tots info` | Get info about the nearest trophy | `/tots info` | `decked-out.tots.info` |
+
 
 ## Setup
 
