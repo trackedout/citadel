@@ -42,7 +42,7 @@ class ScoreManagementCommand(
     @Syntax("<player>")
     @CommandPermission("decked-out.inventory.admin")
     @Description("List scoreboard values for a player")
-    @CommandCompletion("@dbPlayers")
+    @CommandCompletion("@dbPlayers @nothing")
     fun listScores(source: CommandSender, playerName: String) {
         plugin.async(source) {
             val scores = scoreApi.getInventoryRelatedScores(playerName)
@@ -163,7 +163,7 @@ class ScoreManagementCommand(
     @Syntax("<player>")
     @CommandPermission("decked-out.inventory.admin")
     @Description("Calculate and list shard cost for a player")
-    @CommandCompletion("@dbPlayers")
+    @CommandCompletion("@dbPlayers @nothing")
     fun listShardCosts(source: CommandSender, playerName: String) {
         plugin.async(source) {
             source.sendMessage("$playerName has the following shard costs:")

@@ -61,7 +61,7 @@ class ConfigCommand(
     @Subcommand("config show")
     @CommandPermission("decked-out.config.view.all")
     @Description("List config values for target entity")
-    @CommandCompletion("@dbPlayers")
+    @CommandCompletion("@dbPlayers @nothing")
     fun showConfigForPlayer(source: CommandSender, target: String) {
         source.sendConfigList(target)
     }
@@ -112,7 +112,7 @@ class ConfigCommand(
     @Subcommand("config toggle")
     @CommandPermission("decked-out.config.toggle")
     @Description("Toggle a config off / on")
-    @CommandCompletion("@toggleableConfigs")
+    @CommandCompletion("@toggleableConfigs @nothing")
     fun setConfigForPlayer(source: CommandSender, configKey: String) {
         if (source !is Player) {
             source.sendRedMessage("Cannot modify your config as you are not a player. Use /do toggle <configKey> <playerName>")

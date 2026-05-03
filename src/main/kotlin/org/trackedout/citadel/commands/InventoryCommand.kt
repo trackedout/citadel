@@ -53,7 +53,7 @@ class InventoryCommand(
     @Subcommand("run-mode")
     @CommandPermission("decked-out.inventory.set-run-mode")
     @Description("Set run mode for inventory filtering")
-    @CommandCompletion("@runTypes")
+    @CommandCompletion("@runTypes @nothing")
     fun setRunMode(source: Player, runType: RunType) {
         plugin.async(source) {
 
@@ -87,7 +87,7 @@ class InventoryCommand(
     @Subcommand("add-card")
     @CommandPermission("decked-out.inventory.admin")
     @Description("Add Decked Out 2 card into player's DB inventory")
-    @CommandCompletion("@dbPlayers @cards @runTypes")
+    @CommandCompletion("@dbPlayers @cards @runTypes @nothing")
     fun addCard(source: CommandSender, target: String, cardName: String, runType: RunType) {
         mutateInventory("add", source, target, cardName, runType)
     }
@@ -95,7 +95,7 @@ class InventoryCommand(
     @Subcommand("remove-card")
     @CommandPermission("decked-out.inventory.admin")
     @Description("Remove a Decked Out 2 card from player's DB inventory")
-    @CommandCompletion("@dbPlayers @cards @runTypes")
+    @CommandCompletion("@dbPlayers @cards @runTypes @nothing")
     fun removeCard(source: CommandSender, target: String, cardName: String, runType: RunType) {
         mutateInventory("remove", source, target, cardName, runType)
     }
@@ -104,7 +104,7 @@ class InventoryCommand(
     @Syntax("<player>")
     @CommandPermission("decked-out.inventory.admin")
     @Description("List the Decked Out 2 cards in a player's DB inventory")
-    @CommandCompletion("@dbPlayers")
+    @CommandCompletion("@dbPlayers @nothing")
     fun listCards(source: CommandSender, target: String) {
         plugin.async(source) {
             val cards = inventoryApi.inventoryCardsGet(
@@ -137,7 +137,7 @@ class InventoryCommand(
     @Syntax("<player> <runType>")
     @CommandPermission("decked-out.inventory.admin")
     @Description("Remove all Decked Out 2 cards from a player's DB inventory")
-    @CommandCompletion("@dbPlayers @runTypes")
+    @CommandCompletion("@dbPlayers @runTypes @nothing")
     fun removeAllCards(source: CommandSender, target: String, runType: RunType) {
         plugin.async(source) {
             val cards = inventoryApi.inventoryCardsGet(
@@ -164,7 +164,7 @@ class InventoryCommand(
     @Syntax("<player>")
     @CommandPermission("decked-out.inventory.list-known")
     @Description("List all known Decked Out 2 cards")
-    @CommandCompletion("@dbPlayers")
+    @CommandCompletion("@dbPlayers @nothing")
     fun listAllKnownCards(player: Player) {
         val knownCards = cardConfig.sortedList()
         player.sendGreenMessage("Decked Out 2 has the following cards:")
@@ -183,7 +183,7 @@ class InventoryCommand(
     @Syntax("<player> <runType>")
     @CommandPermission("decked-out.inventory.admin")
     @Description("Add a copy of every known card to a player's DB inventory")
-    @CommandCompletion("@dbPlayers @runTypes")
+    @CommandCompletion("@dbPlayers @runTypes @nothing")
     fun addAllKnownCards(source: CommandSender, target: String, runType: RunType) {
         plugin.async(source) {
             val knownCards = cardConfig.values.map { it.shorthand }

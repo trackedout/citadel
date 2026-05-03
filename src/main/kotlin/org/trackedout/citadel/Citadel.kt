@@ -31,8 +31,7 @@ import org.trackedout.citadel.commands.StatusCommand
 import org.trackedout.citadel.commands.TestQueueCommand
 import org.trackedout.citadel.commands.UnstuckCommand
 import org.trackedout.citadel.commands.TrophyCommand
-import org.trackedout.citadel.commands.trophySectionNames
-import org.trackedout.citadel.commands.trophySections
+import org.trackedout.citadel.commands.loadTrophySections
 import org.trackedout.citadel.commands.editableConfigs
 import org.trackedout.citadel.commands.shulkerColors
 import org.trackedout.citadel.commands.toggleableConfigs
@@ -215,8 +214,12 @@ class Citadel : JavaPlugin() {
         manager.commandCompletions.registerStaticCompletion("toggleableConfigs", toggleableConfigs)
         manager.commandCompletions.registerStaticCompletion("editableConfigs", editableConfigs)
         manager.commandCompletions.registerStaticCompletion("shulkerColors", shulkerColors)
-        manager.commandCompletions.registerStaticCompletion("trophySections", trophySectionNames)
-        manager.commandCompletions.registerStaticCompletion("trophyNames", trophySections.values.flatten())
+        manager.commandCompletions.registerAsyncCompletion("trophySections") { _ ->
+            loadTrophySections().keys.toList()
+        }
+        manager.commandCompletions.registerAsyncCompletion("trophyNames") { _ ->
+            loadTrophySections().values.flatten()
+        }
 
         manager.commandCompletions.registerAsyncCompletion("cards") { _ ->
             cardConfig.entries.map { it.key }

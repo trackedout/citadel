@@ -46,7 +46,7 @@ class ShulkerStyleCommand(
     @Subcommand("shulker-style")
     @CommandPermission("decked-out.config.shulker-style")
     @Description("Set the colour of your competitive shulker box")
-    @CommandCompletion("@shulkerColors")
+    @CommandCompletion("@shulkerColors @nothing")
     fun setShulkerStyle(player: Player, color: String) {
         val normalized = color.uppercase()
         if (normalized !in shulkerColors) {

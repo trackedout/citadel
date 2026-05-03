@@ -35,7 +35,7 @@ class ShowArtifakesCommand(
 
     @Subcommand("artifakes")
     @Description("Show artifakes")
-    @CommandCompletion("@runTypes")
+    @CommandCompletion("@runTypes @nothing")
     fun showArtifakes(source: CommandSender, runType: RunType?) {
         if (source is Player) {
             showArtifakeUIForPlayer(this.plugin, this.viewFrame, source, source.name, this.scoreApi, runType)
@@ -47,7 +47,7 @@ class ShowArtifakesCommand(
     @Subcommand("artifakes")
     @CommandPermission("decked-out.artifakes.view.all")
     @Description("Show artifakes for target player")
-    @CommandCompletion("@runTypes @dbPlayers")
+    @CommandCompletion("@runTypes @dbPlayers @nothing")
     fun showArtifakesForPlayer(source: CommandSender, runType: RunType?, targetPlayer: String) {
         showArtifakeUIForPlayer(this.plugin, this.viewFrame, source, targetPlayer, this.scoreApi, runType)
     }

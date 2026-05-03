@@ -81,7 +81,7 @@ class CubbyManagementCommand(
 
     @Subcommand("cubby tp")
     @Description("Teleport to a player's cubby")
-    @CommandCompletion("@dbPlayers")
+    @CommandCompletion("@dbPlayers @nothing")
     fun teleportToCubby(source: CommandSender, @Optional targetPlayer: String?) {
         val world = plugin.server.worlds.find { it.name == "world" } ?: throw IllegalArgumentException("World not found")
 
@@ -104,7 +104,7 @@ class CubbyManagementCommand(
 
     @Subcommand("cubby locate")
     @Description("Locate a cubby owned by another player")
-    @CommandCompletion("@dbPlayers")
+    @CommandCompletion("@dbPlayers @nothing")
     fun locateCubbyOtherPlayer(source: CommandSender, targetPlayer: String) {
         if (source is Player) {
             val uuid = plugin.server.getOfflinePlayerIfCached(targetPlayer)?.uniqueId

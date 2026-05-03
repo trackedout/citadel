@@ -16,60 +16,23 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
+import com.mongodb.client.model.Sorts
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoTrophy
+import org.trackedout.citadel.mongo.MongoTrophySection
 import org.trackedout.citadel.runOnNextTick
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendMiniMessage
 import org.trackedout.citadel.sendRedMessage
 
-val trophySections = mapOf(
-    "Adventuring" to listOf(
-        "Addicted", "Respiration III", "Eggselent Eggsplorer", "Deep Diver", "Sneak Master",
-        "Citadel Conquerer", "Dungeon Master's Master", "Rustiest Ally", "Clink Clank Clunk", "Halloween Enthusiast"
-    ),
-    "Surviving" to listOf(
-        "Technically the Winner", "Momentum Master", "The Real Dungeon Master", "Mummy", "Twinkletoes",
-        "Elite Entrance", "Back for Seconds", "Vex the Vex", "Spelunker", "Tryhard"
-    ),
-    "Artifacts" to listOf(
-        "Death Loop Loop", "Omen of Success", "Sanctioned Forgery", "#NeverForget", "Compass School Valedictorian",
-        "Key to Success", "Well, Aren't You Popular?", "Omen of Defeat", "Sparse-ifake™", "Homing Pigeon"
-    ),
-    "Embers" to listOf(
-        "Frost Ember Farmer", "I Don't Like Getting Shards", "Hyperfocus", "Hunter Gatherer",
-        "Optimized Spending, >1750", "Optimized Spending, <1750"
-    ),
-    "Dying" to listOf(
-        "Humble Beginnings", "Glutton for the Grave", "Participation Trophy", "Momentum Disaster",
-        "Ravager Cuddler", "Vexing Vex", "Warden Hugger", "Ravager Almost-Wrangler",
-        "Selective Dying", "Vex Fanatic", "Dungeon Dinner", "Unfocused Sleeping",
-        "Dungeon Delicacy", "Free Samples", "Mummified", "Caved In", "Fly, You Fools!", "Tryharder"
-    ),
-    "Cards and Deck" to listOf(
-        "Card Collector", "Collecting 'Em All", "Variety Pack", "Thorougly Complete",
-        "Ember Extravagence", "Sumptuous Sidelines", "Overpowered",
-        "Penny Pincher: Caves", "Penny Pincher: Mines", "Penny Pincher: Dark",
-        "It's how you use it: Caves", "It's how you use it: Mines", "It's how you use it: Dark",
-        "Retail Therapy", "Bulk Buyer", "Window Shopper", "High Roller", "Ethereal Extraordinaire",
-        "Clear as Day", "Planned In Advance", "Porkchop Powered", "Premium Member Bonus",
-        "The True Ninja", "Keeping Your Options Open", "Greed is Good", "Frosted Tips",
-        "Got the Zoomies", "Infinity Mending", "Fool of a Took!", "Harrowing Hazards", "Tripping", "Going Green"
-    ),
-    "Crowns" to listOf(
-        "Reigning Monarch", "Sticky Fingers", "Crowning Achievement", "Tunnel Vision"
-    ),
-    "Misc" to listOf(
-        "First In Line", "Is It Over?", "Dungeon Hogger", "Waiting Room Camper",
-        "Polarizing Pizza Master", "One at a Time", "Taking Turns", "Bug Magnet", "Dungeon, You Feeling Old Yet?"
-    ),
-    "Phases" to listOf(
-        "Shard Farmer", "Maximum Efficiency", "Rising Star", "Falling Star",
-        "Minimum Efficiency", "The Infinity Shard", "Feed the Need"
-    ),
-)
-
-val trophySectionNames = trophySections.keys.toList()
+fun loadTrophySections(): LinkedHashMap<String, List<String>> {
+    val database = MongoDBManager.getDatabase("dunga-dunga")
+    val collection = database.getCollection("trophy_sections", MongoTrophySection::class.java)
+    val sections = collection.find().sort(Sorts.ascending("order")).toList()
+    val map = LinkedHashMap<String, List<String>>()
+    sections.forEach { map[it.section] = it.trophies }
+    return map
+}
 
 @CommandAlias("tots")
 class TrophyCommand(
@@ -88,7 +51,7 @@ class TrophyCommand(
     }
 
     @Subcommand("tp")
-    @CommandCompletion("@trophyNames")
+    @CommandCompletion("@trophyNames @nothing")
     @CommandPermission("decked-out.tots.tp")
     @Description("Teleport to a trophy")
     fun teleportToTrophy(player: Player, name: String) {
@@ -96,7 +59,8 @@ class TrophyCommand(
             val trophies = getTrophies()
             val trophy = trophies.find { it.totKey.equals(name, ignoreCase = true) }
             if (trophy == null) {
-                val knownTrophy = trophySections.values.flatten().find { it.equals(name, ignoreCase = true) }
+                val sections = loadTrophySections()
+                val knownTrophy = sections.values.flatten().find { it.equals(name, ignoreCase = true) }
                 if (knownTrophy != null) {
                     player.sendRedMessage("Trophy '$knownTrophy' exists but has no data yet (unclaimed)")
                 } else {
@@ -135,15 +99,16 @@ class TrophyCommand(
     }
 
     @Subcommand("list")
-    @CommandCompletion("@trophySections")
+    @CommandCompletion("@trophySections @nothing")
     @CommandPermission("decked-out.tots.list")
     @Description("List all trophies in a section")
     fun listSection(source: CommandSender, section: String) {
         plugin.async(source) {
             val trophies = getTrophies()
-            val sectionEntry = trophySections.entries.find { it.key.equals(section, ignoreCase = true) }
+            val sections = loadTrophySections()
+            val sectionEntry = sections.entries.find { it.key.equals(section, ignoreCase = true) }
             if (sectionEntry == null) {
-                source.sendRedMessage("Unknown section '$section'. Valid: ${trophySectionNames.joinToString(", ")}")
+                source.sendRedMessage("Unknown section '$section'. Valid: ${sections.keys.joinToString(", ")}")
                 return@async
             }
 
@@ -168,12 +133,13 @@ class TrophyCommand(
             val trophies = getTrophies()
             val q = query.lowercase()
 
+            val sections = loadTrophySections()
             val matches = trophies.filter { trophy ->
                 trophy.totKey.lowercase().contains(q) ||
                     trophy.player?.lowercase()?.contains(q) == true ||
                     trophy.description?.lowercase()?.contains(q) == true ||
                     trophy.value?.lowercase()?.contains(q) == true ||
-                    getSectionForTrophy(trophy.totKey)?.lowercase()?.contains(q) == true
+                    sections.entries.find { it.value.contains(trophy.totKey) }?.key?.lowercase()?.contains(q) == true
             }
 
             if (matches.isEmpty()) {
@@ -183,7 +149,7 @@ class TrophyCommand(
 
             source.sendMiniMessage("<gold>--- Search: $query (${matches.size} results) ---</gold>")
             matches.forEach { trophy ->
-                val section = getSectionForTrophy(trophy.totKey) ?: "Unknown"
+                val section = sections.entries.find { it.value.contains(trophy.totKey) }?.key ?: "Unknown"
                 val player = trophy.player ?: "unclaimed"
                 val value = trophy.value ?: ""
                 source.sendMiniMessage("<gray>[$section]</gray> <yellow>${trophy.totKey}</yellow> - <green>$player</green> <gray>$value</gray>")
@@ -220,7 +186,7 @@ class TrophyCommand(
                 return@async
             }
 
-            val section = getSectionForTrophy(nearest.totKey) ?: "Unknown"
+            val section = loadTrophySections().entries.find { it.value.contains(nearest.totKey) }?.key ?: "Unknown"
             player.sendMiniMessage("<gold>--- Trophy Info ---</gold>")
             player.sendMiniMessage("<yellow>Name:</yellow> ${nearest.totKey}")
             player.sendMiniMessage("<yellow>Section:</yellow> $section")
@@ -231,7 +197,4 @@ class TrophyCommand(
         }
     }
 
-    private fun getSectionForTrophy(totKey: String): String? {
-        return trophySections.entries.find { it.value.contains(totKey) }?.key
-    }
 }
