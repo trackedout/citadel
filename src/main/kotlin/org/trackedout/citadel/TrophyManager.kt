@@ -30,12 +30,37 @@ fun applyTOTs(plugin: Citadel) {
     val trophyCollection = database.getCollection("trophies", MongoTrophy::class.java)
 
     val trophies = trophyCollection.find().toList()
+    plugin.logger.info("Found ${trophies.size} trophies")
+
+    // Collect the set of valid hologram names from current trophies
+    val validHologramNames = trophies.map { "tot-${it.sign.x}-${it.sign.y}-${it.sign.z}" }.toSet()
 
     plugin.runOnNextTick {
+        // Remove stale holograms/heads that no longer correspond to a trophy in the DB
+        try {
+            val manager = FancyHologramsPlugin.get().hologramManager
+            val staleHolograms = manager.holograms
+                .filter { it.data.name.startsWith("tot-") && it.data.name !in validHologramNames }
+
+            staleHolograms.forEach { hologram ->
+                plugin.logger.info("Removing stale hologram: ${hologram.data.name}")
+                hologram.deleteHologram()
+                manager.removeHologram(hologram)
+            }
+        } catch (ex: Exception) {
+            plugin.logger.warning("Failed to clean up stale holograms: ${ex.message}")
+        }
+
         trophies.forEach { trophy ->
+            plugin.logger.info("Applying trophy $trophy")
             val sign = trophy.sign
-//            updateSign(plugin, sign.x, sign.y, sign.z, listOf()) // Clear the sign. In the future we want this to have the ToT description
-            duplicateSignText(plugin, sign.x, sign.y, sign.z)
+            updateSignBlock(plugin, sign.x, sign.y, sign.z, trophy.player != null)
+            val signDesc = trophy.signDescription
+            if (signDesc != null && signDesc.size >= 4) {
+                updateSign(plugin, sign.x, sign.y, sign.z, signDesc)
+            } else {
+                duplicateSignText(plugin, sign.x, sign.y, sign.z)
+            }
             updateSignHead(plugin, sign.x, sign.y, sign.z, trophy.player)
             updateHologram(plugin, sign.x, sign.y, sign.z, trophy.player, sign.text, trophy.totKey)
         }
@@ -127,6 +152,67 @@ fun updateSignHead(plugin: Citadel, x: Int, y: Int, z: Int, playerName: String?)
     }
 }
 
+// Sets the block the sign is attached to and the sign type based on trophy availability
+fun updateSignBlock(plugin: Citadel, x: Int, y: Int, z: Int, isActive: Boolean) {
+    val world = plugin.server.worlds.find { it.name == "world" } ?: return
+    val signBlock = world.getBlockAt(x, y, z)
+    val signBlockData = signBlock.blockData
+    if (signBlockData !is WallSign) return
+
+    // Change sign type
+    val desiredSignType = if (isActive) Material.WARPED_WALL_SIGN else Material.CRIMSON_WALL_SIGN
+    if (signBlock.type != desiredSignType) {
+        val facing = signBlockData.facing
+        signBlock.type = desiredSignType
+        val newData = signBlock.blockData as WallSign
+        newData.facing = facing
+        signBlock.blockData = newData
+    }
+
+    // Change attached block (stem)
+    val attachedBlock = signBlock.getRelative(signBlockData.facing.oppositeFace)
+    val desiredStemType = if (isActive) Material.STRIPPED_WARPED_STEM else Material.STRIPPED_CRIMSON_STEM
+    if (attachedBlock.type != desiredStemType) {
+        attachedBlock.type = desiredStemType
+    }
+
+    // Change stairs on either side of the stem
+    val desiredStairType = if (isActive) Material.WARPED_STAIRS else Material.CRIMSON_STAIRS
+    val currentStairType = if (isActive) Material.CRIMSON_STAIRS else Material.WARPED_STAIRS
+    val stairOffsets = if (signBlockData.facing.modX != 0) {
+        // Sign faces east/west, stairs are at z±1
+        listOf(attachedBlock.getRelative(0, 0, 1), attachedBlock.getRelative(0, 0, -1))
+    } else {
+        // Sign faces north/south, stairs are at x±1
+        listOf(attachedBlock.getRelative(1, 0, 0), attachedBlock.getRelative(-1, 0, 0))
+    }
+    stairOffsets.forEach { stairBlock ->
+        if (stairBlock.type == currentStairType) {
+            val stairData = stairBlock.blockData as org.bukkit.block.data.type.Stairs
+            stairBlock.type = desiredStairType
+            val newStairData = stairBlock.blockData as org.bukkit.block.data.type.Stairs
+            newStairData.facing = stairData.facing
+            newStairData.half = stairData.half
+            newStairData.shape = stairData.shape
+            stairBlock.blockData = newStairData
+        }
+    }
+
+    // Change trapdoor behind the stem
+    val trapdoorBlock = attachedBlock.getRelative(signBlockData.facing.oppositeFace)
+    val desiredTrapdoorType = if (isActive) Material.WARPED_TRAPDOOR else Material.CRIMSON_TRAPDOOR
+    val currentTrapdoorType = if (isActive) Material.CRIMSON_TRAPDOOR else Material.WARPED_TRAPDOOR
+    if (trapdoorBlock.type == currentTrapdoorType) {
+        val trapdoorData = trapdoorBlock.blockData as org.bukkit.block.data.type.TrapDoor
+        trapdoorBlock.type = desiredTrapdoorType
+        val newTrapdoorData = trapdoorBlock.blockData as org.bukkit.block.data.type.TrapDoor
+        newTrapdoorData.facing = trapdoorData.facing
+        newTrapdoorData.half = trapdoorData.half
+        newTrapdoorData.isOpen = trapdoorData.isOpen
+        trapdoorBlock.blockData = newTrapdoorData
+    }
+}
+
 private fun getSignBlock(plugin: Citadel, x: Int, y: Int, z: Int): Block? {
     val world = plugin.server.worlds.find { it.name == "world" }
     if (world == null) {
@@ -135,7 +221,7 @@ private fun getSignBlock(plugin: Citadel, x: Int, y: Int, z: Int): Block? {
     }
 
     val signBlock = world.getBlockAt(x, y, z)
-    if (signBlock.type != Material.WARPED_WALL_SIGN) {
+    if (signBlock.blockData !is WallSign) {
         plugin.logger.warning("Block at ${x}, ${y}, $z is not a wall sign, cannot locate attached block for head")
         return null
     }

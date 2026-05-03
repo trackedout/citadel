@@ -10,6 +10,7 @@ data class MongoTrophy(
     val totKey: String,
     val armorStand: ArmorStand? = null,
     val sign: Sign,
+    val signDescription: List<String>? = null,
     val player: String? = null,
     val description: String? = null,
 

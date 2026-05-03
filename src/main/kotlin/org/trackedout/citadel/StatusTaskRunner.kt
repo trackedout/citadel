@@ -187,9 +187,12 @@ fun updateSign(plugin: Citadel, x: Int, y: Int, z: Int, lines: List<String>) {
     plugin.server.worlds.find { it.name == "world" }?.let { world ->
         val signBlock: Block = world.getBlockAt(x, y, z)
 
-        if (signBlock.type == Material.WARPED_WALL_SIGN) {
+        if (signBlock.type == Material.WARPED_WALL_SIGN || signBlock.type == Material.CRIMSON_WALL_SIGN) {
             val sign = signBlock.state as org.bukkit.block.Sign
             val signSide = sign.getSide(Side.FRONT)
+
+            signSide.isGlowingText = true
+            signSide.color = org.bukkit.DyeColor.LIGHT_BLUE
 
             intArrayOf(0, 1, 2, 3).forEach { i ->
                 signSide.line(i, text(lines.getOrNull(i) ?: "").color(NamedTextColor.WHITE))
