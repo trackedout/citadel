@@ -12,6 +12,7 @@ data class MongoTrophy(
     val sign: Sign,
     val signDescription: List<String>? = null,
     val player: String? = null,
+    val value: String? = null,
     val description: String? = null,
 
     val createdAt: Instant,
