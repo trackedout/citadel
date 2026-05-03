@@ -200,7 +200,7 @@ fun updateSign(plugin: Citadel, x: Int, y: Int, z: Int, lines: List<String>) {
 
             sign.update()
         } else {
-            plugin.logger.warning("Block at ${x}, ${y}, $z is not a sign, cannot update")
+            plugin.debug("Block at ${x}, ${y}, $z is not a sign, cannot update")
         }
     }
 }

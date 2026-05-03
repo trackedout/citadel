@@ -6,12 +6,13 @@ import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Description
 import co.aikar.commands.annotation.Subcommand
 import org.bukkit.entity.Player
+import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.opsLogsTag
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
 
 @CommandAlias("decked-out|do")
-class StatusCommand : BaseCommand() {
+class StatusCommand(private val plugin: Citadel) : BaseCommand() {
     @Subcommand("status")
     @CommandPermission("decked-out.inventory.admin")
     @Description("Render scoreboard with network status")
@@ -35,6 +36,19 @@ class StatusCommand : BaseCommand() {
         } else {
             player.sendGreyMessage("Removing debug tag, you will no longer see operator debug logs")
             player.scoreboardTags.remove(opsLogsTag)
+        }
+    }
+
+    @Subcommand("debug")
+    @CommandPermission("decked-out.inventory.admin")
+    @Description("Toggle debug logging")
+    fun toggleDebug(player: Player) {
+        val current = plugin.config.getBoolean("debug")
+        plugin.config.set("debug", !current)
+        if (!current) {
+            player.sendGreenMessage("Debug logging enabled")
+        } else {
+            player.sendGreyMessage("Debug logging disabled")
         }
     }
 }

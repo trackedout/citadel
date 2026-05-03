@@ -140,7 +140,7 @@ class Citadel : JavaPlugin() {
         manager.enableUnstableAPI("help")
         manager.registerCommand(InventoryCommand(inventoryApi, inventoryManager, scoreApi))
         manager.registerCommand(LogEventCommand(eventsApi))
-        manager.registerCommand(StatusCommand())
+        manager.registerCommand(StatusCommand(this))
         manager.registerCommand(ScoreManagementCommand(this, scoreApi, eventsApi, inventoryManager, inventoryApi))
         manager.registerCommand(ShutdownDungeonsCommand(this, eventsApi))
         manager.registerCommand(ScheduleJobCommand(this, tasksApi))

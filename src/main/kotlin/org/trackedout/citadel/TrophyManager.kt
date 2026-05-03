@@ -24,13 +24,13 @@ class TrophyTaskRunner(
 }
 
 fun applyTOTs(plugin: Citadel) {
-    plugin.logger.info("Running TOT sign updater")
+    plugin.debug("Running TOT sign updater")
 
     val database = MongoDBManager.getDatabase("dunga-dunga");
     val trophyCollection = database.getCollection("trophies", MongoTrophy::class.java)
 
     val trophies = trophyCollection.find().toList()
-    plugin.logger.info("Found ${trophies.size} trophies")
+    plugin.debug("Found ${trophies.size} trophies")
 
     // Collect the set of valid hologram names from current trophies
     val validHologramNames = trophies.map { "tot-${it.sign.x}-${it.sign.y}-${it.sign.z}" }.toSet()
@@ -43,7 +43,7 @@ fun applyTOTs(plugin: Citadel) {
                 .filter { it.data.name.startsWith("tot-") && it.data.name !in validHologramNames }
 
             staleHolograms.forEach { hologram ->
-                plugin.logger.info("Removing stale hologram: ${hologram.data.name}")
+                plugin.debug("Removing stale hologram: ${hologram.data.name}")
                 hologram.deleteHologram()
                 manager.removeHologram(hologram)
             }
@@ -51,9 +51,15 @@ fun applyTOTs(plugin: Citadel) {
             plugin.logger.warning("Failed to clean up stale holograms: ${ex.message}")
         }
 
+        var warnings = 0
         trophies.forEach { trophy ->
-            plugin.logger.info("Applying trophy $trophy")
+            plugin.debug("Applying trophy $trophy")
             val sign = trophy.sign
+            val signBlock = getSignBlock(plugin, sign.x, sign.y, sign.z)
+            if (signBlock == null) {
+                warnings++
+                return@forEach
+            }
             updateSignBlock(plugin, sign.x, sign.y, sign.z, trophy.player != null)
             val signDesc = trophy.signDescription
             if (signDesc != null && signDesc.size >= 4) {
@@ -61,8 +67,11 @@ fun applyTOTs(plugin: Citadel) {
             } else {
                 duplicateSignText(plugin, sign.x, sign.y, sign.z)
             }
-            updateSignHead(plugin, sign.x, sign.y, sign.z, trophy.player)
-            updateHologram(plugin, sign.x, sign.y, sign.z, trophy.player, sign.text, trophy.totKey)
+            updateSignHead(plugin, signBlock, trophy.player)
+            updateHologram(plugin, signBlock, trophy.player, sign.text, trophy.totKey)
+        }
+        if (warnings > 0) {
+            plugin.logger.warning("$warnings trophies had invalid sign blocks and were skipped")
         }
     }
 }
@@ -88,20 +97,8 @@ fun duplicateSignText(plugin: Citadel, x: Int, y: Int, z: Int) {
 
 // Updates the player head (if any) located on the block above the block the sign is attached to.
 // If playerName is null or blank, the head's owner will be cleared.
-fun updateSignHead(plugin: Citadel, x: Int, y: Int, z: Int, playerName: String?) {
-    plugin.logger.fine("Updating sign head for sign at ${x}, ${y}, $z with player: $playerName")
-
-    val signBlock = getSignBlock(plugin, x, y, z)
-    if (signBlock == null) {
-        plugin.logger.warning("Sign at ${x}, ${y}, $z does not exist")
-        return
-    }
-
-    val signBlockData = signBlock.blockData
-    if (signBlockData !is WallSign) {
-        plugin.logger.warning("Sign at ${x}, ${y}, $z does not have WallSign block data, cannot determine attached block")
-        return
-    }
+fun updateSignHead(plugin: Citadel, signBlock: Block, playerName: String?) {
+    val signBlockData = signBlock.blockData as WallSign
 
     val attachedBlock = signBlock.getRelative(signBlockData.facing.oppositeFace) // The attached block
     val headBlock = attachedBlock.getRelative(BlockFace.UP) // The block above the attached block
@@ -144,7 +141,7 @@ fun updateSignHead(plugin: Citadel, x: Int, y: Int, z: Int, playerName: String?)
 
         } else {
             headBlock.type = Material.AIR
-            plugin.logger.fine("Removed head at ${x}, ${y}, $z as player $playerName was not found")
+            plugin.logger.fine("Removed head at ${headBlock.x}, ${headBlock.y}, ${headBlock.z} as player $playerName was not found")
         }
     } catch (ex: Exception) {
         plugin.logger.warning("Failed to update skull at ${headBlock.x}, ${headBlock.y}, ${headBlock.z} for player $playerName: ${ex.stackTraceToString()}")
@@ -213,7 +210,7 @@ fun updateSignBlock(plugin: Citadel, x: Int, y: Int, z: Int, isActive: Boolean) 
     }
 }
 
-private fun getSignBlock(plugin: Citadel, x: Int, y: Int, z: Int): Block? {
+fun getSignBlock(plugin: Citadel, x: Int, y: Int, z: Int): Block? {
     val world = plugin.server.worlds.find { it.name == "world" }
     if (world == null) {
         plugin.logger.warning("World 'world' not found, cannot update sign head at ${x}, ${y}, $z")
@@ -222,7 +219,7 @@ private fun getSignBlock(plugin: Citadel, x: Int, y: Int, z: Int): Block? {
 
     val signBlock = world.getBlockAt(x, y, z)
     if (signBlock.blockData !is WallSign) {
-        plugin.logger.warning("Block at ${x}, ${y}, $z is not a wall sign, cannot locate attached block for head")
+        plugin.debug("Block at ${x}, ${y}, $z is not a wall sign, skipping trophy")
         return null
     }
 
@@ -230,18 +227,11 @@ private fun getSignBlock(plugin: Citadel, x: Int, y: Int, z: Int): Block? {
 }
 
 // Creates or updates a hologram located above the player's head sign
-fun updateHologram(plugin: Citadel, x: Int, y: Int, z: Int, playerName: String?, lines: List<String>, totKey: String) {
-    val signBlock = getSignBlock(plugin, x, y, z)
-    if (signBlock == null) {
-        plugin.logger.warning("Sign at ${x}, ${y}, $z does not exist")
-        return
-    }
-
-    val signBlockData = signBlock.blockData
-    if (signBlockData !is WallSign) {
-        plugin.logger.warning("Sign at ${x}, ${y}, $z does not have WallSign block data, cannot determine attached block")
-        return
-    }
+fun updateHologram(plugin: Citadel, signBlock: Block, playerName: String?, lines: List<String>, totKey: String) {
+    val x = signBlock.x
+    val y = signBlock.y
+    val z = signBlock.z
+    val signBlockData = signBlock.blockData as WallSign
 
     val attachedBlock = signBlock.getRelative(signBlockData.facing.oppositeFace) // The attached block
     val hologramLocation = attachedBlock.getRelative(BlockFace.UP).location.add(0.5, 1.0, 0.5) // The block above the player skull
