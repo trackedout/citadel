@@ -1,11 +1,7 @@
 package org.trackedout.citadel
 
-import net.kyori.adventure.key.Key
-import net.kyori.adventure.sound.Sound
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
-import net.kyori.adventure.text.format.TextDecoration
-import net.kyori.adventure.title.Title
 import org.bukkit.Material
 import org.bukkit.World
 import org.bukkit.block.Block
@@ -13,13 +9,13 @@ import org.bukkit.block.BlockFace
 import org.bukkit.block.Sign
 import org.bukkit.block.Skull
 import org.bukkit.block.data.type.Snow
+import org.bukkit.block.data.type.WallSign
 import org.bukkit.block.sign.Side
 import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoPlayerStats
 import org.trackedout.citadel.mongo.Stats
 import org.trackedout.client.apis.ConfigApi
-import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 
@@ -29,188 +25,232 @@ class LeaderboardTaskRunner(
     private val plugin: Citadel,
     private val configApi: ConfigApi,
 ) : BukkitRunnable() {
-    override fun run() {
-        if (this.isCancelled) {
-            return
-        }
 
-        plugin.logger.info("[Async task ${this.taskId}] Fetching leaderboard from MongoDB (skip=${FirstRun.skip})")
+    data class LeaderboardSlot(val signBlock: Block, val headBlock: Block, val snowBlock: Block)
+    data class PodiumRegion(val rank: Int, val signBlock: Block?, val npcBlock: Block?)
+
+    override fun run() {
+        if (this.isCancelled) return
+
+        plugin.logger.info("[Async task ${this.taskId}] Fetching leaderboard from MongoDB")
+
+        if (!FirstRun.showLeaderboard) return
+
+        val world = plugin.server.worlds.find { it.name == "world" } ?: return
+
+        val activePlayers = mutableMapOf<String, PlayerWithPoints>()
+        var maxPhase = 0
         val pointsForPosition = arrayOf(25, 21, 18, 16, 14, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
 
-        if (FirstRun.skip > 0) {
-            plugin.logger.info("Skipping leaderboard task (skip=${FirstRun.skip})")
-            FirstRun.skip--
-            return
+        configApi.getInt("comp-season", "current-phase")?.let { currentPhase ->
+            maxPhase = parsePhaseDataForAllPlayers(currentPhase, activePlayers, pointsForPosition)
         }
 
-        plugin.server.worlds.find { it.name == "world" }?.let { world ->
-            val activePlayers = mutableMapOf<String, PlayerWithPoints>()
-            var maxPhase = 0
+        // Deterministic sort: by total points descending, then by player name ascending
+        val sortedPlayers = activePlayers.values.sortedWith(
+            compareByDescending<PlayerWithPoints> { it.totalPoints }.thenBy { it.player }
+        )
 
-            if (FirstRun.showLeaderboard) {
-                // If current-phase is set, use that. Otherwise, don't show any phase data
-                configApi.getInt("comp-season", "current-phase")?.let { currentPhase ->
-                    maxPhase = parsePhaseDataForAllPlayers(currentPhase, activePlayers, pointsForPosition)
+        val totalPointsRank = sortedPlayers.map { it.totalPoints }.distinct().sortedDescending()
+
+        plugin.logger.info("[Leaderboard] ${sortedPlayers.size} players sorted")
+
+        plugin.runOnNextTick {
+            // Discover leaderboard slots from WorldGuard regions (must be on main thread)
+            val slots = discoverLeaderboardSlots(world)
+            plugin.logger.info("[Leaderboard] Found ${slots.size} leaderboard slots")
+
+            // Discover podium regions
+            val podiums = discoverPodiums(world)
+            plugin.logger.info("[Leaderboard] Found ${podiums.size} podium regions")
+
+            // Update leaderboard slots
+            sortedPlayers.take(slots.size).forEachIndexed { index, player ->
+                val slot = slots[index]
+                val rank = totalPointsRank.indexOf(player.totalPoints) + 1
+                val snowLayers = player.totalPoints / 4
+
+                updateSlot(slot, player, rank, maxPhase, snowLayers)
+            }
+
+            // Clear unused slots
+            for (i in sortedPlayers.size until slots.size) {
+                clearSlot(slots[i])
+            }
+
+            // Update podiums for top 3
+            podiums.forEach { podium ->
+                val player = sortedPlayers.getOrNull(podium.rank - 1)
+                updatePodium(podium, player, totalPointsRank, maxPhase)
+            }
+        }
+    }
+
+    private fun discoverLeaderboardSlots(world: World): List<LeaderboardSlot> {
+        val regions = world.regions()?.filter { it.id.startsWith("leaderboard-") } ?: return emptyList()
+        val slots = mutableListOf<LeaderboardSlot>()
+
+        for (region in regions) {
+            val min = region.minimumPoint
+            val max = region.maximumPoint
+
+            for (x in min.x..max.x) {
+                for (y in min.y..max.y) {
+                    for (z in min.z..max.z) {
+                        val block = world.getBlockAt(x, y, z)
+                        if (block.type != Material.WARPED_WALL_SIGN) continue
+
+                        val signData = block.blockData as? WallSign ?: continue
+                        val attachedBlock = block.getRelative(signData.facing.oppositeFace)
+                        val headBlock = attachedBlock.getRelative(BlockFace.UP)
+
+                        // Only valid if there's a player head in the expected location
+                        if (headBlock.type != Material.PLAYER_HEAD && headBlock.type != Material.PLAYER_WALL_HEAD) continue
+
+                        val snowBlock = headBlock.getRelative(signData.facing.oppositeFace)
+                        slots.add(LeaderboardSlot(block, headBlock, snowBlock))
+                    }
                 }
             }
+        }
 
-            // Calculate overall rank based on total points, allowing for multiple players to have the same rank
-            val totalPointsRank = activePlayers.values.map { it.totalPoints }.distinct().sortedWith(
-                compareByDescending { it }
-            )
+        // Sort slots deterministically by position (x, then y, then z)
+        return slots.sortedWith(compareBy({ it.signBlock.x }, { it.signBlock.y }, { it.signBlock.z }))
+    }
 
-            val maxPerPage = 20
-            val pages = ceil(activePlayers.size / maxPerPage.toDouble()).toInt()
-            PageWatcher.page++
-            if (PageWatcher.page >= pages) {
-                PageWatcher.page = 0
-            }
+    private fun discoverPodiums(world: World): List<PodiumRegion> {
+        val podiums = mutableListOf<PodiumRegion>()
 
-            val startIndex = maxPerPage * PageWatcher.page
-            val upperIndex = min(startIndex + maxPerPage, activePlayers.size)
-            plugin.logger.info("[Leaderboard] Active players: ${activePlayers.size}, showing $startIndex to $upperIndex (page ${PageWatcher.page + 1}/${pages})")
-            val minRank = totalPointsRank.indexOf(activePlayers.values.minOfOrNull { it.totalPoints } ?: -1)
+        for (rank in 1..3) {
+            val region = world.regions()?.find { it.id == "podium-$rank" } ?: continue
+            val min = region.minimumPoint
+            val max = region.maximumPoint
 
-            val soundScheduled = mutableMapOf<Int, Boolean>()
+            var signBlock: Block? = null
+            var npcBlock: Block? = null
 
-            activePlayers.values.toList().slice(startIndex until upperIndex).forEachIndexed { index, player ->
-                val playerName = player.player
-                val offlinePlayer = plugin.server.getOfflinePlayerIfCached(playerName) ?: plugin.server.getOfflinePlayer(playerName)
-
-                val points = player.totalPoints
-                val rank = totalPointsRank.indexOf(points) + 1
-                val snowLayers = player.totalPoints / 4 // Divide by 4 to make the snow layers look nicer
-
-                val x = -534 + index
-                val y = 114
-                val z = 1973
-
-                val unit = {
-                    val block: Block = world.getBlockAt(x, y, z)
-                    val signBlock: Block = world.getBlockAt(x, y - 1, z + 1)
-
-                    if (block.type !== Material.PLAYER_HEAD) {
-                        block.type = Material.PLAYER_HEAD
-                    }
-
-                    offlinePlayer.let { offlinePlayer ->
-                        val skull: Skull = block.state as Skull
-                        if (skull.owningPlayer?.uniqueId != offlinePlayer.uniqueId || skull.rotation != BlockFace.NORTH) {
-                            skull.setOwningPlayer(offlinePlayer)
-                            skull.rotation = BlockFace.NORTH
-                            skull.update(false)
+            for (x in min.x..max.x) {
+                for (y in min.y..max.y) {
+                    for (z in min.z..max.z) {
+                        val block = world.getBlockAt(x, y, z)
+                        when {
+                            block.type == Material.WARPED_WALL_SIGN && signBlock == null -> signBlock = block
+                            block.type == Material.RED_WOOL && npcBlock == null -> npcBlock = block
                         }
                     }
-
-                    if (signBlock.type == Material.WARPED_WALL_SIGN) {
-                        val sign = signBlock.state as Sign
-                        val signSide = sign.getSide(Side.FRONT)
-//                        signSide.line(0, Component.text("# $rank").color(NamedTextColor.AQUA))
-                        signSide.line(0, Component.text("#$rank ($points points)").color(NamedTextColor.AQUA))
-                        signSide.line(1, Component.text(playerName).color(NamedTextColor.WHITE))
-                        signSide.line(3, Component.text("Phase${maxPhase} tomes: ${player.stats.getOrDefault(maxPhase, null)?.tomesSubmitted ?: 0}").color(NamedTextColor.AQUA))
-//                        signSide.line(3, Component.text("Points: $points").color(NamedTextColor.AQUA))
-                        signSide.line(2, Component.text("").color(NamedTextColor.AQUA))
-
-//                        signSide.line(2, Component.text("Embers/win: ${getAverageEmbersPerWin(lifetimeEmbersMap, player)}"))
-//                        signSide.line(3, Component.text("Tomes: ${player.stats.tomesSubmitted}").color(NamedTextColor.AQUA))
-                        sign.update()
-                    }
-                }
-
-                if (FirstRun.isFirstRun && FirstRun.showLeaderboard) {
-                    // If the lowest rank is still rank #5, then we don't want to wait a bunch before showing that rank
-                    val upperDelay = totalPointsRank.size + 1 - (totalPointsRank.size - minRank)
-                    val delayMs = 60
-                    var delay = ((upperDelay - rank) * delayMs).toLong()
-                    if (rank <= 3) {
-                        delay += (delayMs * (4 - rank))
-                    }
-
-                    plugin.runLaterOnATick(delay) {
-                        // Set snow layers, then at the end set the player head and sign
-                        setSnowLayers(world, x, y, z, snowLayers, true)
-                    }
-
-                    delay += points + 5 // Delay sounds until the end of the snow layers
-                    plugin.runLaterOnATick(delay, unit)
-
-                    // Only play the sound once per rank
-                    if (!soundScheduled.getOrDefault(rank, false)) {
-                        soundScheduled[rank] = true
-                        plugin.runLaterOnATick(delay) {
-                            plugin.server.onlinePlayers.forEach { onlinePlayer ->
-                                onlinePlayer.playSound(Sound.sound(Key.key("do2:events.card_reveal"), Sound.Source.MASTER, 1f, 0f))
-                            }
-                        }
-
-                        if (rank == 1) {
-                            plugin.runLaterOnATick(delay + 60) {
-                                plugin.server.onlinePlayers.forEach { onlinePlayer ->
-                                    val winners = activePlayers.values.filter { it.totalPoints == points }.map { it.player }
-
-                                    if (winners.size == 1) {
-                                        onlinePlayer.showTitle(
-                                            Title.title(
-                                                Component.text(playerName).color(NamedTextColor.AQUA).decorate(TextDecoration.BOLD),
-                                                Component.text("Phase $maxPhase Winner!").color(NamedTextColor.AQUA)
-                                            )
-                                        )
-                                        onlinePlayer.sendMessage(Component.text("Congratulations to $playerName for being the Phase $maxPhase winner with $points points!").color(NamedTextColor.AQUA))
-                                    } else {
-                                        onlinePlayer.showTitle(
-                                            Title.title(
-                                                Component.text("Phase $maxPhase Winners!").color(NamedTextColor.AQUA),
-                                                Component.text(winners.joinToString(" and ")).color(NamedTextColor.AQUA).decorate(TextDecoration.BOLD),
-                                            )
-                                        )
-                                        onlinePlayer.sendMessage(Component.text("Congratulations to ${winners.joinToString(" and ")} for being the Phase $maxPhase winners with $points points!").color(NamedTextColor.AQUA))
-                                    }
-
-                                    onlinePlayer.playSound(Sound.sound(Key.key("do2:events.artifact_retrived"), Sound.Source.MASTER, 1f, 0f))
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    plugin.runOnNextTick {
-                        // Set snow layers, then at the end set the player head and sign
-                        setSnowLayers(world, x, y, z, snowLayers, false)
-                        unit()
-                    }
                 }
             }
 
-            if (upperIndex > 0 && FirstRun.isFirstRun) {
-                FirstRun.isFirstRun = false
-                FirstRun.skip = 5
+            podiums.add(PodiumRegion(rank, signBlock, npcBlock))
+        }
+
+        return podiums
+    }
+
+    private fun updateSlot(slot: LeaderboardSlot, player: PlayerWithPoints, rank: Int, maxPhase: Int, snowLayers: Int) {
+        val playerName = player.player
+        val offlinePlayer = plugin.server.getOfflinePlayerIfCached(playerName) ?: plugin.server.getOfflinePlayer(playerName)
+
+        // Update head
+        val signData = slot.signBlock.blockData as WallSign
+        val desiredRotation = signData.facing.oppositeFace
+        val skull = slot.headBlock.state as? Skull
+        if (skull != null && (skull.owningPlayer?.uniqueId != offlinePlayer.uniqueId || skull.rotation != desiredRotation)) {
+            skull.setOwningPlayer(offlinePlayer)
+            skull.rotation = desiredRotation
+            skull.update(false)
+        }
+
+        // Update sign
+        val sign = slot.signBlock.state as Sign
+        val signSide = sign.getSide(Side.FRONT)
+        signSide.line(0, Component.text("#$rank (${player.totalPoints} points)").color(NamedTextColor.AQUA))
+        signSide.line(1, Component.text(playerName).color(NamedTextColor.WHITE))
+        signSide.line(2, Component.text(""))
+        signSide.line(3, Component.text("Phase${maxPhase} tomes: ${player.stats.getOrDefault(maxPhase, null)?.tomesSubmitted ?: 0}").color(NamedTextColor.AQUA))
+        sign.update()
+
+        // Update snow layers behind head
+        setSnowLayers(slot.snowBlock, snowLayers)
+    }
+
+    private fun clearSlot(slot: LeaderboardSlot) {
+        // Clear sign text
+        val sign = slot.signBlock.state as? Sign ?: return
+        val signSide = sign.getSide(Side.FRONT)
+        signSide.line(0, Component.text(""))
+        signSide.line(1, Component.text(""))
+        signSide.line(2, Component.text(""))
+        signSide.line(3, Component.text(""))
+        sign.update()
+
+        // Clear head
+        if (slot.headBlock.type == Material.PLAYER_HEAD || slot.headBlock.type == Material.PLAYER_WALL_HEAD) {
+            slot.headBlock.type = Material.AIR
+        }
+
+        // Clear snow
+        if (slot.snowBlock.type == Material.SNOW) {
+            slot.snowBlock.type = Material.AIR
+        }
+    }
+
+    private fun updatePodium(podium: PodiumRegion, player: PlayerWithPoints?, totalPointsRank: List<Int>, maxPhase: Int) {
+        // Update sign if present
+        podium.signBlock?.let { signBlock ->
+            val sign = signBlock.state as? Sign ?: return@let
+            val signSide = sign.getSide(Side.FRONT)
+            if (player != null) {
+                val rank = totalPointsRank.indexOf(player.totalPoints) + 1
+                signSide.line(0, Component.text("#$rank").color(NamedTextColor.GOLD))
+                signSide.line(1, Component.text(player.player).color(NamedTextColor.WHITE))
+                signSide.line(2, Component.text("${player.totalPoints} points").color(NamedTextColor.AQUA))
+                signSide.line(3, Component.text("Phase${maxPhase} tomes: ${player.stats.getOrDefault(maxPhase, null)?.tomesSubmitted ?: 0}").color(NamedTextColor.AQUA))
+            } else {
+                signSide.line(0, Component.text(""))
+                signSide.line(1, Component.text(""))
+                signSide.line(2, Component.text(""))
+                signSide.line(3, Component.text(""))
             }
+            sign.update()
+        }
 
-            // Clear remaining slots
-            for (i in upperIndex until startIndex + maxPerPage) {
-                plugin.runOnNextTick {
-                    val x = -534 + i - startIndex
-                    val y = 114
-                    val z = 1973
+        // Spawn/update NPC at RED_WOOL location
+        podium.npcBlock?.let { npcBlock ->
+            val npcName = "leaderboard-podium-${podium.rank}"
+            val loc = npcBlock.location.add(0.5, 1.0, 0.5) // Stand on top of the wool block
 
-                    val block: Block = world.getBlockAt(x, y, z)
-                    if (block.type != Material.AIR) {
-                        block.type = Material.AIR
-                    }
+            if (player != null) {
+                // Remove existing NPC if present, then create new one
+                plugin.server.dispatchCommand(plugin.server.consoleSender, "npc select $npcName")
+                plugin.server.dispatchCommand(plugin.server.consoleSender, "npc remove")
+                plugin.server.dispatchCommand(plugin.server.consoleSender, "npc create $npcName")
+                plugin.server.dispatchCommand(plugin.server.consoleSender, "npc select $npcName")
+                plugin.server.dispatchCommand(plugin.server.consoleSender, "npc tp ${loc.x} ${loc.y} ${loc.z} ${loc.world.name}")
+                plugin.server.dispatchCommand(plugin.server.consoleSender, "npc skin ${player.player} -C")
+            } else {
+                plugin.server.dispatchCommand(plugin.server.consoleSender, "npc select $npcName")
+                plugin.server.dispatchCommand(plugin.server.consoleSender, "npc remove")
+            }
+        }
+    }
 
-                    val signBlock: Block = world.getBlockAt(x, y - 1, z + 1)
-                    if (signBlock.type == Material.WARPED_WALL_SIGN) {
-                        val sign = signBlock.state as Sign
-                        val signSide = sign.getSide(Side.FRONT)
-                        signSide.line(0, Component.text(""))
-                        signSide.line(1, Component.text(""))
-                        signSide.line(2, Component.text(""))
-                        signSide.line(3, Component.text(""))
-                        sign.update()
-                    }
+    private fun setSnowLayers(startBlock: Block, layers: Int) {
+        for (blockIndex in 0 until 6) {
+            val snowBlock = startBlock.getRelative(BlockFace.UP, blockIndex)
+            val layersForBlock = min(8, layers - (blockIndex * 8))
 
-                    setSnowLayers(world, x, y, z, 0)
+            if (layersForBlock <= 0) {
+                if (snowBlock.type != Material.AIR) {
+                    snowBlock.type = Material.AIR
                 }
+            } else {
+                if (snowBlock.type != Material.SNOW) {
+                    snowBlock.type = Material.SNOW
+                }
+                val snow = snowBlock.blockData as Snow
+                snow.layers = layersForBlock
+                snowBlock.blockData = snow
             }
         }
     }
@@ -220,7 +260,7 @@ class LeaderboardTaskRunner(
         activePlayers: MutableMap<String, PlayerWithPoints>,
         pointsForPosition: Array<Int>,
     ): Int {
-        val database = MongoDBManager.getDatabase("dunga-dunga");
+        val database = MongoDBManager.getDatabase("dunga-dunga")
         var maxPhase = 0
         (1..currentPhase).forEach { phase ->
             val playerStatsCollection = database.getCollection("playerStatsPhase${phase}", MongoPlayerStats::class.java)
@@ -252,47 +292,6 @@ class LeaderboardTaskRunner(
         val stats: Map<Int, Stats>,
         val totalPoints: Int = 0,
     )
-
-    // This runs on a tick, so we don't need to schedule a tick task for each block
-    private fun setSnowLayers(world: World, x: Int, y: Int, z: Int, layers: Int, shouldAnimate: Boolean = false) {
-        // blockIndex = snowLayers / 8 (e.g. 0 for first 8 layers)
-        for (blockIndex in 0 until 6) { // support 6 blocks worth (48 points)
-            val snowBlock = world.getBlockAt(x, y + blockIndex, z - 1)
-            val layersForBlock = min(8, layers - (blockIndex * 8))
-
-            if (layersForBlock <= 0) {
-                if (snowBlock.type != Material.AIR) {
-                    snowBlock.type = Material.AIR
-                }
-            } else {
-//                plugin.logger.info("Setting snow layers at $x, $y, $z to $layersForBlock at index $blockIndex")
-
-                if (shouldAnimate) {
-                    for (i in 1..layersForBlock) {
-                        plugin.runLaterOnATick((blockIndex * 8) + i.toLong()) {
-                            setSnowLayersOfBlock(snowBlock, i)
-                        }
-                    }
-                } else {
-                    setSnowLayersOfBlock(snowBlock, layersForBlock)
-                }
-            }
-        }
-    }
-
-    private fun setSnowLayersOfBlock(snowBlock: Block, layersForBlock: Int) {
-        if (snowBlock.type != Material.SNOW) {
-            snowBlock.type = Material.SNOW
-        }
-
-        val snow = snowBlock.blockData as Snow
-        snow.layers = layersForBlock
-        snowBlock.blockData = snow
-    }
-}
-
-object PageWatcher {
-    var page: Int = 99
 }
 
 object FirstRun {

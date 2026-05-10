@@ -9,7 +9,7 @@ import com.mongodb.client.model.Filters
 import org.bukkit.command.CommandSender
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.FirstRun
-import org.trackedout.citadel.PageWatcher
+
 import org.trackedout.citadel.async
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoScore
@@ -36,7 +36,6 @@ class LeaderboardCommand(
     fun showLeaderboard(source: CommandSender, animate: Boolean) {
         FirstRun.showLeaderboard = true
         FirstRun.isFirstRun = animate
-        PageWatcher.page = 99
         source.sendGreenMessage("Showing leaderboard ${if (animate) "with" else "without"} animation")
     }
 
