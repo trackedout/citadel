@@ -7,9 +7,8 @@ import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.PotionMeta
-import org.bukkit.potion.Potion
-import org.bukkit.potion.PotionType
 import org.bukkit.potion.PotionData
+import org.bukkit.potion.PotionType
 import org.trackedout.citadel.displayNamedText
 import org.trackedout.data.RunType
 
@@ -55,6 +54,11 @@ fun dungeonTome(
     textColor: NamedTextColor = NamedTextColor.AQUA,
     itemCount: Int = 1,
 ) = dungeonItem("❄☠ Victory Tome (${runType}) ☠❄", 6, textColor, itemCount = itemCount)
+
+fun dungeonSwiftnessPotion(
+    runType: RunType,
+    itemCount: Int,
+) = dungeonPotion(runType.displayName, PotionType.SPEED, "Splash Potion of Swiftness", false, true, runType.displayNamedText(), itemCount)
 
 fun dungeonSlownessPotion(
     runType: RunType,

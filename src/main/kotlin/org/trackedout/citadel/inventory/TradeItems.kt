@@ -3,7 +3,6 @@ package org.trackedout.citadel.inventory
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.config.cardConfig
-import org.trackedout.citadel.inventory.dungeonWeaknessPotion
 import org.trackedout.data.getRunTypeById
 
 interface ScoreboardDescriber {
@@ -88,6 +87,12 @@ val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
 )
 
 val intoDungeonItems: Map<String, ScoreboardDescriber> = mapOf(
+    "SWIFTNESS_POTION" to object : ItemWithoutScoreboard {
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return dungeonSwiftnessPotion(getRunTypeById(runType), count)
+        }
+    },
+
     "SLOWNESS_POTION" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
             return dungeonSlownessPotion(getRunTypeById(runType), count)
