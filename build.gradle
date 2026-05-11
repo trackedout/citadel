@@ -31,6 +31,10 @@ repositories {
     maven {
         url = "https://repo.fancyinnovations.com/releases"
     }
+    maven {
+        name = "citizens-repo"
+        url = "https://maven.citizensnpcs.co/repo"
+    }
 }
 
 println "Agronet jar: ${property('agronet_jar')}"
@@ -69,6 +73,9 @@ dependencies {
 
     compileOnly 'com.sk89q.worldguard:worldguard-bukkit:7.0.9'
     compileOnly 'de.oliver:FancyHolograms:2.8.0'
+    compileOnly('net.citizensnpcs:citizens-main:2.0.35-SNAPSHOT') {
+        exclude group: '*', module: '*'
+    }
 
     // https://github.com/MegavexNetwork/scoreboard-library/blob/main/INSTALLATION.md
     var scoreboardLibraryVersion = "2.7.0"

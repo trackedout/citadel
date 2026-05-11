@@ -9,6 +9,7 @@ import com.mongodb.client.model.Filters
 import org.bukkit.command.CommandSender
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.FirstRun
+import org.trackedout.citadel.runOnNextTick
 
 import org.trackedout.citadel.async
 import org.trackedout.citadel.mongo.MongoDBManager
@@ -20,14 +21,16 @@ import org.trackedout.citadel.sendRedMessage
 class LeaderboardCommand(
     private val plugin: Citadel,
 ) : BaseCommand() {
-    @Subcommand("leaderboard clear")
+    @Subcommand("leaderboard hide")
     @CommandPermission("decked-out.leaderboard.admin")
     @Description("Clear and hide the leaderboard")
     fun clearAndHideLeaderboard(source: CommandSender) {
         FirstRun.showLeaderboard = false
-        FirstRun.isFirstRun = true
-        FirstRun.skip = 0
-        source.sendGreenMessage("Leaderboard cleared and hidden")
+        FirstRun.animating = false
+        FirstRun.running = false
+        // Immediately clear all slots and podiums
+        plugin.runOnNextTick { plugin.leaderboardTaskRunner.hideAll() }
+        source.sendGreenMessage("Leaderboard hidden")
     }
 
     @Subcommand("leaderboard show")
@@ -35,8 +38,12 @@ class LeaderboardCommand(
     @Description("Show the leaderboard and optionally animate")
     fun showLeaderboard(source: CommandSender, animate: Boolean) {
         FirstRun.showLeaderboard = true
-        FirstRun.isFirstRun = animate
         source.sendGreenMessage("Showing leaderboard ${if (animate) "with" else "without"} animation")
+        // Trigger immediately instead of waiting for next tick
+        plugin.async(source) {
+            if (animate) plugin.leaderboardTaskRunner.runWithAnimation()
+            else plugin.leaderboardTaskRunner.run()
+        }
     }
 
     @Subcommand("hardcore-leaderboard")

@@ -4,6 +4,7 @@ main: org.trackedout.citadel.Citadel
 api-version: 1.20
 author: trackedout
 depend: [ InventoryFramework, WorldGuard ]
+softdepend: [ Citizens ]
 load: POSTWORLD
 website: "https://github.com/trackedout/citadel"
 description: The Citadel plugin

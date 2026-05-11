@@ -77,6 +77,7 @@ class Citadel : JavaPlugin() {
     val serverName by lazy { getEnvOrDefault("SERVER_NAME", InetAddress.getLocalHost().hostName) }
     val dungaAPIPath by lazy { getEnvOrDefault("DUNGA_API", "http://localhost:3000/v1") }
     val mongoURI by lazy { getEnvOrDefault("MONGODB_URL", "") }
+    lateinit var leaderboardTaskRunner: LeaderboardTaskRunner
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -171,7 +172,7 @@ class Citadel : JavaPlugin() {
         val statusTaskRunner = StatusTaskRunner(this, statusApi, sidebar, sidebar2)
         statusTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 60) // Repeat every 60 ticks (3 seconds)
 
-        val leaderboardTaskRunner = LeaderboardTaskRunner(this, configApi)
+        leaderboardTaskRunner = LeaderboardTaskRunner(this, configApi)
         leaderboardTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 20 * 15) // Repeat every 300 ticks (15 seconds)
 
         val trophyTaskRunner = TrophyTaskRunner(this)
@@ -179,6 +180,7 @@ class Citadel : JavaPlugin() {
 
         server.pluginManager.registerEvents(PlayedJoinedListener(this, eventsApi, configApi, inventoryManager), this)
         server.pluginManager.registerEvents(PlayedDeathListener(this, eventsApi, scoreApi), this)
+        server.pluginManager.registerEvents(org.trackedout.citadel.listeners.LeaderboardSignListener(this), this)
 
         val viewFrame: ViewFrame = ViewFrame.create(this)
             .with(
