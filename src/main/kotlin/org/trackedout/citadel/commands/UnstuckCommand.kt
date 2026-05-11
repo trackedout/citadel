@@ -17,7 +17,8 @@ class UnstuckCommand(
     @Subcommand("unstuck")
     @Description("Unstuck yourself")
     fun unstuck(player: Player) {
+        val world = plugin.server.worlds.find { it.name == "world" } ?: player.world
         player.sendGreenMessage("Be freeeee!")
-        player.teleport(Location(player.world, -512.0, 114.0, 1980.0, 90f, 0f))
+        player.teleport(Location(world, -512.0, 114.0, 1980.0, 90f, 0f))
     }
 }

@@ -225,3 +225,10 @@ fun ItemStack.oldDungeonItem(): ItemStack {
         return tag.loadCopy()
     })
 }
+
+fun gauntletTrophy(itemCount: Int = 1): ItemStack = dungeonItem(
+    name = "❄☠ I survived the Decked Out Gauntlet! ☠❄",
+    customModelData = 93,
+    material = Material.CARVED_PUMPKIN,
+    itemCount = itemCount,
+)

@@ -84,6 +84,16 @@ val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
             return dungeonShardFragment(getRunTypeById(runType), count)
         }
     },
+
+    "GAUNTLET_TROPHY" to object : ScoreboardDescriber {
+        override fun sourceScoreboardName(runType: String): String {
+            return "${runType}-do2.lifetime.gauntlet_survival"
+        }
+
+        override fun itemStack(runType: String, count: Int): ItemStack {
+            return gauntletTrophy(if (count > 0) 1 else 0)
+        }
+    },
 )
 
 val intoDungeonItems: Map<String, ScoreboardDescriber> = mapOf(
