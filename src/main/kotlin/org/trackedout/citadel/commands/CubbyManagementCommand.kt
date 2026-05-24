@@ -87,7 +87,8 @@ class CubbyManagementCommand(
 
         if (source is Player) {
             val playerName = targetPlayer ?: source.name
-            val playerCubby = source.world.getCubbyForPlayer(playerName)
+            val uuid = plugin.server.getOfflinePlayerIfCached(playerName)?.uniqueId ?: if (playerName == source.name) source.uniqueId else null
+            val playerCubby = source.world.getCubbyForPlayer(playerName, uuid)
             if (playerCubby != null) {
                 val target = if (targetPlayer == null || targetPlayer == source.name) "your" else "${playerName}'s"
                 source.sendMiniMessage("<green>Teleporting you to $target cubby! Use <blue>/do unstuck</blue> if you get stuck</green>")
@@ -106,7 +107,8 @@ class CubbyManagementCommand(
     @CommandCompletion("@dbPlayers")
     fun locateCubbyOtherPlayer(source: CommandSender, targetPlayer: String) {
         if (source is Player) {
-            val playerCubby = source.world.getCubbyForPlayer(targetPlayer)
+            val uuid = plugin.server.getOfflinePlayerIfCached(targetPlayer)?.uniqueId
+            val playerCubby = source.world.getCubbyForPlayer(targetPlayer, uuid)
             if (playerCubby != null) {
                 source.sendGreenMessage("${targetPlayer}'s cubby is located at ${playerCubby.minimumPoint}, ${playerCubby.maximumPoint}")
             } else {
