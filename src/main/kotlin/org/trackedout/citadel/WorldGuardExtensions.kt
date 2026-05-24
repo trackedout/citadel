@@ -10,8 +10,12 @@ import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.entity.Player
 
+fun ProtectedRegion.hasMembers(): Boolean {
+    return this.members.players.isNotEmpty() || this.members.uniqueIds.isNotEmpty()
+}
+
 fun Player.getCubby(): ProtectedRegion? {
-    return this.world.getCubbyForPlayer(this.name)
+    return this.world.getCubbyForPlayer(this.name, this.uniqueId)
 }
 
 fun World.getCubbyByName(name: String): ProtectedRegion? {
@@ -20,9 +24,10 @@ fun World.getCubbyByName(name: String): ProtectedRegion? {
     }
 }
 
-fun World.getCubbyForPlayer(playerName: String): ProtectedRegion? {
+fun World.getCubbyForPlayer(playerName: String, uuid: java.util.UUID? = null): ProtectedRegion? {
     return this.regions()?.firstOrNull { region ->
-        region.members.players.contains(playerName.lowercase())
+        region.members.players.contains(playerName.lowercase()) ||
+            (uuid != null && region.members.uniqueIds.contains(uuid))
     }
 }
 

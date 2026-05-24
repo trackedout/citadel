@@ -14,6 +14,7 @@ import org.trackedout.citadel.getCenterLocation
 import org.trackedout.citadel.getCubby
 import org.trackedout.citadel.getCubbyByName
 import org.trackedout.citadel.getCubbyForPlayer
+import org.trackedout.citadel.hasMembers
 import org.trackedout.citadel.regions
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendMiniMessage
@@ -35,8 +36,9 @@ class CubbyManagementCommand(
         } else {
             val cubby = player.world.getApplicableRegions(player.location)?.firstOrNull { it.id.startsWith(CUBBY_PREFIX) }
             if (cubby != null) {
-                if (cubby.members.players.isNotEmpty()) {
-                    player.sendRedMessage("Cubby already claimed by ${cubby.members.players.first()}")
+                if (cubby.hasMembers()) {
+                    val owner = cubby.members.players.firstOrNull() ?: cubby.members.uniqueIds.first().toString()
+                    player.sendRedMessage("Cubby already claimed by $owner")
                     return
                 }
                 cubby.parent = player.world.getCubbyByName("cubby")
@@ -48,7 +50,7 @@ class CubbyManagementCommand(
 
                 // Find nearest available cubby
                 val allCubbies = player.world.regions()?.filter { it.id.startsWith(CUBBY_PREFIX) }
-                val availableCubbies = allCubbies?.filter { it.members.players.isEmpty() }
+                val availableCubbies = allCubbies?.filter { !it.hasMembers() }
 
                 if (!availableCubbies.isNullOrEmpty()) {
                     availableCubbies.minBy { it.getCenterLocation(player.world).distance(player.location) }.let {
@@ -122,8 +124,8 @@ class CubbyManagementCommand(
         val allCubbies = world?.regions()?.filter { it.id.startsWith(CUBBY_PREFIX) }
 
         if (allCubbies != null) {
-            val ownedCubbies = allCubbies.filter { it.members.players.isNotEmpty() }
-            val availableCubbies = allCubbies.filter { it.members.players.isEmpty() }
+            val ownedCubbies = allCubbies.filter { it.hasMembers() }
+            val availableCubbies = allCubbies.filter { !it.hasMembers() }
 
             source.sendGreenMessage("Owned Cubbies: ${ownedCubbies.size}")
             source.sendGreenMessage("Available Cubbies: ${availableCubbies.size}")
@@ -139,12 +141,13 @@ class CubbyManagementCommand(
         val allCubbies = world?.regions()?.filter { it.id.startsWith(CUBBY_PREFIX) }
 
         if (allCubbies != null) {
-            val ownedCubbies = allCubbies.filter { it.members.players.isNotEmpty() }
-            val availableCubbies = allCubbies.filter { it.members.players.isEmpty() }
+            val ownedCubbies = allCubbies.filter { it.hasMembers() }
+            val availableCubbies = allCubbies.filter { !it.hasMembers() }
 
             source.sendGreenMessage("Cubbies (${ownedCubbies.size} total):")
             ownedCubbies.forEach { cubby ->
-                source.sendGreenMessage("- ${cubby.id} -> ${cubby.minimumPoint}, ${cubby.maximumPoint} (owned by ${cubby.members.players})")
+                val owner = cubby.members.players.firstOrNull() ?: cubby.members.uniqueIds.first().toString()
+                source.sendGreenMessage("- ${cubby.id} -> ${cubby.minimumPoint}, ${cubby.maximumPoint} (owned by $owner)")
             }
 
             source.sendGreenMessage("Available Cubbies: ${availableCubbies.size}")
