@@ -147,6 +147,22 @@ class LeaderboardTaskRunner(
                         updatePodium(podium, playersAtRank, podium.rank, maxPhase)
                     }
 
+                    // Remove any leftover NPCs in podium regions that aren't expected
+                    val expectedIds = podiums.flatMap { podium ->
+                        listOf("leaderboard-podium-${podium.rank}", "leaderboard-podium-${podium.rank}-left", "leaderboard-podium-${podium.rank}-right")
+                    }.filter { npcId ->
+                        // Only keep IDs that actually have a player assigned
+                        val rank = npcId.removePrefix("leaderboard-podium-").split("-").first().toIntOrNull() ?: return@filter false
+                        val points = pointsByRank.getOrNull(rank - 1) ?: return@filter false
+                        val playersAtRank = sortedPlayers.filter { it.totalPoints == points }
+                        when {
+                            npcId.endsWith("-left") -> playersAtRank.size > 1
+                            npcId.endsWith("-right") -> playersAtRank.size > 2
+                            else -> playersAtRank.isNotEmpty()
+                        }
+                    }.toSet()
+                    removeStaleNpcs(world, expectedIds)
+
                     // Update title hologram above podium-1
                     updateTitleHologram(podiums.find { it.rank == 1 }, maxPhase)
                 }
@@ -169,7 +185,7 @@ class LeaderboardTaskRunner(
 
         slots.forEach { clearSlot(it) }
         podiums.forEach { updatePodium(it, emptyList(), it.rank, maxPhase) }
-        CitizensAPI.getNPCRegistry()?.filter { it.data().has("leaderboard-id") }?.forEach { it.destroy() }
+        removeStaleNpcs(world, emptySet())
 
         val podium1 = podiums.find { it.rank == 1 }
         val viewLocation = computeViewLocation(podium1, slots)
@@ -375,9 +391,35 @@ class LeaderboardTaskRunner(
         val world = plugin.server.worlds.find { it.name == "world" } ?: return
         discoverLeaderboardSlots(world).forEach { clearSlot(it) }
         discoverPodiums(world).forEach { updatePodium(it, emptyList(), it.rank, 0) }
-        CitizensAPI.getNPCRegistry()?.filter { it.data().has("leaderboard-id") }?.forEach { it.destroy() }
+        removeStaleNpcs(world, emptySet())
         val manager = FancyHologramsPlugin.get().hologramManager
         manager.getHologram("leaderboard-title").ifPresent { it.deleteHologram(); manager.removeHologram(it) }
+    }
+
+    private fun removeStaleNpcs(world: World, expectedNpcIds: Set<String>) {
+        val registry = CitizensAPI.getNPCRegistry() ?: return
+        val podiumRegions = (1..3).mapNotNull { world.regions()?.find { r -> r.id == "podium-$it" } }
+        val podiumNpcLocations = discoverPodiums(world).mapNotNull { it.npcLocation }
+
+        registry.toList().forEach { npc ->
+            if (!npc.isSpawned) {
+                if (npc.data().has("leaderboard-id")) npc.destroy()
+                return@forEach
+            }
+            val loc = npc.storedLocation ?: return@forEach
+            if (loc.world != world) return@forEach
+
+            val isLeaderboardNpc = npc.data().has("leaderboard-id")
+            val inPodium = podiumRegions.any { it.contains(loc.blockX, loc.blockY, loc.blockZ) }
+            val nearPodium = podiumNpcLocations.any { it.distanceSquared(loc) < 9 }
+
+            if (isLeaderboardNpc || inPodium || nearPodium) {
+                val id = npc.data().get<String>("leaderboard-id") ?: ""
+                if (id !in expectedNpcIds) {
+                    npc.destroy()
+                }
+            }
+        }
     }
 
     private fun discoverLeaderboardSlots(world: World): List<LeaderboardSlot> {
