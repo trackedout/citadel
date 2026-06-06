@@ -175,7 +175,7 @@ class Citadel : JavaPlugin() {
         leaderboardTaskRunner = LeaderboardTaskRunner(this, configApi)
         leaderboardTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 20 * 15) // Repeat every 300 ticks (15 seconds)
 
-        val trophyTaskRunner = TrophyTaskRunner(this)
+        val trophyTaskRunner = TrophyTaskRunner(this, configApi)
         trophyTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 20 * 60) // Repeat every 1200 ticks (1 minute)
 
         server.pluginManager.registerEvents(PlayedJoinedListener(this, eventsApi, configApi, inventoryManager), this)
@@ -203,7 +203,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(CubbyManagementCommand(this))
         manager.registerCommand(LeaderboardCommand(this, configApi))
         manager.registerCommand(UnstuckCommand(this))
-        manager.registerCommand(TrophyCommand(this))
+        manager.registerCommand(TrophyCommand(this, configApi))
 
         val echoShardListener = EchoShardListener(this, inventoryApi, eventsApi, scoreApi, viewFrame, inventoryManager)
         server.pluginManager.registerEvents(echoShardListener, this)

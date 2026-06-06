@@ -13,13 +13,47 @@ import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoTrophy
 
+import org.trackedout.client.apis.ConfigApi
+
 // WARNING: This task is processed *asynchronously*, and thus most interactions with the main Minecraft thread
 // must go through a sync task scheduler.
 class TrophyTaskRunner(
     private val plugin: Citadel,
+    private val configApi: ConfigApi,
 ) : BukkitRunnable() {
     override fun run() {
+        if (!configApi.getBool("lobby", "show-tots", default = true)) {
+            plugin.debug("TOTs are hidden, skipping sign updater")
+            return
+        }
         applyTOTs(plugin)
+    }
+}
+
+fun hideTOTs(plugin: Citadel) {
+    val database = MongoDBManager.getDatabase("dunga-dunga")
+    val trophyCollection = database.getCollection("trophies", MongoTrophy::class.java)
+    val trophies = trophyCollection.find().toList()
+
+    plugin.runOnNextTick {
+        try {
+            val manager = FancyHologramsPlugin.get().hologramManager
+            manager.holograms
+                .filter { it.data.name.startsWith("tot-") }
+                .forEach { hologram ->
+                    hologram.deleteHologram()
+                    manager.removeHologram(hologram)
+                }
+        } catch (ex: Exception) {
+            plugin.logger.warning("Failed to hide ToT holograms: ${ex.message}")
+        }
+
+        trophies.forEach { trophy ->
+            val sign = trophy.sign
+            val signBlock = getSignBlock(plugin, sign.x, sign.y, sign.z) ?: return@forEach
+            updateSignBlock(plugin, sign.x, sign.y, sign.z, false)
+            updateSignHead(plugin, signBlock, null)
+        }
     }
 }
 

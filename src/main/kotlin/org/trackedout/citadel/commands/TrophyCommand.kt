@@ -15,15 +15,21 @@ import org.bukkit.block.data.type.WallSign
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.applyTOTs
 import org.trackedout.citadel.async
+import org.trackedout.citadel.getBool
 import com.mongodb.client.model.Sorts
+import org.trackedout.citadel.hideTOTs
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoTrophy
 import org.trackedout.citadel.mongo.MongoTrophySection
 import org.trackedout.citadel.runOnNextTick
 import org.trackedout.citadel.sendGreenMessage
+import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.citadel.sendMiniMessage
 import org.trackedout.citadel.sendRedMessage
+import org.trackedout.client.apis.ConfigApi
+import org.trackedout.client.models.Config
 
 fun loadTrophySections(): LinkedHashMap<String, List<String>> {
     val database = MongoDBManager.getDatabase("dunga-dunga")
@@ -37,6 +43,7 @@ fun loadTrophySections(): LinkedHashMap<String, List<String>> {
 @CommandAlias("tots")
 class TrophyCommand(
     private val plugin: Citadel,
+    private val configApi: ConfigApi,
 ) : BaseCommand() {
 
     @HelpCommand
@@ -56,6 +63,11 @@ class TrophyCommand(
     @Description("Teleport to a trophy")
     fun teleportToTrophy(player: Player, name: String) {
         plugin.async(player) {
+            if (!configApi.getBool("lobby", "show-tots", default = true)) {
+                player.sendRedMessage("ToTs are currently hidden")
+                return@async
+            }
+
             val trophies = getTrophies()
             val trophy = trophies.find { it.totKey.equals(name, ignoreCase = true) }
             if (trophy == null) {
@@ -194,6 +206,28 @@ class TrophyCommand(
             player.sendMiniMessage("<yellow>Value:</yellow> ${nearest.value ?: "N/A"}")
             player.sendMiniMessage("<yellow>Description:</yellow> ${nearest.description ?: "N/A"}")
             player.sendMiniMessage("<yellow>Location:</yellow> ${nearest.sign.x}, ${nearest.sign.y}, ${nearest.sign.z}")
+        }
+    }
+
+    @Subcommand("show")
+    @CommandPermission("decked-out.tots.toggle")
+    @Description("Show all ToT displays")
+    fun show(source: CommandSender) {
+        plugin.async(source) {
+            configApi.configsAddConfigPost(Config(entity = "lobby", key = "show-tots", value = "true"))
+            applyTOTs(plugin)
+            source.sendGreenMessage("All ToTs are now visible")
+        }
+    }
+
+    @Subcommand("hide")
+    @CommandPermission("decked-out.tots.toggle")
+    @Description("Hide all ToT displays")
+    fun hide(source: CommandSender) {
+        plugin.async(source) {
+            configApi.configsAddConfigPost(Config(entity = "lobby", key = "show-tots", value = "false"))
+            hideTOTs(plugin)
+            source.sendGreyMessage("All ToTs are now hidden")
         }
     }
 
