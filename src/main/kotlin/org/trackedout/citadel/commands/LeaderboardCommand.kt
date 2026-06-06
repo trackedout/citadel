@@ -9,6 +9,7 @@ import com.mongodb.client.model.Filters
 import org.bukkit.command.CommandSender
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.FirstRun
+import org.trackedout.citadel.getInt
 import org.trackedout.citadel.runOnNextTick
 
 import org.trackedout.citadel.async
@@ -43,11 +44,23 @@ class LeaderboardCommand(
     @Description("Show the leaderboard and optionally animate")
     fun showLeaderboard(source: CommandSender, animate: Boolean) {
         plugin.async(source) {
+            val currentPhase = configApi.getInt("comp-season", "current-phase")
+            if (currentPhase == null) {
+                source.sendRedMessage("Cannot show leaderboard: current-phase is not set")
+                return@async
+            }
             configApi.configsAddConfigPost(Config(entity = "lobby", key = "show-leaderboard", value = "true"))
             FirstRun.showLeaderboard = true
             source.sendGreenMessage("Showing leaderboard ${if (animate) "with" else "without"} animation")
-            if (animate) plugin.leaderboardTaskRunner.runWithAnimation()
-            else plugin.leaderboardTaskRunner.run()
+            if (animate) {
+                val seenKey = "leaderboard-seen-phase-$currentPhase"
+                plugin.server.onlinePlayers.forEach { p ->
+                    configApi.configsAddConfigPost(Config(entity = p.name, key = seenKey, value = "true"))
+                }
+                plugin.leaderboardTaskRunner.runWithAnimation()
+            } else {
+                plugin.leaderboardTaskRunner.run()
+            }
         }
     }
 
