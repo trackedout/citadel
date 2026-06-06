@@ -15,6 +15,14 @@ fun ConfigApi.getInt(entity: String, key: String): Int? {
     }
 }
 
+fun ConfigApi.getBool(entity: String, key: String, default: Boolean = false): Boolean {
+    return try {
+        this.configsGet(entity, key).value == "true"
+    } catch (e: ClientException) {
+        default
+    }
+}
+
 fun ConfigApi.getRelativeFutureDate(entity: String, key: String): String? {
     return try {
         this.configsGet(entity, key).value?.let {

@@ -16,31 +16,36 @@ import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoScore
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendRedMessage
+import org.trackedout.client.apis.ConfigApi
+import org.trackedout.client.models.Config
 
 @CommandAlias("decked-out|do")
 class LeaderboardCommand(
     private val plugin: Citadel,
+    private val configApi: ConfigApi,
 ) : BaseCommand() {
     @Subcommand("leaderboard hide")
     @CommandPermission("decked-out.leaderboard.admin")
     @Description("Clear and hide the leaderboard")
     fun clearAndHideLeaderboard(source: CommandSender) {
-        FirstRun.showLeaderboard = false
         FirstRun.animating = false
         FirstRun.running = false
-        // Immediately clear all slots and podiums
-        plugin.runOnNextTick { plugin.leaderboardTaskRunner.hideAll() }
-        source.sendGreenMessage("Leaderboard hidden")
+        plugin.async(source) {
+            configApi.configsAddConfigPost(Config(entity = "lobby", key = "show-leaderboard", value = "false"))
+            FirstRun.showLeaderboard = false
+            plugin.runOnNextTick { plugin.leaderboardTaskRunner.hideAll() }
+            source.sendGreenMessage("Leaderboard hidden")
+        }
     }
 
     @Subcommand("leaderboard show")
     @CommandPermission("decked-out.leaderboard.admin")
     @Description("Show the leaderboard and optionally animate")
     fun showLeaderboard(source: CommandSender, animate: Boolean) {
-        FirstRun.showLeaderboard = true
-        source.sendGreenMessage("Showing leaderboard ${if (animate) "with" else "without"} animation")
-        // Trigger immediately instead of waiting for next tick
         plugin.async(source) {
+            configApi.configsAddConfigPost(Config(entity = "lobby", key = "show-leaderboard", value = "true"))
+            FirstRun.showLeaderboard = true
+            source.sendGreenMessage("Showing leaderboard ${if (animate) "with" else "without"} animation")
             if (animate) plugin.leaderboardTaskRunner.runWithAnimation()
             else plugin.leaderboardTaskRunner.run()
         }

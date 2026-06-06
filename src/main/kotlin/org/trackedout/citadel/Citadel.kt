@@ -201,7 +201,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(ShulkerStyleCommand(configApi, inventoryManager))
         manager.registerCommand(ShowArtifakesCommand(this, scoreApi, viewFrame))
         manager.registerCommand(CubbyManagementCommand(this))
-        manager.registerCommand(LeaderboardCommand(this))
+        manager.registerCommand(LeaderboardCommand(this, configApi))
         manager.registerCommand(UnstuckCommand(this))
         manager.registerCommand(TrophyCommand(this))
 

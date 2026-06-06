@@ -85,6 +85,7 @@ class LeaderboardTaskRunner(
         try {
             plugin.logger.info("[Async task ${this.taskId}] Fetching leaderboard from MongoDB")
 
+            FirstRun.showLeaderboard = configApi.getBool("lobby", "show-leaderboard", default = false)
             if (!FirstRun.showLeaderboard) return
 
             val world = plugin.server.worlds.find { it.name == "world" } ?: return
@@ -770,7 +771,7 @@ class LeaderboardTaskRunner(
 }
 
 object LeaderboardConfig {
-    var showLeaderboard = true
+    var showLeaderboard = false
 }
 
 object LeaderboardState {
