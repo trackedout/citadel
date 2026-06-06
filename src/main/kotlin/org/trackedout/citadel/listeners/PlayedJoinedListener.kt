@@ -8,19 +8,25 @@ import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerJoinEvent
+import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
+import org.trackedout.citadel.LeaderboardState
 import org.trackedout.citadel.async
+import org.trackedout.citadel.getBool
 import org.trackedout.citadel.getEnvOrDefault
 import org.trackedout.citadel.getInt
 import org.trackedout.citadel.getRelativeFutureDate
+import org.trackedout.citadel.regions
 import org.trackedout.citadel.runLaterOnATick
 import org.trackedout.citadel.sendMiniMessage
 import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.EventsApi
+import org.trackedout.client.models.Config
 import org.trackedout.client.models.Event
 import java.time.Duration
+import java.util.UUID
 
 class PlayedJoinedListener(
     private val plugin: Citadel,
@@ -113,6 +119,38 @@ class PlayedJoinedListener(
         return -553 <= player.x && player.x <= -542
                 && 1977 <= player.z && player.z <= 1983
                 && 112 <= player.y && player.y <= 119
+    }
+
+    private val leaderboardAnimationPending = mutableSetOf<UUID>()
+
+    @EventHandler(ignoreCancelled = true)
+    fun onPlayerMove(event: PlayerMoveEvent) {
+        if (!event.hasChangedBlock()) return
+        val player = event.player
+        if (player.uniqueId in leaderboardAnimationPending) return
+        if (LeaderboardState.animating || LeaderboardState.running) return
+
+        val region = player.world.regions()?.find { it.id == "view-leaderboard" } ?: return
+        if (!region.contains(event.to.blockX, event.to.blockY, event.to.blockZ)) return
+        if (region.contains(event.from.blockX, event.from.blockY, event.from.blockZ)) return
+
+        // Player just entered the view-leaderboard region
+        leaderboardAnimationPending.add(player.uniqueId)
+        plugin.async(player) {
+            try {
+                val currentPhase = configApi.getInt("comp-season", "current-phase") ?: return@async
+                if (!configApi.getBool("lobby", "show-leaderboard", default = false)) return@async
+                val seenKey = "leaderboard-seen-phase-$currentPhase"
+                if (configApi.getBool(player.name, seenKey, default = false)) return@async
+
+                configApi.configsAddConfigPost(Config(entity = player.name, key = seenKey, value = "true"))
+                if (!LeaderboardState.animating && !LeaderboardState.running) {
+                    plugin.leaderboardTaskRunner.runWithAnimation(setOf(player.uniqueId))
+                }
+            } finally {
+                leaderboardAnimationPending.remove(player.uniqueId)
+            }
+        }
     }
 
     @EventHandler(ignoreCancelled = true)

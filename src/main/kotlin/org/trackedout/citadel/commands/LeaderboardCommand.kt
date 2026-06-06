@@ -84,4 +84,10 @@ class LeaderboardCommand(
             }
         }
     }
+
+    @Subcommand("leaderboard list")
+    @Description("List current leaderboard standings")
+    fun listLeaderboard(source: CommandSender) {
+        plugin.leaderboardTaskRunner.sendLeaderboardTo(source)
+    }
 }

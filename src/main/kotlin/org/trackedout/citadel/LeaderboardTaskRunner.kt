@@ -24,6 +24,8 @@ import org.bukkit.block.data.type.WallSign
 import org.bukkit.block.sign.Side
 import org.bukkit.entity.Display
 import org.bukkit.entity.EntityType
+import org.bukkit.entity.Player
+import org.bukkit.command.CommandSender
 import org.bukkit.event.player.PlayerTeleportEvent
 import org.bukkit.potion.PotionEffect
 import org.bukkit.potion.PotionEffectType
@@ -66,6 +68,7 @@ class LeaderboardTaskRunner(
 
     private val previousGameModes = mutableMapOf<UUID, GameMode>()
     private val previousLocations = mutableMapOf<UUID, Location>()
+    private var animationParticipants: Set<UUID>? = null // null = all online players
     val playerData = mutableMapOf<String, PlayerWithPoints>()
     var currentMaxPhase = 0
 
@@ -73,7 +76,8 @@ class LeaderboardTaskRunner(
         doRun(false)
     }
 
-    fun runWithAnimation() {
+    fun runWithAnimation(participants: Set<UUID>? = null) {
+        animationParticipants = participants
         doRun(true)
     }
 
@@ -192,7 +196,7 @@ class LeaderboardTaskRunner(
         val viewLocation = computeViewLocation(podium1, slots)
         enterSpectatorMode(world, viewLocation)
 
-        plugin.server.onlinePlayers.forEach { p ->
+        animationAudience().forEach { p ->
             p.showTitle(Title.title(
                 Component.empty(),
                 Component.text("The Leaderboard", NamedTextColor.GOLD),
@@ -216,18 +220,28 @@ class LeaderboardTaskRunner(
             val loc = podiumLoc.clone()
             val depthDiff = furthestSlot.signBlock.location.toVector().subtract(podiumLoc.toVector()).dot(facing.direction)
             loc.add(facing.direction.multiply(depthDiff))
+            loc.add(facing.direction.multiply(1.0))
+            loc.add(0.0, -2.0, 0.0)
             loc.setDirection(facing.direction.multiply(-1))
+            loc.pitch = 30f
             loc
         }
+    }
+
+    private fun animationAudience(): List<Player> {
+        val participants = animationParticipants
+        return if (participants == null) plugin.server.onlinePlayers.toList()
+        else plugin.server.onlinePlayers.filter { it.uniqueId in participants }
     }
 
     private fun enterSpectatorMode(world: World, viewLocation: Location?) {
         previousGameModes.clear()
         previousLocations.clear()
-        plugin.server.onlinePlayers.forEach { p ->
+        animationAudience().forEach { p ->
             previousGameModes[p.uniqueId] = p.gameMode
             previousLocations[p.uniqueId] = p.location.clone()
             p.gameMode = GameMode.SPECTATOR
+            p.velocity = org.bukkit.util.Vector(0, 0, 0)
             viewLocation?.let { p.teleport(it) }
         }
 
@@ -273,7 +287,7 @@ class LeaderboardTaskRunner(
                 group.value.forEach { a ->
                     updateSlot(a.slot, a.player, a.rank, maxPhase, a.snowLayers)
                 }
-                plugin.server.onlinePlayers.forEach { p ->
+                animationAudience().forEach { p ->
                     p.playSound(Sound.sound(Key.key("do2:events.card_reveal"), Sound.Source.MASTER, SIGN_REVEAL_VOLUME, 0f))
                 }
             }
@@ -330,7 +344,7 @@ class LeaderboardTaskRunner(
 
                 val sound = if (podiumRank == 1) "do2:events.artifact_retrived" else "do2:events.card_reveal"
                 val pitch = when (podiumRank) { 1 -> 0f; 2 -> 0.5f; else -> 1f }
-                plugin.server.onlinePlayers.forEach { p ->
+                animationAudience().forEach { p ->
                     p.playSound(Sound.sound(Key.key(sound), Sound.Source.MASTER, 1f, pitch))
                 }
 
@@ -353,15 +367,29 @@ class LeaderboardTaskRunner(
     }
 
     private fun sendChatLeaderboard(assignments: List<SlotAssignment>, maxPhase: Int) {
-        plugin.server.onlinePlayers.forEach { p ->
-            p.sendMessage(Component.text(""))
-            p.sendMessage(Component.text("------- Leaderboard -------", NamedTextColor.GOLD))
-            assignments.sortedByDescending { it.player.totalPoints }.forEachIndexed { i, a ->
-                val color = when (a.rank) { 1 -> NamedTextColor.GOLD; 2 -> NamedTextColor.WHITE; 3 -> NamedTextColor.RED; else -> NamedTextColor.GRAY }
-                p.sendMessage(Component.text(" ${i + 1}. ${a.player.player} - ${a.player.totalPoints} pts (${a.player.stats[maxPhase]?.tomesSubmitted ?: 0} tomes)", color))
-            }
-            p.sendMessage(Component.text(""))
+        animationAudience().forEach { p ->
+            sendLeaderboardTo(p, assignments.map { it.player }, maxPhase)
         }
+    }
+
+    fun sendLeaderboardTo(target: CommandSender, players: List<PlayerWithPoints> = playerData.values.toList(), maxPhase: Int = currentMaxPhase) {
+        val sorted = players.sortedByDescending { it.totalPoints }
+        if (sorted.isEmpty()) {
+            target.sendMessage(Component.text("No leaderboard data available", NamedTextColor.RED))
+            return
+        }
+        val targetName = (target as? Player)?.name
+        val totalPointsRank = sorted.map { it.totalPoints }.distinct().sortedDescending()
+        target.sendMessage(Component.text(""))
+        target.sendMessage(Component.text("------- Leaderboard -------", NamedTextColor.GOLD))
+        sorted.forEachIndexed { i, p ->
+            val rank = totalPointsRank.indexOf(p.totalPoints) + 1
+            val isSelf = p.player == targetName
+            val color = if (isSelf) NamedTextColor.AQUA else when (rank) { 1 -> NamedTextColor.GOLD; 2 -> NamedTextColor.WHITE; 3 -> NamedTextColor.RED; else -> NamedTextColor.GRAY }
+            val line = Component.text(" ${i + 1}. ${p.player} - ${p.totalPoints} pts (${p.stats[maxPhase]?.tomesSubmitted ?: 0} tomes)", color)
+            target.sendMessage(if (isSelf) line.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD) else line)
+        }
+        target.sendMessage(Component.text(""))
     }
 
     private fun restoreGameModes() {
@@ -379,7 +407,7 @@ class LeaderboardTaskRunner(
                     }
                     if (loc != p.location) p.teleport(loc)
                 }
-                p.gameMode = mode
+                p.gameMode = if (mode == GameMode.SPECTATOR) GameMode.SURVIVAL else mode
                 p.addPotionEffect(PotionEffect(PotionEffectType.SLOW_FALLING, 200, 0, false, false))
             }
         }
