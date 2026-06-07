@@ -117,6 +117,7 @@ class TrophyCommand(
     fun listSection(source: CommandSender, section: String) {
         plugin.async(source) {
             val trophies = getTrophies()
+            val hidden = !configApi.getBool("lobby", "show-tots", default = true)
             val sections = loadTrophySections()
             val sectionEntry = sections.entries.find { it.key.equals(section, ignoreCase = true) }
             if (sectionEntry == null) {
@@ -128,7 +129,8 @@ class TrophyCommand(
             sectionEntry.value.forEach { totKey ->
                 val trophy = trophies.find { it.totKey == totKey }
                 if (trophy?.player != null) {
-                    source.sendMiniMessage("<yellow>$totKey</yellow> - <green>${trophy.player}</green> <gray>${trophy.value ?: ""}</gray>")
+                    val display = if (hidden) "<gray>[hidden]</gray>" else "<green>${trophy.player}</green> <gray>${trophy.value ?: ""}</gray>"
+                    source.sendMiniMessage("<yellow>$totKey</yellow> - $display")
                 } else {
                     source.sendMiniMessage("<yellow>$totKey</yellow> - <gray>unclaimed</gray>")
                 }
@@ -143,12 +145,13 @@ class TrophyCommand(
     fun search(source: CommandSender, query: String) {
         plugin.async(source) {
             val trophies = getTrophies()
+            val hidden = !configApi.getBool("lobby", "show-tots", default = true)
             val q = query.lowercase()
 
             val sections = loadTrophySections()
             val matches = trophies.filter { trophy ->
                 trophy.totKey.lowercase().contains(q) ||
-                    trophy.player?.lowercase()?.contains(q) == true ||
+                    (!hidden && trophy.player?.lowercase()?.contains(q) == true) ||
                     trophy.description?.lowercase()?.contains(q) == true ||
                     trophy.value?.lowercase()?.contains(q) == true ||
                     sections.entries.find { it.value.contains(trophy.totKey) }?.key?.lowercase()?.contains(q) == true
@@ -162,8 +165,8 @@ class TrophyCommand(
             source.sendMiniMessage("<gold>--- Search: $query (${matches.size} results) ---</gold>")
             matches.forEach { trophy ->
                 val section = sections.entries.find { it.value.contains(trophy.totKey) }?.key ?: "Unknown"
-                val player = trophy.player ?: "unclaimed"
-                val value = trophy.value ?: ""
+                val player = if (hidden) "[hidden]" else (trophy.player ?: "unclaimed")
+                val value = if (hidden) "" else (trophy.value ?: "")
                 source.sendMiniMessage("<gray>[$section]</gray> <yellow>${trophy.totKey}</yellow> - <green>$player</green> <gray>$value</gray>")
             }
         }
@@ -199,12 +202,13 @@ class TrophyCommand(
             }
 
             val section = loadTrophySections().entries.find { it.value.contains(nearest.totKey) }?.key ?: "Unknown"
+            val hidden = !configApi.getBool("lobby", "show-tots", default = true)
             player.sendMiniMessage("<gold>--- Trophy Info ---</gold>")
             player.sendMiniMessage("<yellow>Name:</yellow> ${nearest.totKey}")
             player.sendMiniMessage("<yellow>Section:</yellow> $section")
-            player.sendMiniMessage("<yellow>Player:</yellow> ${nearest.player ?: "<gray>unclaimed</gray>"}")
-            player.sendMiniMessage("<yellow>Value:</yellow> ${nearest.value ?: "N/A"}")
-            player.sendMiniMessage("<yellow>Description:</yellow> ${nearest.description ?: "N/A"}")
+            player.sendMiniMessage("<yellow>Player:</yellow> ${if (hidden) "<gray>[hidden]</gray>" else (nearest.player ?: "<gray>unclaimed</gray>")}")
+            player.sendMiniMessage("<yellow>Value:</yellow> ${if (hidden) "N/A" else (nearest.value ?: "N/A")}")
+            player.sendMiniMessage("<yellow>Description:</yellow> ${if (hidden) "N/A" else (nearest.description ?: "N/A")}")
             player.sendMiniMessage("<yellow>Location:</yellow> ${nearest.sign.x}, ${nearest.sign.y}, ${nearest.sign.z}")
         }
     }
