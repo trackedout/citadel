@@ -34,7 +34,7 @@ class ManageDeckCommand(
         player.sendGreenMessage("Opening editor for your deck")
 
         // TODO: Make this async
-        val allCards = inventoryApi.inventoryCardsGet(player = player.name, limit = 200).results!!
+        val allCards = inventoryApi.inventoryCardsGet(player = player.name, limit = 1000).results!!
 
         val addCardFunc = BiConsumer<DeckId, Card> { deckId, card ->
             plugin.async(player) {

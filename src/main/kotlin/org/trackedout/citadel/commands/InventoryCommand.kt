@@ -109,7 +109,7 @@ class InventoryCommand(
         plugin.async(source) {
             val cards = inventoryApi.inventoryCardsGet(
                 player = target,
-                limit = 200,
+                limit = 1000,
                 deckId = "1",
             ).results!!
 
@@ -142,7 +142,7 @@ class InventoryCommand(
         plugin.async(source) {
             val cards = inventoryApi.inventoryCardsGet(
                 player = target,
-                limit = 200,
+                limit = 1000,
                 deckType = runType.deckType(),
             ).results!!
 

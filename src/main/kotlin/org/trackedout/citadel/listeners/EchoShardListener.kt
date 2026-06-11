@@ -312,7 +312,7 @@ class EchoShardListener(
         event.isCancelled = true
 
         // TODO: Make this async
-        val allCards = inventoryApi.inventoryCardsGet(player = player.name, limit = 200).results!!
+        val allCards = inventoryApi.inventoryCardsGet(player = player.name, limit = 1000).results!!
 
         val updateCardVisibility = BiConsumer<DeckId, Map<String, Number>> { deckIdToUpdate, cardsToHide ->
             eventsApi.eventsPost(
