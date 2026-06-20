@@ -33,7 +33,7 @@ fun showBookUI(
 
 - <u><blue><click:open_url:'https://trackedout.org'>Tracked Out Website</click></blue></u>
 
-- <u><blue><click:open_url:'https://stats.trackedout.org'>Player Stats</click></blue></u>
+- <u><blue><click:open_url:'https://ember.trackedout.org/stats'>Stats & More!</click></blue></u>
 
 - <u><blue><click:open_url:'https://trackedout.org/discord'>Discord</click></blue></u>
 
@@ -43,16 +43,16 @@ fun showBookUI(
         """.trimIndent()
 
         val page3 = """
-       Run modes:
+  Switch Mode (click!)
 
-       <aqua>Competitive:</aqua>
+      <click:run_command:'/do run-mode competitive'><aqua>[Competitive]</aqua></click>
 Limited shards, standard rules, and new content!
 
-       <green>Practice:</green>
+      <click:run_command:'/do run-mode practice'><green>[Practice]</green></click>
 Infinite runs, open access to all cards.
 
-       <red>Hardcore:</red>
-Limited shards, deck is lost on death.
+      <click:run_command:'/do run-mode hardcore'><red>[Hardcore]</red></click>
+Limited shards, deck lost on death.
         """.trimIndent()
 
         val page4 = """
@@ -97,7 +97,7 @@ Limited shards, deck is lost on death.
   Common Questions:
 
 1. How do I claim a cubby?
-Stand in an available cubby and run: <gold>/do cubby claim</gold>
+Stand in an available cubby and run: <click:run_command:'/do cubby claim'><gold>/do cubby claim</gold></click>
 
 2. How do I report a bug?
 Join our <u><blue><click:open_url:'https://trackedout.org/discord'>Discord</click></blue></u> and head to <gold>#bug-reports</gold>
@@ -121,8 +121,8 @@ To stop spectating run <gold>/lobby</gold>
 
 4. How do I switch run modes?
 
-Run <gold>/do run-mode practice</gold> or <gold>/do run-mode competitive</gold> or <gold>/do run-mode hardcore</gold>
-Note that competitive mode is <red>currently closed</red> as we build the next season.
+Use the <gold>Run Mode</gold> page in this book!
+Or run: <gold>/do run-mode <mode></gold>
         """.trimIndent())
 
         val components = pages.map {
