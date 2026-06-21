@@ -114,9 +114,11 @@ class InventoryCommand(
             ).results!!
 
             val knownCards = cardConfig.sortedList()
+            val knownShorthands = knownCards.map { it.shorthand }.toSet()
             cards.map { it.deckType }.distinct().forEach { deckType ->
                 val cardsForRunType = cards.filter { it.deckType == deckType }
-                source.sendGreenMessage("${target}'s ${deckType?.displayName()} deck contains ${cardsForRunType.size} cards:")
+                val knownCount = cardsForRunType.count { it.name in knownShorthands }
+                source.sendGreenMessage("${target}'s ${deckType?.displayName()} deck contains ${knownCount} cards:")
 
                 knownCards.forEach {
                     var textColor = it.tag.nameFormat?.color?.let(TextColor::fromHexString)
