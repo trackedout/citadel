@@ -201,6 +201,15 @@ fun settingsBook(): ItemStack = dungeonItem(
     customModelData = 0,
 ).withLore(text("Configure your Decked Out experience!", NamedTextColor.AQUA))
 
+fun adminBook(): ItemStack = dungeonItem(
+    name = "❄☠ Admin Panel ☠❄",
+    material = Material.WRITTEN_BOOK,
+    textColor = NamedTextColor.RED,
+    metadata = mapOf("deckId" to "", "action" to "show-admin-book"),
+    itemCount = 1,
+    customModelData = 0,
+).withLore(text("Server management tools", NamedTextColor.RED))
+
 fun ItemStack.withTradeMeta(runType: String, tradeId: String): ItemStack {
     var metadata = mapOf(
         "deckId" to "${runType.shortRunType()}1",

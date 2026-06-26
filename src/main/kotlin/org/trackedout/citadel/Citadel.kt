@@ -144,7 +144,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(LogEventCommand(eventsApi))
         manager.registerCommand(StatusCommand(this))
         manager.registerCommand(ScoreManagementCommand(this, scoreApi, eventsApi, inventoryManager, inventoryApi))
-        manager.registerCommand(ShutdownDungeonsCommand(this, eventsApi))
+        manager.registerCommand(ShutdownDungeonsCommand(this, eventsApi, tasksApi))
         manager.registerCommand(ScheduleJobCommand(this, tasksApi))
         manager.registerCommand(ShopCommand(this))
         manager.registerCommand(TestQueueCommand(eventsApi))

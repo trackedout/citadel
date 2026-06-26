@@ -1,56 +1,63 @@
 package org.trackedout.citadel.commands
 
+import com.mongodb.client.model.Filters
 import net.kyori.adventure.inventory.Book
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.entity.Player
+import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.async
+import org.trackedout.citadel.mongo.MongoDBManager
+import org.trackedout.citadel.mongo.MongoDungeon
+import org.trackedout.client.apis.ConfigApi
+import org.trackedout.client.infrastructure.ClientException
 
-fun showAdminBook(player: Player) {
-    val pages = listOf(
-        """
-     <red>Admin Book</red>
+fun showAdminBook(plugin: Citadel, player: Player, configApi: ConfigApi) {
+    plugin.async(player) {
+        val database = MongoDBManager.getDatabase("dunga-dunga")
+        val dungeons = database.getCollection("instances", MongoDungeon::class.java)
+            .find(Filters.regex("name", "^d8[0-9]{2}"))
+            .sortedBy { it.name }
+            .map { it.name }
 
-   <gold>Dungeon Management</gold>
+        val dungeonTypes = dungeons.associateWith { d ->
+            try {
+                configApi.configsGet(d, "dungeon-type").value ?: "default"
+            } catch (e: ClientException) { "default" }
+        }
 
-<click:run_command:'/do shutdown-all-empty-dungeons'><red>[Shutdown All Empty]</red></click>
+        fun dungeonLine(d: String): String {
+            val type = dungeonTypes[d] ?: "default"
+            val s1Btn = if (type == "default") "<gold>[<u>S1</u>]</gold>" else "<click:run_command:'/do config set $d dungeon-type default'><gold>[S1]</gold></click>"
+            val s2Btn = if (type == "season-2") "<aqua>[<u>S2</u>]</aqua>" else "<click:run_command:'/do config set $d dungeon-type season-2'><aqua>[S2]</aqua></click>"
+            val shutdownBtn = "<click:run_command:'/do shutdown-dungeon $d'><red>[X]</red></click>"
+            return "  $d $s1Btn $s2Btn $shutdownBtn"
+        }
 
-   Shutdown individual:
-<click:run_command:'/do config set d800 shutdown true --force'><gold>[d800]</gold></click> <click:run_command:'/do config set d801 shutdown true --force'><gold>[d801]</gold></click> <click:run_command:'/do config set d802 shutdown true --force'><gold>[d802]</gold></click>
-<click:run_command:'/do config set d803 shutdown true --force'><gold>[d803]</gold></click> <click:run_command:'/do config set d804 shutdown true --force'><gold>[d804]</gold></click>
-        """.trimIndent(),
+        fun toggleLabel(label: String, on: Boolean) = if (on) "<green>[$label: ON]</green>" else "<red>[$label: OFF]</red>"
 
-        """
-      <gold>Backups</gold>
+        val pages = listOf(
+            """
+  <italic><red>Dungeon Management</red></italic>
 
-<click:run_command:'/k8s create-snapshot builders'><aqua>[Snapshot Builders]</aqua></click>
+${dungeons.joinToString("\n") { dungeonLine(it) }}
 
-<click:run_command:'/k8s create-snapshot builders2'><aqua>[Snapshot Builders2]</aqua></click>
+ <click:run_command:'/do shutdown-all-empty-dungeons'><red>[Shutdown All Empty]</red></click>
+            """.trimIndent(),
 
-<click:run_command:'/k8s backup-database'><aqua>[Backup Database]</aqua></click>
-        """.trimIndent(),
+            """
+    <italic><gold>Debug Configs</gold></italic>
 
-        """
-   <gold>Instance Config</gold>
+<click:run_command:'/do details'>${toggleLabel("Dungeon Details", player.scoreboardTags.contains("details"))}</click>
+<click:run_command:'/do status'>${toggleLabel("Network Status", player.scoreboardTags.contains("debug"))}</click>
+<click:run_command:'/do debug'>${toggleLabel("Click Debug", plugin.config.getBoolean("debug"))}</click>
 
-Set dungeon-type to default:
-<click:run_command:'/do config set d800 dungeon-type default'><gold>[d800]</gold></click> <click:run_command:'/do config set d801 dungeon-type default'><gold>[d801]</gold></click> <click:run_command:'/do config set d802 dungeon-type default'><gold>[d802]</gold></click>
-<click:run_command:'/do config set d803 dungeon-type default'><gold>[d803]</gold></click> <click:run_command:'/do config set d804 dungeon-type default'><gold>[d804]</gold></click>
+<click:run_command:'/do config show'><gold>[List Configs]</gold></click>
+            """.trimIndent(),
+        )
 
-Set dungeon-type to season-2:
-<click:run_command:'/do config set d800 dungeon-type season-2'><aqua>[d800]</aqua></click> <click:run_command:'/do config set d801 dungeon-type season-2'><aqua>[d801]</aqua></click> <click:run_command:'/do config set d802 dungeon-type season-2'><aqua>[d802]</aqua></click>
-<click:run_command:'/do config set d803 dungeon-type season-2'><aqua>[d803]</aqua></click> <click:run_command:'/do config set d804 dungeon-type season-2'><aqua>[d804]</aqua></click>
-        """.trimIndent(),
-
-        """
-      <gold>Utilities</gold>
-
-<click:run_command:'/do status'><gold>[Toggle Status Board]</gold></click>
-<click:run_command:'/do debug'><gold>[Toggle Debug]</gold></click>
-<click:run_command:'/do config show'><gold>[Show My Config]</gold></click>
-        """.trimIndent(),
-    )
-
-    val components = pages.map { MiniMessage.miniMessage().deserialize(it) }
-    val book = Book.book(Component.text("Admin Panel"), Component.text("Tracked Out"), components)
-    player.openBook(book)
+        val components = pages.map { MiniMessage.miniMessage().deserialize(it) }
+        val book = Book.book(Component.text("Admin Panel"), Component.text("Tracked Out"), components)
+        player.openBook(book)
+    }
 }

@@ -2,19 +2,24 @@ package org.trackedout.citadel.commands
 
 import co.aikar.commands.BaseCommand
 import co.aikar.commands.annotation.CommandAlias
+import co.aikar.commands.annotation.CommandCompletion
 import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Description
 import co.aikar.commands.annotation.Subcommand
 import org.bukkit.command.CommandSender
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
+import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.client.apis.EventsApi
+import org.trackedout.client.apis.TasksApi
 import org.trackedout.client.models.Event
+import org.trackedout.client.models.Task
 
 @CommandAlias("decked-out|do|k8s")
 class ShutdownDungeonsCommand(
     private val plugin: Citadel,
     private val eventsApi: EventsApi,
+    private val tasksApi: TasksApi,
 ) : BaseCommand() {
 
     @Subcommand("shutdown-all-empty-dungeons")
@@ -36,4 +41,20 @@ class ShutdownDungeonsCommand(
         }
     }
 
+    @Subcommand("shutdown-dungeon")
+    @CommandPermission("decked-out.inventory.admin")
+    @CommandCompletion("@dungeonNames")
+    @Description("Shutdown a specific dungeon if empty")
+    fun shutdownDungeon(source: CommandSender, dungeon: String) {
+        plugin.async(source) {
+            tasksApi.tasksPost(
+                Task(
+                    type = "shutdown-server-if-empty",
+                    server = dungeon,
+                    arguments = emptyList(),
+                )
+            )
+            source.sendGreenMessage("Scheduled shutdown for $dungeon")
+        }
+    }
 }

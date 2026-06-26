@@ -34,7 +34,7 @@ class BookCommand(
     @CommandPermission("decked-out.book.admin")
     @Description("Open the server management book")
     fun adminBook(player: Player) {
-        showAdminBook(player)
+        showAdminBook(plugin, player, configApi)
     }
 
     @Subcommand("book cubby")

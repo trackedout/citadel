@@ -7,6 +7,7 @@ import co.aikar.commands.annotation.Description
 import co.aikar.commands.annotation.Subcommand
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.debugDetailsTag
 import org.trackedout.citadel.opsLogsTag
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
@@ -36,6 +37,19 @@ class StatusCommand(private val plugin: Citadel) : BaseCommand() {
         } else {
             player.sendGreyMessage("Removing debug tag, you will no longer see operator debug logs")
             player.scoreboardTags.remove(opsLogsTag)
+        }
+    }
+
+    @Subcommand("details")
+    @CommandPermission("decked-out.inventory.admin")
+    @Description("Toggle detailed dungeon list scoreboard")
+    fun toggleDetails(player: Player) {
+        if (!player.scoreboardTags.contains(debugDetailsTag)) {
+            player.sendGreenMessage("Showing detailed dungeon list")
+            player.scoreboardTags.add(debugDetailsTag)
+        } else {
+            player.sendGreyMessage("Hiding detailed dungeon list")
+            player.scoreboardTags.remove(debugDetailsTag)
         }
     }
 

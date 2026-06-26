@@ -37,6 +37,7 @@ import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
 import org.trackedout.citadel.commands.showArtifakeUIForPlayer
 import org.trackedout.citadel.commands.showBookUI
+import org.trackedout.citadel.commands.showAdminBook
 import org.trackedout.citadel.commands.showPlayerBook
 import org.trackedout.citadel.debug
 import org.trackedout.citadel.getAction
@@ -306,6 +307,12 @@ class EchoShardListener(
 
             if (item.getAction() == "show-player-settings") {
                 showPlayerBook(plugin, player, configApi, scoreApi)
+            }
+
+            if (item.getAction() == "show-admin-book") {
+                if (player.hasPermission("decked-out.book.admin")) {
+                    showAdminBook(plugin, player, configApi)
+                }
             }
 
             if (isRestrictedItem(item) && !player.scoreboardTags.contains("nocheck")) {
