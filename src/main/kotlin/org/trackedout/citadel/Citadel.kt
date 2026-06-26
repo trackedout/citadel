@@ -15,6 +15,7 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
+import org.trackedout.citadel.commands.BookCommand
 import org.trackedout.citadel.commands.ConfigCommand
 import org.trackedout.citadel.commands.CubbyManagementCommand
 import org.trackedout.citadel.commands.InventoryCommand
@@ -204,8 +205,9 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(LeaderboardCommand(this, configApi))
         manager.registerCommand(UnstuckCommand(this))
         manager.registerCommand(TrophyCommand(this, configApi))
+        manager.registerCommand(BookCommand(this, configApi, scoreApi))
 
-        val echoShardListener = EchoShardListener(this, inventoryApi, eventsApi, scoreApi, viewFrame, inventoryManager)
+        val echoShardListener = EchoShardListener(this, inventoryApi, eventsApi, scoreApi, configApi, viewFrame, inventoryManager)
         server.pluginManager.registerEvents(echoShardListener, this)
 
         logger.info("Citadel has been enabled. Server name: $serverName")

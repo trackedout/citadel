@@ -25,12 +25,14 @@ src/main/kotlin/org/trackedout/citadel/
 
 ## Build & Deploy
 
-Build mods and deploy to the lobby server (from `~/tracked-out/davybones`, not the citadel directory):
+Build, deploy, and reload the lobby server (from `~/tracked-out/davybones`, not the citadel directory):
 ```bash
-KUBECONTEXT=burn just build-mods && export ST=$(date -u +%FT%TZ) && KUBECONTEXT=burn just reload-lobby && kubectl --context burn logs -n davybones deployments/lobby --since-time="$ST"
+export ST=$(date -u +%FT%TZ) && KUBECONTEXT=burn just dev-lobby && sleep 10 && kubectl --context burn logs -n davybones deployments/lobby --since-time="$ST"
 ```
 
-You must ALWAYS reload-lobby after building to verify the plugin loads without errors. Never skip this step.
+`just dev-lobby` handles the full build and reload. Don't rebuild locally with `./gradlew` separately — just run `dev-lobby` and don't worry about caches.
+
+You must ALWAYS run dev-lobby after changes to verify the plugin loads without errors. Never skip this step.
 
 After verifying the plugin reloads cleanly, commit the changes with a descriptive message. Stage only the files you changed — don't use `git add .`. Use imperative mood, sentence case, no prefix, no trailing period (e.g. "Add /tots command with tp, list, search, info subcommands").
 

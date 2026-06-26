@@ -192,6 +192,15 @@ fun menuBook(): ItemStack = dungeonItem(
     customModelData = 0,
 ).withLore(text("An introduction to our server!", NamedTextColor.GOLD))
 
+fun settingsBook(): ItemStack = dungeonItem(
+    name = "❄☠ Player Settings ☠❄",
+    material = Material.WRITTEN_BOOK,
+    textColor = NamedTextColor.AQUA,
+    metadata = mapOf("deckId" to "", "action" to "show-player-settings"),
+    itemCount = 1,
+    customModelData = 0,
+).withLore(text("Configure your Decked Out experience!", NamedTextColor.AQUA))
+
 fun ItemStack.withTradeMeta(runType: String, tradeId: String): ItemStack {
     var metadata = mapOf(
         "deckId" to "${runType.shortRunType()}1",

@@ -75,12 +75,6 @@ class SpectateCommand(
                         return@forEach
                     }
 
-                    // TODO: Remove this check when season-2 is allowed to be spectated
-                    if (dungeonType == "season-2") {
-                        plugin.logger.info("Not allowing spectating of season-2 dungeons")
-                        return@forEach
-                    }
-
                     val isSpectatingEnabled = try {
                         configApi.configsGet(mongoPlayer.playerName, "allow-spectating").let { it.value == "true" }
                     } catch (e: ClientException) {

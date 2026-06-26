@@ -37,6 +37,7 @@ import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
 import org.trackedout.citadel.commands.showArtifakeUIForPlayer
 import org.trackedout.citadel.commands.showBookUI
+import org.trackedout.citadel.commands.showPlayerBook
 import org.trackedout.citadel.debug
 import org.trackedout.citadel.getAction
 import org.trackedout.citadel.getCard
@@ -66,6 +67,7 @@ import org.trackedout.citadel.isDeckedOutShulker
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.citadel.shop.getShopData
+import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.ScoreApi
@@ -83,6 +85,7 @@ class EchoShardListener(
     private val inventoryApi: InventoryApi,
     private val eventsApi: EventsApi,
     private val scoreApi: ScoreApi,
+    private val configApi: ConfigApi,
     private val viewFrame: ViewFrame,
     private val inventoryManager: InventoryManager,
 ) : BaseCommand(), Listener {
@@ -299,6 +302,10 @@ class EchoShardListener(
         if ((event.action == Action.RIGHT_CLICK_AIR || event.action == Action.RIGHT_CLICK_BLOCK)) {
             if (item.getAction() == "show-main-menu") {
                 showBookUI(plugin, player)
+            }
+
+            if (item.getAction() == "show-player-settings") {
+                showPlayerBook(plugin, player, configApi, scoreApi)
             }
 
             if (isRestrictedItem(item) && !player.scoreboardTags.contains("nocheck")) {

@@ -42,19 +42,6 @@ fun showBookUI(
 - <u><gold><click:open_url:'https://modrinth.com/modpack/trackedout'>Modpack (optional)</click></gold></u>
         """.trimIndent()
 
-        val page3 = """
-  Switch Mode (click!)
-
-      <click:run_command:'/do run-mode competitive'><aqua>[Competitive]</aqua></click>
-Limited shards, standard rules, and new content!
-
-      <click:run_command:'/do run-mode practice'><green>[Practice]</green></click>
-Infinite runs, open access to all cards.
-
-      <click:run_command:'/do run-mode hardcore'><red>[Hardcore]</red></click>
-Limited shards, deck lost on death.
-        """.trimIndent()
-
         val page4 = """
  How to play (page 1)
 
@@ -86,7 +73,6 @@ Limited shards, deck lost on death.
         val pages = mutableListOf(
             page1,
             page2,
-            page3,
             page4,
             page5,
             page6,
@@ -121,8 +107,7 @@ To stop spectating run <gold>/lobby</gold>
 
 4. How do I switch run modes?
 
-Use the <gold>Run Mode</gold> page in this book!
-Or run: <gold>/do run-mode <mode></gold>
+Open your <click:run_command:'/do book player'><gold>[Settings Book]</gold></click> and go to the <gold>Run Mode</gold> page.
         """.trimIndent())
 
         val components = pages.map {
