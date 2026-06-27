@@ -202,7 +202,7 @@ fun settingsBook(): ItemStack = dungeonItem(
 ).withLore(text("Configure your Decked Out experience!", NamedTextColor.AQUA))
 
 fun adminBook(): ItemStack = dungeonItem(
-    name = "❄☠ Admin Panel ☠❄",
+    name = "❄☠ Dungeon Ops ☠❄",
     material = Material.WRITTEN_BOOK,
     textColor = NamedTextColor.RED,
     metadata = mapOf("deckId" to "", "action" to "show-admin-book"),

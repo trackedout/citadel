@@ -46,6 +46,16 @@ ${dungeons.joinToString("\n") { dungeonLine(it) }}
             """.trimIndent(),
 
             """
+      <italic><gold>Backups</gold></italic>
+
+<click:run_command:'/k8s create-snapshot builders'><aqua>[Snapshot Builders]</aqua></click>
+
+<click:run_command:'/k8s create-snapshot builders2'><aqua>[Snapshot Builders2]</aqua></click>
+
+<click:run_command:'/k8s backup-database'><aqua>[Backup Database]</aqua></click>
+            """.trimIndent(),
+
+            """
     <italic><gold>Debug Configs</gold></italic>
 
 <click:run_command:'/do details'>${toggleLabel("Dungeon Details", player.scoreboardTags.contains("details"))}</click>
@@ -57,7 +67,7 @@ ${dungeons.joinToString("\n") { dungeonLine(it) }}
         )
 
         val components = pages.map { MiniMessage.miniMessage().deserialize(it) }
-        val book = Book.book(Component.text("Admin Panel"), Component.text("Tracked Out"), components)
+        val book = Book.book(Component.text("Dungeon Ops"), Component.text("Tracked Out"), components)
         player.openBook(book)
     }
 }
