@@ -28,7 +28,7 @@ class ScheduleJobCommand(
                     type = "run-job",
                     arguments = listOf(
                         "create-builders-snapshot", "wait-for-builders-snapshot",
-                        "upload-backups-to-s3", "wait-for-backup-upload",
+                        "upload-snapshot-b1", "wait-for-upload-snapshot-b1",
                         "import-latest-snapshot-from-s3", "wait-for-snapshot-import"
                     ),
                     server = "job-scheduler",
@@ -49,7 +49,7 @@ class ScheduleJobCommand(
                     type = "run-job",
                     arguments = listOf(
                         "create-builders2-snapshot", "wait-for-builders2-snapshot",
-                        "upload-backups-to-s3", "wait-for-backup-upload",
+                        "upload-snapshot-b2", "wait-for-upload-snapshot-b2",
                     ),
                     server = "job-scheduler",
                 )
@@ -69,7 +69,7 @@ class ScheduleJobCommand(
                     type = "run-job",
                     arguments = listOf(
                         "mongo-backup", "wait-for-mongo-backup",
-                        "upload-backups-to-s3-survival", "wait-for-survival-backup-upload",
+                        "upload-mongo-backups", "wait-for-upload-mongo-backups",
                     ),
                     server = "job-scheduler",
                 )
