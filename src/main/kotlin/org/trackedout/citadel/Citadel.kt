@@ -196,7 +196,7 @@ class Citadel : JavaPlugin() {
                 ShopView(),
             )
             .register()
-        manager.registerCommand(ManageDeckCommand(this, inventoryApi, eventsApi, viewFrame))
+        manager.registerCommand(ManageDeckCommand(this, inventoryApi, eventsApi, configApi, viewFrame))
         manager.registerCommand(SpectateCommand(this, eventsApi, configApi, viewFrame))
         manager.registerCommand(ConfigCommand(this, configApi))
         manager.registerCommand(ShulkerStyleCommand(configApi, inventoryManager))

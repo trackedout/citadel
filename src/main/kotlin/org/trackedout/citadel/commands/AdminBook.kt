@@ -26,12 +26,25 @@ fun showAdminBook(plugin: Citadel, player: Player, configApi: ConfigApi) {
             } catch (e: ClientException) { "default" }
         }
 
+        val queueDungeonTypes = listOf("practice", "competitive", "hardcore").associateWith { runType ->
+            try {
+                configApi.configsGet(runType, "default-dungeon-type").value ?: "default"
+            } catch (e: ClientException) { "default" }
+        }
+
         fun dungeonLine(d: String): String {
             val type = dungeonTypes[d] ?: "default"
             val s1Btn = if (type == "default") "<gold>[<u>S1</u>]</gold>" else "<click:run_command:'/do config set $d dungeon-type default'><gold>[S1]</gold></click>"
             val s2Btn = if (type == "season-2") "<aqua>[<u>S2</u>]</aqua>" else "<click:run_command:'/do config set $d dungeon-type season-2'><aqua>[S2]</aqua></click>"
             val shutdownBtn = "<click:run_command:'/do shutdown-dungeon $d'><red>[X]</red></click>"
             return "  $d $s1Btn $s2Btn $shutdownBtn"
+        }
+
+        fun queueTypeBtn(runType: String, label: String, colour: String): String {
+            val current = queueDungeonTypes[runType] ?: "default"
+            val s1Btn = if (current == "default") "<gold>[<u>S1</u>]</gold>" else "<click:run_command:'/do config set $runType default-dungeon-type default'><gold>[S1]</gold></click>"
+            val s2Btn = if (current == "season-2") "<aqua>[<u>S2</u>]</aqua>" else "<click:run_command:'/do config set $runType default-dungeon-type season-2'><aqua>[S2]</aqua></click>"
+            return "  <$colour>$label</$colour> $s1Btn $s2Btn"
         }
 
         fun toggleLabel(label: String, on: Boolean) = if (on) "<green>[$label: ON]</green>" else "<red>[$label: OFF]</red>"
@@ -43,6 +56,17 @@ fun showAdminBook(plugin: Citadel, player: Player, configApi: ConfigApi) {
 ${dungeons.joinToString("\n") { dungeonLine(it) }}
 
  <click:run_command:'/do shutdown-all-empty-dungeons'><red>[Shutdown All Empty]</red></click>
+            """.trimIndent(),
+
+            """
+     <italic><gold>Run Mode Defaults</gold></italic>
+     <gray>(for ALL players)</gray>
+
+${queueTypeBtn("practice", "Practice    ", "green")}
+
+${queueTypeBtn("competitive", "Competitive ", "aqua")}
+
+${queueTypeBtn("hardcore", "Hardcore   ", "red")}
             """.trimIndent(),
 
             """

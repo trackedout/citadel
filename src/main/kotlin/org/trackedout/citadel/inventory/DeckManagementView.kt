@@ -254,6 +254,7 @@ fun DeckId.isValidRunType(): Boolean = findRunTypeById(this) != null
 
 fun DeckId.isPractice(): Boolean = this.shortRunType() == "p"
 fun DeckId.isCompetitive(): Boolean = this.shortRunType() == "c"
+fun DeckId.isHardcore(): Boolean = this.shortRunType() == "h"
 
 fun DeckId.runType(): RunType = getRunTypeById(this)
 

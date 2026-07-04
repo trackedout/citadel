@@ -27,16 +27,19 @@ val toggleableConfigs = listOf(
     "allow-spectating"
 )
 
+// Requires 'decked-out.config.edit' permission
 val editableConfigs = listOf(
     "dungeon-type",
-    "datapack-version"
+    "datapack-version",
+    "default-dungeon-type",
 )
 
 private val configDescriptions = mapOf(
     "skip-door" to "Enable this to skip the door animation",
     "dungeon-type" to "The type of dungeon to generate (default / season-2)",
     "allow-spectating" to "Allow players to spectate your runs",
-    "shulker-style" to "Shulker box colour (in competitive mode)"
+    "shulker-style" to "Shulker box colour (in competitive mode)",
+    "default-dungeon-type" to "Dungeon season to use when queuing (default / season-2)",
 )
 
 private fun configDescription(key: String?): String = configDescriptions[key]?.let { "<gray>$it</gray>" } ?: ""
