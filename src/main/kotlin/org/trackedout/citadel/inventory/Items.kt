@@ -58,17 +58,17 @@ fun dungeonTome(
 fun dungeonSwiftnessPotion(
     runType: RunType,
     itemCount: Int,
-) = dungeonPotion(runType.displayName, PotionType.SPEED, "Splash Potion of Swiftness", false, true, runType.displayNamedText(), itemCount)
+) = dungeonPotion(runType.displayName, PotionType.SPEED, "Splash Potion of Swiftness", false, true, runType.displayNamedText(), itemCount, splash = true)
 
 fun dungeonSlownessPotion(
     runType: RunType,
     itemCount: Int,
-) = dungeonPotion(runType.displayName, PotionType.SLOWNESS, "Splash Potion of Slowness", false, true, runType.displayNamedText(), itemCount)
+) = dungeonPotion(runType.displayName, PotionType.SLOWNESS, "Splash Potion of Slowness", false, true, runType.displayNamedText(), itemCount, splash = true)
 
 fun dungeonWeaknessPotion(
     runType: RunType,
     itemCount: Int,
-) = dungeonPotion(runType.displayName, PotionType.WEAKNESS, "Splash Potion of Weakness", false, false, runType.displayNamedText(), itemCount)
+) = dungeonPotion(runType.displayName, PotionType.WEAKNESS, "Splash Potion of Weakness", false, false, runType.displayNamedText(), itemCount, splash = true)
 
 fun dungeonHealthPotion(
     runType: RunType,
@@ -83,8 +83,10 @@ fun dungeonPotion(
     upgraded: Boolean = false,
     textColor: NamedTextColor = NamedTextColor.AQUA,
     itemCount: Int = 1,
+    splash: Boolean = false,
 ): ItemStack {
-    val itemStack = ItemStack(Material.POTION, if (itemCount <= 0) 999 else itemCount)
+    val material = if (splash) Material.SPLASH_POTION else Material.POTION
+    val itemStack = ItemStack(material, if (itemCount <= 0) 999 else itemCount)
     val meta = itemStack.itemMeta as PotionMeta
     meta.basePotionData = PotionData(potionType, extended, upgraded)
     meta.displayName(text("${displayName} (${runType})", textColor))
