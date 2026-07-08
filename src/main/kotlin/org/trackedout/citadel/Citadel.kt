@@ -38,6 +38,7 @@ import org.trackedout.citadel.commands.shulkerColors
 import org.trackedout.citadel.commands.toggleableConfigs
 import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.inventory.AddACardView
+import org.trackedout.citadel.inventory.AddAnItemView
 import org.trackedout.citadel.inventory.BasicItemView
 import org.trackedout.citadel.inventory.CardActionView
 import org.trackedout.citadel.inventory.DeckInventoryView
@@ -186,6 +187,7 @@ class Citadel : JavaPlugin() {
         val viewFrame: ViewFrame = ViewFrame.create(this)
             .with(
                 AddACardView(),
+                AddAnItemView(),
                 BasicItemView(),
                 CardActionView(),
                 MoveCardView(),

@@ -125,6 +125,11 @@ open class DeckInventoryView : DeckManagementView() {
                 .cancelOnClick()
                 .withItem(namedItem(Material.SLIME_BLOCK, "Add a card"))
                 .onClick { _: StateValueHost? -> render.openForPlayer(AddACardView::class.java, getContext(render)) }
+
+            render.slot(rowCount(cards), 8)
+                .cancelOnClick()
+                .withItem(namedItem(Material.CHEST, "Add an item"))
+                .onClick { _: StateValueHost? -> render.openForPlayer(AddAnItemView::class.java, getContext(render)) }
         }
 
         cardConfig.sortedList().forEach { cardDefinition ->
