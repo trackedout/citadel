@@ -35,6 +35,7 @@ import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
+import org.trackedout.citadel.canTakeIntoDungeon
 import org.trackedout.citadel.commands.showArtifakeUIForPlayer
 import org.trackedout.citadel.commands.showBookUI
 import org.trackedout.citadel.commands.showAdminBook
@@ -43,6 +44,7 @@ import org.trackedout.citadel.debug
 import org.trackedout.citadel.getAction
 import org.trackedout.citadel.getCard
 import org.trackedout.citadel.getDeckId
+import org.trackedout.citadel.getTradeId
 import org.trackedout.citadel.hasDeckId
 import org.trackedout.citadel.inventory.DeckId
 import org.trackedout.citadel.inventory.DeckInventoryViewWithoutBack
@@ -242,9 +244,9 @@ class EchoShardListener(
         )
 
         val item = event.itemDrop.itemStack
-        if (isPracticeCard(item)) {
+        if (isPracticeCard(item) || isPracticeItem(item)) {
             event.isCancelled = true
-            player.debug("Replacing item drop event with card delete (for ${item.amount}x practice card)")
+            player.debug("Replacing item drop event with card/item delete (for ${item.amount}x practice card/item)")
             deleteCard(player, item.clone())
             item.amount = 0
         } else if (isRestrictedItem(item)) {
@@ -463,9 +465,9 @@ class EchoShardListener(
 
         val anyItemMatches = itemsToCheck.any { isRestrictedItem(it) }
         if (anyItemMatches) {
-            if (event.action in actionsToBlockRegardlessOfInventoryType && itemsToCheck.all { isPracticeCard(it) }) {
-                // Allow players to drop practice cards, but just delete it
-                player.debug("Allowing click action ${event.action} for practice card")
+            if (event.action in actionsToBlockRegardlessOfInventoryType && itemsToCheck.all { isPracticeCard(it) || isPracticeItem(it) }) {
+                // Allow players to drop practice cards/items, but just delete it
+                player.debug("Allowing click action ${event.action} for practice card/item")
             } else {
                 player.debug("Blocking click action ${event.action}")
                 event.isCancelled = true
@@ -476,19 +478,21 @@ class EchoShardListener(
     private fun deleteCard(player: Player, it: ItemStack) {
         val deckType = it.getDeckId()?.shortRunType()
         val card = it.getCard()
+        val tradeId = it.getTradeId()
 
-        if (deckType == null || card == null) {
-            plugin.logger.warning("Cannot delete card for item stack: $it (either deckType or resolved Card type is null)")
+        val itemName = card?.shorthand ?: tradeId
+        if (deckType == null || itemName == null) {
+            plugin.logger.warning("Cannot delete card/item for item stack: $it (either deckType or resolved Card/tradeId is null)")
             return
         }
 
         plugin.async(player) {
             for (i in 1..it.amount) {
-                plugin.logger.info("Deleting ${card.shorthand} (loop iteration ${i})")
+                plugin.logger.info("Deleting ${itemName} (loop iteration ${i})")
                 inventoryApi.inventoryDeleteCardPost(
                     Card(
                         player = player.name,
-                        name = card.shorthand,
+                        name = itemName,
                         deckType = deckType,
                         server = plugin.serverName,
                     )
@@ -516,6 +520,8 @@ class EchoShardListener(
     private fun isRestrictedItem(it: ItemStack) = it.itemMeta != null && it.hasDeckId()
 
     private fun isPracticeCard(it: ItemStack) = isRestrictedItem(it) && it.isDeckedOutCard() && it.getDeckId()?.isPractice() == true
+
+    private fun isPracticeItem(it: ItemStack) = isRestrictedItem(it) && it.canTakeIntoDungeon() && it.getDeckId()?.isPractice() == true
 }
 
 fun getCostForCrownTrade(plugin: Citadel, playerName: String, runType: RunType): Int? {
