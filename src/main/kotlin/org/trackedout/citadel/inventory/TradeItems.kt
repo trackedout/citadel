@@ -1,7 +1,10 @@
 package org.trackedout.citadel.inventory
 
+import net.kyori.adventure.text.Component.text
+import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
+import org.trackedout.actions.returnableItems
 import org.trackedout.citadel.config.cardConfig
 import org.trackedout.data.getRunTypeById
 
@@ -99,107 +102,115 @@ val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
 val intoDungeonItems: Map<String, ScoreboardDescriber> = mapOf(
     "SWIFTNESS_POTION" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return dungeonSwiftnessPotion(getRunTypeById(runType), count)
+            return dungeonSwiftnessPotion(getRunTypeById(runType), count).withDungeonItemLore("SWIFTNESS_POTION")
         }
     },
 
     "SLOWNESS_POTION" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return dungeonSlownessPotion(getRunTypeById(runType), count)
+            return dungeonSlownessPotion(getRunTypeById(runType), count).withDungeonItemLore("SLOWNESS_POTION")
         }
     },
 
     "WEAKNESS_POTION" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return dungeonWeaknessPotion(getRunTypeById(runType), count)
+            return dungeonWeaknessPotion(getRunTypeById(runType), count).withDungeonItemLore("WEAKNESS_POTION")
         }
     },
 
     "HEALTH_POTION" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return dungeonHealthPotion(getRunTypeById(runType), count)
+            return dungeonHealthPotion(getRunTypeById(runType), count).withDungeonItemLore("HEALTH_POTION")
         }
     },
 
     "CAVES_OF_CARNAGE_KEY" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return dungeonKeyLevel1(getRunTypeById(runType), count)
+            return dungeonKeyLevel1(getRunTypeById(runType), count).withDungeonItemLore("CAVES_OF_CARNAGE_KEY")
         }
     },
 
     "BLACK_MINES_KEY" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return dungeonKeyLevel2(getRunTypeById(runType), count)
+            return dungeonKeyLevel2(getRunTypeById(runType), count).withDungeonItemLore("BLACK_MINES_KEY")
         }
     },
 
     "BURNING_DARK_KEY" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return dungeonKeyLevel3(getRunTypeById(runType), count)
+            return dungeonKeyLevel3(getRunTypeById(runType), count).withDungeonItemLore("BURNING_DARK_KEY")
         }
     },
 
     "COIN" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return dungeonCoin(getRunTypeById(runType), count)
+            return dungeonCoin(getRunTypeById(runType), count).withDungeonItemLore("COIN")
         }
     },
 
     "RUSTY_REPAIR_KIT" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return repairKit(getRunTypeById(runType), count)
+            return repairKit(getRunTypeById(runType), count).withDungeonItemLore("RUSTY_REPAIR_KIT")
         }
     },
 
     "COPPER_BLOCK" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return basicDungeonItem("Copper Block", Material.COPPER_BLOCK, getRunTypeById(runType), count)
+            return basicDungeonItem("Copper Block", Material.COPPER_BLOCK, getRunTypeById(runType), count).withDungeonItemLore("COPPER_BLOCK")
         }
     },
 
     "EXPOSED_COPPER" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return basicDungeonItem("Exposed Copper", Material.EXPOSED_COPPER, getRunTypeById(runType), count)
+            return basicDungeonItem("Exposed Copper", Material.EXPOSED_COPPER, getRunTypeById(runType), count).withDungeonItemLore("EXPOSED_COPPER")
         }
     },
 
     "WEATHERED_COPPER" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return basicDungeonItem("Weathered Copper", Material.WEATHERED_COPPER, getRunTypeById(runType), count)
+            return basicDungeonItem("Weathered Copper", Material.WEATHERED_COPPER, getRunTypeById(runType), count).withDungeonItemLore("WEATHERED_COPPER")
         }
     },
 
     "OXIDIZED_COPPER" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return basicDungeonItem("Oxidized Copper", Material.OXIDIZED_COPPER, getRunTypeById(runType), count)
+            return basicDungeonItem("Oxidized Copper", Material.OXIDIZED_COPPER, getRunTypeById(runType), count).withDungeonItemLore("OXIDIZED_COPPER")
         }
     },
 
     "ICE" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return basicDungeonItem("Ice", Material.ICE, getRunTypeById(runType), count)
+            return basicDungeonItem("Ice", Material.ICE, getRunTypeById(runType), count).withDungeonItemLore("ICE")
         }
     },
 
     "PACKED_ICE" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return basicDungeonItem("Packed Ice", Material.PACKED_ICE, getRunTypeById(runType), count)
+            return basicDungeonItem("Packed Ice", Material.PACKED_ICE, getRunTypeById(runType), count).withDungeonItemLore("PACKED_ICE")
         }
     },
 
     "BLUE_ICE" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return basicDungeonItem("Blue Ice", Material.BLUE_ICE, getRunTypeById(runType), count)
+            return basicDungeonItem("Blue Ice", Material.BLUE_ICE, getRunTypeById(runType), count).withDungeonItemLore("BLUE_ICE")
         }
     },
 
     "RED_DYE" to object : ItemWithoutScoreboard {
         override fun itemStack(runType: String, count: Int): ItemStack {
-            return basicDungeonItem("Red Dye", Material.RED_DYE, getRunTypeById(runType), count)
+            return basicDungeonItem("Red Dye", Material.RED_DYE, getRunTypeById(runType), count).withDungeonItemLore("RED_DYE")
         }
     },
 
 )
+
+private fun ItemStack.withDungeonItemLore(itemKey: String): ItemStack {
+    return if (returnableItems.contains(itemKey)) {
+        this.withLore(text("Returned to deck on win", NamedTextColor.GREEN))
+    } else {
+        this.withLore(text("Consumed on dungeon entry", NamedTextColor.RED))
+    }
+}
 
 val tradeItems = baseTradeItems.plus(cardDescribers()).plus(intoDungeonItems)
 
