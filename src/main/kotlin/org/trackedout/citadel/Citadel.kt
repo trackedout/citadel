@@ -18,7 +18,6 @@ import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.commands.BookCommand
 import org.trackedout.citadel.commands.ConfigCommand
 import org.trackedout.citadel.commands.party.GameRegistryCache
-import org.trackedout.citadel.commands.party.PartyApi
 import org.trackedout.citadel.commands.party.PartyCommand
 import org.trackedout.citadel.commands.CubbyManagementCommand
 import org.trackedout.citadel.commands.InventoryCommand
@@ -61,7 +60,9 @@ import org.trackedout.citadel.mongo.MongoPlayer
 import org.trackedout.citadel.shop.ShopCommand
 import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.EventsApi
+import org.trackedout.client.apis.GameRegistryApi
 import org.trackedout.client.apis.InventoryApi
+import org.trackedout.client.apis.PartiesApi
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.apis.StatusApi
 import org.trackedout.client.apis.TasksApi
@@ -136,7 +137,7 @@ class Citadel : JavaPlugin() {
                 .build()
         )
 
-        val partyApi = PartyApi(
+        val partiesApi = PartiesApi(
             basePath = dungaAPIPath,
             client = OkHttpClient.Builder()
                 .connectTimeout(5.seconds.toJavaDuration())
@@ -144,16 +145,21 @@ class Citadel : JavaPlugin() {
                 .build()
         )
 
-        val gameRegistryCache = GameRegistryCache(this, partyApi)
+        val gameRegistryApi = GameRegistryApi(
+            basePath = dungaAPIPath,
+            client = OkHttpClient.Builder()
+                .connectTimeout(5.seconds.toJavaDuration())
+                .callTimeout(30.seconds.toJavaDuration())
+                .build()
+        )
+
+        val gameRegistryCache = GameRegistryCache(this, gameRegistryApi)
 
         val inventoryManager = InventoryManager(this, inventoryApi, scoreApi, eventsApi, configApi)
 
         MongoDBManager.initialize(mongoURI)
 
-        registerCommandCompletions()
-        manager.commandCompletions.registerAsyncCompletion("gameNames") { _ ->
-            gameRegistryCache.getGameNames()
-        }
+        registerCommandCompletions(gameRegistryCache)
 
         // https://github.com/aikar/commands/wiki/Real-World-Examples
         manager.enableUnstableAPI("help")
@@ -224,7 +230,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(UnstuckCommand(this))
         manager.registerCommand(TrophyCommand(this, configApi))
         manager.registerCommand(BookCommand(this, configApi, scoreApi))
-        manager.registerCommand(PartyCommand(this, partyApi, gameRegistryCache))
+        manager.registerCommand(PartyCommand(this, partiesApi, gameRegistryApi, gameRegistryCache))
 
         gameRegistryCache.startRefreshTask()
 
@@ -234,11 +240,14 @@ class Citadel : JavaPlugin() {
         logger.info("Citadel has been enabled. Server name: $serverName")
     }
 
-    private fun registerCommandCompletions() {
+    private fun registerCommandCompletions(gameRegistryCache: GameRegistryCache) {
         manager.commandCompletions.registerStaticCompletion("runTypes", runTypes.map { it.longId })
         manager.commandCompletions.registerStaticCompletion("toggleableConfigs", toggleableConfigs)
         manager.commandCompletions.registerStaticCompletion("editableConfigs", editableConfigs)
         manager.commandCompletions.registerStaticCompletion("shulkerColors", shulkerColors)
+        manager.commandCompletions.registerAsyncCompletion("gameNames") { _ ->
+            gameRegistryCache.getGameNames()
+        }
         manager.commandCompletions.registerAsyncCompletion("trophySections") { _ ->
             loadTrophySections().keys.toList()
         }
