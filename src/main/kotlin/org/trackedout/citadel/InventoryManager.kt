@@ -230,15 +230,13 @@ class InventoryManager(
                     if (inventoryFilterRunType != null && inventoryFilterRunType != runType) {
                         itemCount = 0
                     }
-                    val materialOverride = if (runType.shortId == 'c') {
-                        try {
-                            configApi.configsGet(player.name, "shulker-style").value
-                                ?.uppercase()
-                                ?.let { Material.valueOf("${it}_SHULKER_BOX") }
-                        } catch (e: ClientException) {
-                            null
-                        }
-                    } else null
+                    val materialOverride = try {
+                        configApi.configsGet(player.name, "shulker-style").value
+                            ?.uppercase()
+                            ?.let { Material.valueOf("${it}_SHULKER_BOX") }
+                    } catch (e: ClientException) {
+                        null
+                    }
                     player.ensureInventoryContains(knownItemTracker, dungeonDeck(runType, itemCount, materialOverride))
                     player.ensureInventoryContains(knownItemTracker, dungeonArtifacts(runType, itemCount))
                 }

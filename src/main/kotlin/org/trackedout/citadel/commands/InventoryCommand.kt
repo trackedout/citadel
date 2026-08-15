@@ -64,7 +64,7 @@ class InventoryCommand(
 
         plugin.async(source) {
 
-            if (runType.shortId == 'h') {
+            if (runType.longId == "hardcore") {
                 val hardcoreShards = scoreApi.scoresGet(
                     source.name,
                     prefixFilter = "do2.inventory.shards.hardcore"

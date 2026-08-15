@@ -3,7 +3,7 @@ package org.trackedout.citadel.config
 import org.trackedout.client.models.League
 
 data class RunType(
-    val shortId: Char,
+    val shortId: String,
     val longId: String,
     val displayName: String,
     val runTypeId: Int,
@@ -11,14 +11,14 @@ data class RunType(
     val displayColour: Int,
 ) {
     fun deckType(): String {
-        return shortId.toString()
+        return shortId
     }
 }
 
-val unknownRunType = RunType('u', "unknown", "Unknown", 99, "GRAY_SHULKER_BOX", 0x555555)
+val unknownRunType = RunType("u", "unknown", "Unknown", 99, "GRAY_SHULKER_BOX", 0x555555)
 
 fun runTypeFromLeague(league: League): RunType? {
-    val shortId = league.display?.shortId?.firstOrNull() ?: return null
+    val shortId = league.display?.shortId ?: return null
     val slug = league.slug ?: return null
     return RunType(
         shortId = shortId,
@@ -40,8 +40,8 @@ fun findRunTypeByIdFromCache(leagueCache: LeagueCache, id: String): RunType? {
         if (league != null) return runTypeFromLeague(league)
     }
 
-    // Try shortId (single char like "c")
-    val league = leagueCache.getLeagueByShortId(id.take(1))
+    // Try shortId match (e.g. "c", "mm", "s3")
+    val league = leagueCache.getLeagueByShortId(id)
         ?: leagueCache.getLeagueBySlug(id)
     return league?.let { runTypeFromLeague(it) }
 }
