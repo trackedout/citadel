@@ -164,7 +164,7 @@ open class DeckInventoryView : DeckManagementView() {
                 return@forEach
             }
 
-            val itemStack = entry.value.itemStack(deckId.displayName().lowercase(), count).withTradeMeta(deckId.shortRunType(), entry.key)
+            val itemStack = entry.value.itemStack(deckId.displayName(plugin[render].leagueCache).lowercase(), count).withTradeMeta(deckId.shortRunType(), entry.key)
             render.availableSlot(itemStack)
         }
     }

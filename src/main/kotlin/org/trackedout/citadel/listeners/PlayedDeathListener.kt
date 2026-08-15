@@ -10,7 +10,7 @@ import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Event
 import org.trackedout.client.models.Score
-import org.trackedout.data.getRunTypeById
+import org.trackedout.citadel.config.getRunTypeByIdFromCache
 
 class PlayedDeathListener(
     private val plugin: Citadel,
@@ -50,7 +50,7 @@ class PlayedDeathListener(
                     Score(
                         player = playerName,
                         key = INVENTORY_FILTER_MODE_SCOREBOARD,
-                        value = getRunTypeById("hardcore").runTypeId.toBigDecimal(),
+                        value = getRunTypeByIdFromCache(plugin.leagueCache, "hardcore").runTypeId.toBigDecimal(),
                     )
                 )
             )

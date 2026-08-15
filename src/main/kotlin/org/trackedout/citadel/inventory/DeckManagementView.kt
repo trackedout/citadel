@@ -15,9 +15,10 @@ import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.withTags
 import org.trackedout.client.models.Card
-import org.trackedout.data.RunType
-import org.trackedout.data.findRunTypeById
-import org.trackedout.data.getRunTypeById
+import org.trackedout.citadel.config.LeagueCache
+import org.trackedout.citadel.config.RunType
+import org.trackedout.citadel.config.findRunTypeByIdFromCache
+import org.trackedout.citadel.config.getRunTypeByIdFromCache
 import java.util.function.BiConsumer
 import java.util.function.Consumer
 
@@ -76,9 +77,9 @@ open class DeckManagementView : View() {
                     showDeckLink(
                         render,
                         i,
-                        "View ${deckId.displayName()} Deck #${deckId.id()} (contains ${cards.size} cards)",
+                        "View ${deckId.displayName(plugin[render].leagueCache)} Deck #${deckId.id()} (contains ${cards.size} cards)",
                         deckId,
-                        deckId.deckMaterial(),
+                        deckId.deckMaterial(plugin[render].leagueCache),
                     )
                     i++
                 }
@@ -246,18 +247,18 @@ fun DeckId.id(): String = this.substring(1)
 
 fun DeckId.shortRunType(): String = this.lowercase()[0].toString()
 
-fun DeckId.displayName(): String {
-    return getRunTypeById(this).displayName
+fun DeckId.displayName(leagueCache: LeagueCache): String {
+    return getRunTypeByIdFromCache(leagueCache, this).displayName
 }
 
-fun DeckId.isValidRunType(): Boolean = findRunTypeById(this) != null
+fun DeckId.isValidRunType(leagueCache: LeagueCache): Boolean = findRunTypeByIdFromCache(leagueCache, this) != null
 
 fun DeckId.isPractice(): Boolean = this.shortRunType() == "p"
 fun DeckId.isCompetitive(): Boolean = this.shortRunType() == "c"
 fun DeckId.isHardcore(): Boolean = this.shortRunType() == "h"
 
-fun DeckId.runType(): RunType = getRunTypeById(this)
+fun DeckId.runType(leagueCache: LeagueCache): RunType = getRunTypeByIdFromCache(leagueCache, this)
 
-fun DeckId.deckMaterial(): Material {
-    return Material.valueOf(getRunTypeById(this).deckMaterial)
+fun DeckId.deckMaterial(leagueCache: LeagueCache): Material {
+    return Material.valueOf(getRunTypeByIdFromCache(leagueCache, this).deckMaterial)
 }

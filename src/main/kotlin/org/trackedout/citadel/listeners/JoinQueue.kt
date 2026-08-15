@@ -36,7 +36,7 @@ fun createJoinQueueFunc(citadel: Citadel, eventsApi: EventsApi, player: Player):
                 )
             )
 
-            player.sendGreenMessage("Joining dungeon queue with ${deckId.displayName()} Deck #${deckId.id()}")
+            player.sendGreenMessage("Joining dungeon queue with ${deckId.displayName(citadel.leagueCache)} Deck #${deckId.id()}")
         }
     }
 

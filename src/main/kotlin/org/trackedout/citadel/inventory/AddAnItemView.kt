@@ -24,7 +24,7 @@ class AddAnItemView : DeckManagementView() {
             }
 
         intoDungeonItems.entries.forEachIndexed { index, (itemKey, describer) ->
-            val runType = deckId[render].displayName().lowercase()
+            val runType = deckId[render].displayName(plugin[render].leagueCache).lowercase()
             val itemStack = describer.itemStack(runType, 1).withTradeMeta(deckId[render].shortRunType(), itemKey)
 
             render.slot(index, itemStack)

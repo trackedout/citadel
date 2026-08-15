@@ -23,8 +23,8 @@ import org.trackedout.citadel.inventory.BasicItemView
 import org.trackedout.citadel.runOnNextTick
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.ScoreApi
-import org.trackedout.data.RunType
-import org.trackedout.data.getRunTypeById
+import org.trackedout.citadel.config.RunType
+import org.trackedout.citadel.config.getRunTypeByIdFromCache
 
 @CommandAlias("decked-out|do")
 class ShowArtifakesCommand(
@@ -62,7 +62,7 @@ fun showArtifakeUIForPlayer(
     runType: RunType? = null,
 ) {
     plugin.async(source) {
-        val runType = runType ?: getInventoryFilterForPlayer(plugin, scoreApi, playerName) ?: getRunTypeById("c")
+        val runType = runType ?: getInventoryFilterForPlayer(plugin, scoreApi, playerName) ?: getRunTypeByIdFromCache(plugin.leagueCache, "c")
         val runTypeLongId = runType.longId
         val scores = scoreApi.scoresGet(playerName, prefixFilter = "${runTypeLongId}-do2.artifakes.").results!!
 

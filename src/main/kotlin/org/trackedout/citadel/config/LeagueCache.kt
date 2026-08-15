@@ -12,6 +12,15 @@ class LeagueCache(
 ) {
     private val leagues = CopyOnWriteArrayList<League>()
 
+    companion object {
+        lateinit var instance: LeagueCache
+            private set
+    }
+
+    init {
+        instance = this
+    }
+
     fun startRefreshTask() {
         object : BukkitRunnable() {
             override fun run() {

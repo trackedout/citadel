@@ -13,7 +13,7 @@ import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.inventory.DeckId
 import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.data.BrillianceCard
-import org.trackedout.data.RunType
+import org.trackedout.citadel.config.RunType
 import org.trackedout.data.find
 
 val opsLogsTag = "debug" // Show ops notification messages

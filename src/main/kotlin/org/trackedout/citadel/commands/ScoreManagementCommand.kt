@@ -25,8 +25,8 @@ import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Card
 import org.trackedout.client.models.Event
 import org.trackedout.client.models.Score
-import org.trackedout.data.RunType
-import org.trackedout.data.runTypes
+import org.trackedout.citadel.config.RunType
+import org.trackedout.citadel.config.getRunTypesFromCache
 
 @CommandAlias("decked-out|do")
 class ScoreManagementCommand(
@@ -44,16 +44,16 @@ class ScoreManagementCommand(
     @CommandCompletion("@dbPlayers @nothing")
     fun listScores(source: CommandSender, playerName: String) {
         plugin.async(source) {
-            val scores = scoreApi.getInventoryRelatedScores(playerName)
+            val scores = scoreApi.getInventoryRelatedScores(plugin.leagueCache, playerName)
 
-            val applicableScores = scores.filter(::isInventoryRelatedScore)
+            val applicableScores = scores.filter { isInventoryRelatedScore(plugin.leagueCache, it) }
             if (applicableScores.isEmpty()) {
                 source.sendRedMessage("No applicable scores found for $playerName")
                 return@async
             }
 
             source.sendMessage("$playerName has the following scores (minus spent):")
-            for (runType in runTypes) {
+            for (runType in getRunTypesFromCache(plugin.leagueCache)) {
                 fun sortKey(score: Score): String? {
                     return score.key?.replace("${runType.longId}-", "")?.replace(runType.longId, "")
                 }
@@ -66,7 +66,7 @@ class ScoreManagementCommand(
     }
 
     private fun listScores(source: CommandSender, scores: Map<String, Int>, key: String, value: Int) {
-        for (runType in runTypes) {
+        for (runType in getRunTypesFromCache(plugin.leagueCache)) {
             when (key) {
                 // Shards
                 "do2.inventory.shards.${runType.longId}" -> {

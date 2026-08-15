@@ -10,7 +10,7 @@ import org.bukkit.inventory.meta.PotionMeta
 import org.bukkit.potion.PotionData
 import org.bukkit.potion.PotionType
 import org.trackedout.citadel.displayNamedText
-import org.trackedout.data.RunType
+import org.trackedout.citadel.config.RunType
 
 
 fun dungeonShard(runType: RunType, itemCount: Int): ItemStack {

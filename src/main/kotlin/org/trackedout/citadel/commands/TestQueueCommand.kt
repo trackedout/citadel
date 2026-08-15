@@ -92,7 +92,7 @@ class TestQueueCommand(
             val message = "[${current}/${world?.gameTime}] Sent { event=$eventName, count=$count, player=$playerName, location=[$x, $y, $z] } to Dunga Dunga"
             plugin.logger.info(message)
             sender.sendGreyMessage(message)
-            sender.sendGreenMessage("Placing ${playerName} into test dungeon queue with ${deckId.displayName()} Deck #${deckId.id()}")
+            sender.sendGreenMessage("Placing ${playerName} into test dungeon queue with ${deckId.displayName(plugin.leagueCache)} Deck #${deckId.id()}")
         }
     }
 }

@@ -70,9 +70,9 @@ import org.trackedout.client.apis.StatusApi
 import org.trackedout.client.apis.TasksApi
 import org.trackedout.client.infrastructure.ClientError
 import org.trackedout.client.infrastructure.ClientException
-import org.trackedout.data.RunType
-import org.trackedout.data.findRunTypeById
-import org.trackedout.data.runTypes
+import org.trackedout.citadel.config.RunType
+import org.trackedout.citadel.config.findRunTypeByIdFromCache
+import org.trackedout.citadel.config.getRunTypesFromCache
 import java.net.InetAddress
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
@@ -255,7 +255,7 @@ class Citadel : JavaPlugin() {
     }
 
     private fun registerCommandCompletions(gameRegistryCache: GameRegistryCache) {
-        manager.commandCompletions.registerStaticCompletion("runTypes", runTypes.map { it.longId })
+        manager.commandCompletions.registerStaticCompletion("runTypes", getRunTypesFromCache(leagueCache).map { it.longId })
         manager.commandCompletions.registerAsyncCompletion("leagueSlugs") { _ ->
             val leagues = leagueCache.getLeagues()
             val slugs = leagues.mapNotNull { it.slug }
@@ -300,7 +300,7 @@ class Citadel : JavaPlugin() {
 
         manager.commandContexts.registerContext(RunType::class.java) { context ->
             val arg = context.popFirstArg()
-            val runType = findRunTypeById(arg) ?: throw InvalidCommandArgument("Invalid run type: $arg")
+            val runType = findRunTypeByIdFromCache(leagueCache, arg) ?: throw InvalidCommandArgument("Invalid run type: $arg")
             runType
         }
     }

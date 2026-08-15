@@ -9,7 +9,7 @@ import org.trackedout.citadel.INVENTORY_FILTER_MODE_SCOREBOARD
 import org.trackedout.citadel.async
 import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.ScoreApi
-import org.trackedout.data.findRunTypeById
+import org.trackedout.citadel.config.findRunTypeByIdFromCache
 
 fun showPlayerBook(plugin: Citadel, player: Player, configApi: ConfigApi, scoreApi: ScoreApi, page: Int = 0) {
     plugin.async(player) {
@@ -20,7 +20,7 @@ fun showPlayerBook(plugin: Citadel, player: Player, configApi: ConfigApi, scoreA
         val currentRunMode = try {
             val score = scoreApi.scoresGet(player.name, prefixFilter = INVENTORY_FILTER_MODE_SCOREBOARD)
                 .results?.firstOrNull()
-            score?.let { findRunTypeById(it.value.toString()) }
+            score?.let { findRunTypeByIdFromCache(plugin.leagueCache, it.value.toString()) }
         } catch (e: Exception) { null }
 
         val skipDoor = configs.find { it.key == "skip-door" }?.value == "true"

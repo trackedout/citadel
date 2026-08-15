@@ -26,9 +26,9 @@ import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.models.Card
 import org.trackedout.client.models.Score
-import org.trackedout.data.RunType
+import org.trackedout.citadel.config.RunType
+import org.trackedout.citadel.config.findRunTypeByIdFromCache
 import org.trackedout.data.find
-import org.trackedout.data.findRunTypeById
 import org.trackedout.data.sortedList
 
 @CommandAlias("decked-out|do")
@@ -125,7 +125,7 @@ class InventoryCommand(
             cards.map { it.deckType }.distinct().forEach { deckType ->
                 val cardsForRunType = cards.filter { it.deckType == deckType }
                 val knownCount = cardsForRunType.count { it.name in knownShorthands }
-                source.sendGreenMessage("${target}'s ${deckType?.displayName()} deck contains ${knownCount} cards:")
+                source.sendGreenMessage("${target}'s ${deckType?.displayName(plugin.leagueCache)} deck contains ${knownCount} cards:")
 
                 knownCards.forEach {
                     var textColor = it.tag.nameFormat?.color?.let(TextColor::fromHexString)
@@ -270,9 +270,9 @@ class InventoryCommand(
 
         if (league != null) {
             val shortId = league.display?.shortId ?: return null
-            return findRunTypeById(shortId)
+            return findRunTypeByIdFromCache(plugin.leagueCache, shortId)
         }
 
-        return findRunTypeById(leagueSlugOrShortId)
+        return findRunTypeByIdFromCache(plugin.leagueCache, leagueSlugOrShortId)
     }
 }

@@ -26,11 +26,11 @@ import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.infrastructure.ClientException
 import org.trackedout.client.models.Event
-import org.trackedout.client.models.League
 import org.trackedout.client.models.Score
-import org.trackedout.data.RunType
-import org.trackedout.data.findRunTypeById
-import org.trackedout.data.runTypes
+import org.trackedout.citadel.config.RunType
+import org.trackedout.citadel.config.LeagueCache
+import org.trackedout.citadel.config.findRunTypeByIdFromCache
+import org.trackedout.citadel.config.getRunTypesFromCache
 import org.trackedout.data.sortedList
 
 const val INVENTORY_FILTER_MODE_SCOREBOARD = "do2.inventory.filter-mode-id"
@@ -43,10 +43,7 @@ class InventoryManager(
     private val configApi: ConfigApi,
 ) {
     private fun effectiveRunTypes(): List<RunType> {
-        val leagues = plugin.leagueCache.getLeagues()
-        if (leagues.isEmpty()) return runTypes
-
-        return leagues.mapNotNull { it.toRunType() }
+        return getRunTypesFromCache(plugin.leagueCache)
     }
 
     fun updateInventoryBasedOnScore(player: Player) {
@@ -54,15 +51,15 @@ class InventoryManager(
 
         plugin.async(player) {
             val playerName = player.name
-            plugin.logger.info("Fetching scores for $playerName (filtering for prefixes: ${tradeSourceScores})")
-            var scores = scoreApi.getInventoryRelatedScores(playerName)
+            plugin.logger.info("Fetching scores for $playerName (filtering for prefixes: ${tradeSourceScores(plugin.leagueCache)})")
+            var scores = scoreApi.getInventoryRelatedScores(plugin.leagueCache, playerName)
 
             if (ensurePlayerHasPracticeShards(playerName, scores)) {
                 // Update scores again to reflect new shard count
-                scores = scoreApi.getInventoryRelatedScores(playerName)
+                scores = scoreApi.getInventoryRelatedScores(plugin.leagueCache, playerName)
             }
 
-            scores = scores.filter(::isInventoryRelatedScore)
+            scores = scores.filter { isInventoryRelatedScore(plugin.leagueCache, it) }
             val inventoryFilterRunType = getInventoryFilterForPlayer(this.plugin, this.scoreApi, playerName)
             if (inventoryFilterRunType != null) {
                 val tradeSourcesForFilter = getTradeSourcesForRunTypes(listOf(inventoryFilterRunType))
@@ -316,7 +313,7 @@ class InventoryManager(
         val playerName = player.name
 
         try {
-            val runType = "c".displayName().lowercase()
+            val runType = "c".displayName(plugin.leagueCache).lowercase()
             val advancementFilter = "$runType-advancement-"
 
             plugin.logger.info("Score filter for advancements: $advancementFilter")
@@ -392,7 +389,7 @@ class InventoryManager(
     }
 }
 
-val tradeSourceScores = getTradeSourcesForRunTypes(runTypes)
+fun tradeSourceScores(leagueCache: LeagueCache) = getTradeSourcesForRunTypes(getRunTypesFromCache(leagueCache))
 
 fun getTradeSourcesForRunTypes(runTypes: List<RunType>) = baseTradeItems.values.flatMap {
     runTypes.map(RunType::longId).map { runType ->
@@ -403,14 +400,14 @@ fun getTradeSourcesForRunTypes(runTypes: List<RunType>) = baseTradeItems.values.
     }.flatten()
 }.filterNot { it.isBlank() }.distinct()
 
-fun ScoreApi.getInventoryRelatedScores(playerName: String): List<Score> {
-    return tradeSourceScores.flatMap {
+fun ScoreApi.getInventoryRelatedScores(leagueCache: LeagueCache, playerName: String): List<Score> {
+    return tradeSourceScores(leagueCache).flatMap {
         this.scoresGet(playerName, prefixFilter = it).results!!
     }
 }
 
-fun isInventoryRelatedScore(score: Score): Boolean {
-    return tradeSourceScores.contains(score.key!!)
+fun isInventoryRelatedScore(leagueCache: LeagueCache, score: Score): Boolean {
+    return tradeSourceScores(leagueCache).contains(score.key!!)
 }
 
 fun getInventoryFilterForPlayer(
@@ -425,24 +422,11 @@ fun getInventoryFilterForPlayer(
     // If the filter is set, only include scores for that run type
     plugin.logger.info("Inventory filter for $playerName is ${inventoryFilterMode?.value}")
     val inventoryFilterRunType = inventoryFilterMode?.let { runTypeId: Score ->
-        val runType = findRunTypeById(runTypeId.value.toString())
+        val runType = findRunTypeByIdFromCache(plugin.leagueCache, runTypeId.value.toString())
         plugin.logger.info("Run type for $playerName is $runType")
 
         runType
     }
 
     return inventoryFilterRunType
-}
-
-private fun League.toRunType(): RunType? {
-    val shortId = display?.shortId?.firstOrNull() ?: return null
-    val slug = slug ?: return null
-    return RunType(
-        shortId = shortId,
-        longId = slug,
-        displayName = displayName ?: slug,
-        runTypeId = 0,
-        deckMaterial = display?.material ?: "GRAY_SHULKER_BOX",
-        displayColour = display?.colour ?: 0x555555,
-    )
 }
