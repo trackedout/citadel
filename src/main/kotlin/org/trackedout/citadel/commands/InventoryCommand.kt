@@ -28,6 +28,7 @@ import org.trackedout.client.models.Card
 import org.trackedout.client.models.Score
 import org.trackedout.data.RunType
 import org.trackedout.data.find
+import org.trackedout.data.findRunTypeById
 import org.trackedout.data.sortedList
 
 @CommandAlias("decked-out|do")
@@ -53,8 +54,28 @@ class InventoryCommand(
     @Subcommand("run-mode")
     @CommandPermission("decked-out.inventory.set-run-mode")
     @Description("Set run mode for inventory filtering")
-    @CommandCompletion("@runTypes @nothing")
-    fun setRunMode(source: Player, runType: RunType) {
+    @CommandCompletion("@leagueSlugs @nothing")
+    fun setRunMode(source: Player, leagueSlugOrShortId: String) {
+        val league = plugin.leagueCache.getLeagueBySlug(leagueSlugOrShortId)
+            ?: plugin.leagueCache.getLeagueByShortId(leagueSlugOrShortId)
+
+        if (league == null) {
+            source.sendRedMessage("Unknown league: $leagueSlugOrShortId")
+            return
+        }
+
+        val shortId = league.display?.shortId
+        if (shortId == null) {
+            source.sendRedMessage("League '${league.slug}' has no shortId configured")
+            return
+        }
+
+        val runType = findRunTypeById(shortId)
+        if (runType == null) {
+            source.sendRedMessage("No matching run type found for league '${league.slug}' (shortId: $shortId)")
+            return
+        }
+
         plugin.async(source) {
 
             if (runType.shortId == 'h') {
