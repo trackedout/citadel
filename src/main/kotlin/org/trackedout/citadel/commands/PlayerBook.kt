@@ -47,12 +47,7 @@ fun showPlayerBook(plugin: Citadel, player: Player, configApi: ConfigApi, scoreA
             else -> "aqua"
         }
 
-        val runModeDisplay = currentRunMode?.displayName ?: "Competitive"
-        val runModeColour = when (currentRunMode?.shortId) {
-            'p' -> "green"
-            'h' -> "red"
-            else -> "aqua"
-        }
+
 
         // ~114px per line, ~14 lines per page
         // Approx chars: lowercase ~6px, uppercase ~6px, space ~4px, bold +1px/char
@@ -63,27 +58,28 @@ fun showPlayerBook(plugin: Citadel, player: Player, configApi: ConfigApi, scoreA
             return "<click:run_command:'/do shulker-style $id'><$tag>[$display]</$tag></click>"
         }
 
+        val leagueButtons = plugin.leagueCache.getLeagues().joinToString("\n\n") { league ->
+            val colour = league.display?.colour?.let { String.format("#%06x", it) } ?: "#ffffff"
+            val slug = league.slug ?: "unknown"
+            val name = league.displayName ?: slug
+            val shortId = league.display?.shortId
+            val isSelected = currentRunMode?.shortId?.toString() == shortId
+            val description = league.description ?: ""
+
+            if (isSelected) {
+                "<color:$colour>>> $name <<</color>\n$description"
+            } else {
+                "<click:run_command:'/do run-mode $slug'><color:$colour>[$name]</color></click>\n$description"
+            }
+        }
+
         val pages = listOf(
 
             // Page 1: Run Mode
-            // Centering: 114px line width, space=4px
-            // >> Competitive << ~88px -> 3 spaces
-            // [Competitive] ~70px -> 5 spaces
-            // >> Practice << ~72px -> 5 spaces
-            // [Practice] ~54px -> 7 spaces
-            // >> Hardcore << ~72px -> 5 spaces
-            // [Hardcore] ~54px -> 7 spaces
             """
    <italic><gold>Run Mode</gold> (click!)</italic>
 
-${if (currentRunMode?.shortId == 'c') "   <aqua>>> Competitive <<</aqua>" else "     <click:run_command:'/do run-mode competitive'><aqua>[Competitive]</aqua></click>"}
-Limited shards, standard rules, and new content!
-
-${if (currentRunMode?.shortId == 'p') "     <green>>> Practice <<</green>" else "      <click:run_command:'/do run-mode practice'><green>[Practice]</green></click>"}
-Infinite runs, open access to all cards.
-
-${if (currentRunMode?.shortId == 'h') "     <red>>> Hardcore <<</red>" else "      <click:run_command:'/do run-mode hardcore'><red>[Hardcore]</red></click>"}
-Limited shards, deck lost on death.
+$leagueButtons
             """.trimIndent(),
 
             // Page 2: Quick actions
