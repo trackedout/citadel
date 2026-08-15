@@ -221,7 +221,7 @@ class EchoShardListener(
             inventoryManager.updateInventoryBasedOnScore(it)
         }
 
-        val joinQueueFunc = createJoinQueueFunc(plugin, eventsApi, configApi, player)
+        val joinQueueFunc = createJoinQueueFunc(plugin, eventsApi, player)
 
         val context = mutableMapOf(
             PLUGIN to plugin,

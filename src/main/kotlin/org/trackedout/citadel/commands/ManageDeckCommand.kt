@@ -15,7 +15,6 @@ import org.trackedout.citadel.inventory.DeckManagementView
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.createContext
 import org.trackedout.citadel.listeners.createJoinQueueFunc
 import org.trackedout.citadel.sendGreenMessage
-import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Card
@@ -26,7 +25,6 @@ class ManageDeckCommand(
     private val plugin: Citadel,
     private val inventoryApi: InventoryApi,
     private val eventsApi: EventsApi,
-    private val configApi: ConfigApi,
     private val viewFrame: ViewFrame,
 ) : BaseCommand() {
     @Subcommand("edit")
@@ -86,7 +84,7 @@ class ManageDeckCommand(
             }
         }
 
-        val joinQueueFunc = createJoinQueueFunc(plugin, eventsApi, configApi, player)
+        val joinQueueFunc = createJoinQueueFunc(plugin, eventsApi, player)
 
         val context = createContext(plugin, player, allCards, addCardFunc, deleteCardFunc, moveCardFunc, joinQueueFunc)
         viewFrame.open(DeckManagementView::class.java, player, context)

@@ -233,7 +233,7 @@ class Citadel : JavaPlugin() {
                 ShopView(),
             )
             .register()
-        manager.registerCommand(ManageDeckCommand(this, inventoryApi, eventsApi, configApi, viewFrame))
+        manager.registerCommand(ManageDeckCommand(this, inventoryApi, eventsApi, viewFrame))
         manager.registerCommand(SpectateCommand(this, eventsApi, configApi, viewFrame))
         manager.registerCommand(ConfigCommand(this, configApi))
         manager.registerCommand(ShulkerStyleCommand(configApi, inventoryManager))
@@ -256,6 +256,9 @@ class Citadel : JavaPlugin() {
 
     private fun registerCommandCompletions(gameRegistryCache: GameRegistryCache) {
         manager.commandCompletions.registerStaticCompletion("runTypes", runTypes.map { it.longId })
+        manager.commandCompletions.registerAsyncCompletion("leagueSlugs") { _ ->
+            leagueCache.getLeagues().mapNotNull { it.slug }
+        }
         manager.commandCompletions.registerStaticCompletion("toggleableConfigs", toggleableConfigs)
         manager.commandCompletions.registerStaticCompletion("editableConfigs", editableConfigs)
         manager.commandCompletions.registerStaticCompletion("shulkerColors", shulkerColors)

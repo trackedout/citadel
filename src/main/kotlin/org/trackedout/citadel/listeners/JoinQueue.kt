@@ -6,31 +6,18 @@ import org.trackedout.citadel.async
 import org.trackedout.citadel.inventory.DeckId
 import org.trackedout.citadel.inventory.displayName
 import org.trackedout.citadel.inventory.id
-import org.trackedout.citadel.inventory.isCompetitive
-import org.trackedout.citadel.inventory.isHardcore
-import org.trackedout.citadel.inventory.isPractice
 import org.trackedout.citadel.inventory.shortRunType
 import org.trackedout.citadel.sendGreenMessage
-import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.EventsApi
-import org.trackedout.client.infrastructure.ClientException
 import org.trackedout.client.models.Event
 import java.util.function.Consumer
 
-private fun resolveRunTypeLabel(deckId: DeckId): String = when {
-    deckId.isPractice() -> "practice"
-    deckId.isCompetitive() -> "competitive"
-    deckId.isHardcore() -> "hardcore"
-    else -> "unknown"
-}
-
-fun createJoinQueueFunc(citadel: Citadel, eventsApi: EventsApi, configApi: ConfigApi, player: Player): Consumer<String> {
+fun createJoinQueueFunc(citadel: Citadel, eventsApi: EventsApi, player: Player): Consumer<String> {
     val joinQueueFunc = Consumer<DeckId> { deckId ->
         citadel.async(player) {
-            val runTypeLabel = resolveRunTypeLabel(deckId)
-            val dungeonType = try {
-                configApi.configsGet(runTypeLabel, "default-dungeon-type").value ?: "default"
-            } catch (e: ClientException) { "default" }
+            val shortRunType = deckId.shortRunType()
+            val league = citadel.leagueCache.getLeagueByShortId(shortRunType)
+            val dungeonType = league?.dungeon?.type ?: "default"
 
             eventsApi.eventsPost(
                 Event(
