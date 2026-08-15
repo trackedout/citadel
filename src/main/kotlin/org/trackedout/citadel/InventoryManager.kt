@@ -26,6 +26,7 @@ import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.infrastructure.ClientException
 import org.trackedout.client.models.Event
+import org.trackedout.client.models.League
 import org.trackedout.client.models.Score
 import org.trackedout.data.RunType
 import org.trackedout.data.findRunTypeById
@@ -41,6 +42,13 @@ class InventoryManager(
     private val eventsApi: EventsApi,
     private val configApi: ConfigApi,
 ) {
+    private fun effectiveRunTypes(): List<RunType> {
+        val leagues = plugin.leagueCache.getLeagues()
+        if (leagues.isEmpty()) return runTypes
+
+        return leagues.mapNotNull { it.toRunType() }
+    }
+
     fun updateInventoryBasedOnScore(player: Player) {
         val knownItemTracker = mutableSetOf<ItemStack>()
 
@@ -95,7 +103,7 @@ class InventoryManager(
         // For each card in the player's inventory, ensure they only have the correct amount
         val deckItems = inventoryApi.inventoryCardsGet(player = player.name, limit = 1000).results!!
 
-        runTypes.forEach { runType ->
+        effectiveRunTypes().forEach { runType ->
 
             // Check cards against contents of player's deck
             cardConfig.sortedList().forEach { card ->
@@ -196,7 +204,7 @@ class InventoryManager(
     ) {
         plugin.logger.info("Player ${player.name} has inventory score $key=$value")
 
-        for (runType in runTypes.map { it.longId }) {
+        for (runType in effectiveRunTypes().map { it.longId }) {
             baseTradeItems.forEach { it: Map.Entry<String, ScoreboardDescriber> ->
                 val sb = it.value
                 val sourceScoreKey = sb.sourceScoreboardName(runType)
@@ -217,7 +225,7 @@ class InventoryManager(
             }
         }
 
-        for (runType in runTypes) {
+        for (runType in effectiveRunTypes()) {
             when (key) {
                 // Shards
                 "do2.inventory.shards.${runType.longId}" -> {
@@ -424,4 +432,17 @@ fun getInventoryFilterForPlayer(
     }
 
     return inventoryFilterRunType
+}
+
+private fun League.toRunType(): RunType? {
+    val shortId = display?.shortId?.firstOrNull() ?: return null
+    val slug = slug ?: return null
+    return RunType(
+        shortId = shortId,
+        longId = slug,
+        displayName = displayName ?: slug,
+        runTypeId = 0,
+        deckMaterial = display?.material ?: "GRAY_SHULKER_BOX",
+        displayColour = display?.colour ?: 0x555555,
+    )
 }
