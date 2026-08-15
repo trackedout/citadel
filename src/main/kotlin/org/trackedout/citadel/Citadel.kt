@@ -18,6 +18,7 @@ import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.commands.BookCommand
 import org.trackedout.citadel.commands.ConfigCommand
 import org.trackedout.citadel.commands.party.GameRegistryCache
+import org.trackedout.citadel.config.LeagueCache
 import org.trackedout.citadel.commands.party.PartyCommand
 import org.trackedout.citadel.commands.CubbyManagementCommand
 import org.trackedout.citadel.commands.InventoryCommand
@@ -62,6 +63,7 @@ import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.GameRegistryApi
 import org.trackedout.client.apis.InventoryApi
+import org.trackedout.client.apis.LeaguesApi
 import org.trackedout.client.apis.PartiesApi
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.apis.StatusApi
@@ -84,6 +86,7 @@ class Citadel : JavaPlugin() {
     val dungaAPIPath by lazy { getEnvOrDefault("DUNGA_API", "http://localhost:3000/v1") }
     val mongoURI by lazy { getEnvOrDefault("MONGODB_URL", "") }
     lateinit var leaderboardTaskRunner: LeaderboardTaskRunner
+    lateinit var leagueCache: LeagueCache
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -153,7 +156,17 @@ class Citadel : JavaPlugin() {
                 .build()
         )
 
+        val leaguesApi = LeaguesApi(
+            basePath = dungaAPIPath,
+            client = OkHttpClient.Builder()
+                .connectTimeout(5.seconds.toJavaDuration())
+                .callTimeout(30.seconds.toJavaDuration())
+                .build()
+        )
+
         val gameRegistryCache = GameRegistryCache(this, gameRegistryApi)
+
+        leagueCache = LeagueCache(this, leaguesApi)
 
         val inventoryManager = InventoryManager(this, inventoryApi, scoreApi, eventsApi, configApi)
 
@@ -233,6 +246,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(PartyCommand(this, partiesApi, gameRegistryApi, gameRegistryCache))
 
         gameRegistryCache.startRefreshTask()
+        leagueCache.startRefreshTask()
 
         val echoShardListener = EchoShardListener(this, inventoryApi, eventsApi, scoreApi, configApi, viewFrame, inventoryManager)
         server.pluginManager.registerEvents(echoShardListener, this)
