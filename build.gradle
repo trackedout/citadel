@@ -138,7 +138,6 @@ shadowJar {
     relocate "co.aikar.commands", "org.trackedout.citadel.acf"
     relocate "co.aikar.locales", "org.trackedout.citadel.locales"
     relocate "com.saicone.rtag", project.group + ".libs.rtag"
-    relocate "org.trackedout.client", project.group + ".libs.dungadunga"
     relocate "xyz.upperlevel.spigot.book", project.group + ".libs.spigot.book"
 }
 
