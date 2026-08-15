@@ -16,7 +16,6 @@ import org.trackedout.citadel.getInventoryRelatedScores
 import org.trackedout.citadel.inventory.Trade
 import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.citadel.isInventoryRelatedScore
-import org.trackedout.citadel.listeners.getCostForCrownTrade
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendMessage
 import org.trackedout.citadel.sendRedMessage
@@ -159,19 +158,4 @@ class ScoreManagementCommand(
         }
     }
 
-    @Subcommand("list-shard-costs")
-    @Syntax("<player>")
-    @CommandPermission("decked-out.inventory.admin")
-    @Description("Calculate and list shard cost for a player")
-    @CommandCompletion("@dbPlayers @nothing")
-    fun listShardCosts(source: CommandSender, playerName: String) {
-        plugin.async(source) {
-            source.sendMessage("$playerName has the following shard costs:")
-            for (runType in runTypes) {
-                getCostForCrownTrade(plugin, playerName, runType).let { cost ->
-                    source.sendMessage("- ${runType.displayName} = ${cost ?: 10} crowns", runType.displayNamedText())
-                }
-            }
-        }
-    }
 }
