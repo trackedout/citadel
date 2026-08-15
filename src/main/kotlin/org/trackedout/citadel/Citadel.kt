@@ -255,7 +255,9 @@ class Citadel : JavaPlugin() {
     }
 
     private fun registerCommandCompletions(gameRegistryCache: GameRegistryCache) {
-        manager.commandCompletions.registerStaticCompletion("runTypes", getRunTypesFromCache(leagueCache).map { it.longId })
+        manager.commandCompletions.registerAsyncCompletion("runTypes") { _ ->
+            getRunTypesFromCache(leagueCache).map { it.longId }
+        }
         manager.commandCompletions.registerAsyncCompletion("leagueSlugs") { _ ->
             val leagues = leagueCache.getLeagues()
             val slugs = leagues.mapNotNull { it.slug }

@@ -24,7 +24,7 @@ fun runTypeFromLeague(league: League): RunType? {
         shortId = shortId,
         longId = slug,
         displayName = league.displayName ?: slug,
-        runTypeId = 0,
+        runTypeId = league.display?.runTypeId ?: 0,
         deckMaterial = league.display?.material ?: "GRAY_SHULKER_BOX",
         displayColour = league.display?.colour ?: 0x555555,
     )
@@ -33,6 +33,14 @@ fun runTypeFromLeague(league: League): RunType? {
 fun findRunTypeByIdFromCache(leagueCache: LeagueCache, id: String): RunType? {
     if (id.isEmpty()) return null
 
+    // Try numeric runTypeId lookup (e.g., "2" from the filter-mode scoreboard)
+    val numericId = id.toIntOrNull()
+    if (numericId != null) {
+        val league = leagueCache.getLeagues().find { it.display?.runTypeId == numericId }
+        if (league != null) return runTypeFromLeague(league)
+    }
+
+    // Try shortId (single char like "c")
     val league = leagueCache.getLeagueByShortId(id.take(1))
         ?: leagueCache.getLeagueBySlug(id)
     return league?.let { runTypeFromLeague(it) }
