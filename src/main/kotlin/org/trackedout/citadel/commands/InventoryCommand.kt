@@ -56,23 +56,9 @@ class InventoryCommand(
     @Description("Set run mode for inventory filtering")
     @CommandCompletion("@leagueSlugs @nothing")
     fun setRunMode(source: Player, leagueSlugOrShortId: String) {
-        val league = plugin.leagueCache.getLeagueBySlug(leagueSlugOrShortId)
-            ?: plugin.leagueCache.getLeagueByShortId(leagueSlugOrShortId)
-
-        if (league == null) {
-            source.sendRedMessage("Unknown league: $leagueSlugOrShortId")
-            return
-        }
-
-        val shortId = league.display?.shortId
-        if (shortId == null) {
-            source.sendRedMessage("League '${league.slug}' has no shortId configured")
-            return
-        }
-
-        val runType = findRunTypeById(shortId)
+        val runType = resolveRunType(leagueSlugOrShortId)
         if (runType == null) {
-            source.sendRedMessage("No matching run type found for league '${league.slug}' (shortId: $shortId)")
+            source.sendRedMessage("Unknown league or run type: $leagueSlugOrShortId")
             return
         }
 
@@ -276,5 +262,17 @@ class InventoryCommand(
             plugin.logger.severe("Failed to $action $cardName to/from $target's ${runType.displayName} deck. Exception: $e")
             source.sendRedMessage("Failed to $action $cardName to $target's ${runType.displayName} deck. Exception: $e")
         }
+    }
+
+    private fun resolveRunType(leagueSlugOrShortId: String): RunType? {
+        val league = plugin.leagueCache.getLeagueBySlug(leagueSlugOrShortId)
+            ?: plugin.leagueCache.getLeagueByShortId(leagueSlugOrShortId)
+
+        if (league != null) {
+            val shortId = league.display?.shortId ?: return null
+            return findRunTypeById(shortId)
+        }
+
+        return findRunTypeById(leagueSlugOrShortId)
     }
 }
