@@ -23,6 +23,7 @@ import org.trackedout.citadel.commands.party.PartyCommand
 import org.trackedout.citadel.commands.CubbyManagementCommand
 import org.trackedout.citadel.commands.InventoryCommand
 import org.trackedout.citadel.commands.LeaderboardCommand
+import org.trackedout.citadel.commands.LeagueCommand
 import org.trackedout.citadel.commands.LogEventCommand
 import org.trackedout.citadel.commands.ManageDeckCommand
 import org.trackedout.citadel.commands.ScheduleJobCommand
@@ -244,6 +245,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(TrophyCommand(this, configApi))
         manager.registerCommand(BookCommand(this, configApi, scoreApi))
         manager.registerCommand(PartyCommand(this, partiesApi, gameRegistryApi, gameRegistryCache))
+        manager.registerCommand(LeagueCommand(this, leagueCache, leaguesApi))
 
         gameRegistryCache.startRefreshTask()
         leagueCache.startRefreshTask()
