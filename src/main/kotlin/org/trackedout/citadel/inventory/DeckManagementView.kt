@@ -243,22 +243,22 @@ open class DeckManagementView : View() {
 
 typealias DeckId = String
 
-fun DeckId.id(): String = this.substring(1)
+fun DeckId.id(): String = this.last().toString()
 
-fun DeckId.shortRunType(): String = this.lowercase()[0].toString()
+fun DeckId.shortRunType(): String = this.dropLast(1).lowercase()
 
 fun DeckId.displayName(leagueCache: LeagueCache): String {
-    return getRunTypeByIdFromCache(leagueCache, this).displayName
+    return getRunTypeByIdFromCache(leagueCache, this.shortRunType()).displayName
 }
 
-fun DeckId.isValidRunType(leagueCache: LeagueCache): Boolean = findRunTypeByIdFromCache(leagueCache, this) != null
+fun DeckId.isValidRunType(leagueCache: LeagueCache): Boolean = findRunTypeByIdFromCache(leagueCache, this.shortRunType()) != null
 
 fun DeckId.isPractice(): Boolean = this.shortRunType() == "p"
 fun DeckId.isCompetitive(): Boolean = this.shortRunType() == "c"
 fun DeckId.isHardcore(): Boolean = this.shortRunType() == "h"
 
-fun DeckId.runType(leagueCache: LeagueCache): RunType = getRunTypeByIdFromCache(leagueCache, this)
+fun DeckId.runType(leagueCache: LeagueCache): RunType = getRunTypeByIdFromCache(leagueCache, this.shortRunType())
 
 fun DeckId.deckMaterial(leagueCache: LeagueCache): Material {
-    return Material.valueOf(getRunTypeByIdFromCache(leagueCache, this).deckMaterial)
+    return Material.valueOf(getRunTypeByIdFromCache(leagueCache, this.shortRunType()).deckMaterial)
 }
