@@ -10,7 +10,7 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.HumanEntity
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.config.cardConfig
-import org.trackedout.citadel.inventory.DeckId
+import org.trackedout.citadel.inventory.LeagueSlug
 import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.data.BrillianceCard
 import org.trackedout.citadel.config.RunType
@@ -50,15 +50,18 @@ fun HumanEntity.debug(message: String, tag: String = "debug.click") {
 }
 
 fun ItemStack.isDeckedOutShulker(): Boolean {
-    return this.type.name.endsWith("_SHULKER_BOX") && getDeckId() != null
+    return this.type.name.endsWith("_SHULKER_BOX") && getSlug() != null
 }
 
-fun ItemStack.hasDeckId(): Boolean = RtagItem(this).hasTag("deckId")
+fun ItemStack.hasSlug(): Boolean = RtagItem(this).hasTag("slug")
 
-fun ItemStack.getDeckId(): String? = RtagItem(this).get<String>("deckId")
+// Items are tagged with their league `slug` in NBT.
+fun ItemStack.getSlug(): String? {
+    return RtagItem(this).get<String>("slug")
+}
 
-fun ItemStack.withDeckId(deckId: DeckId): ItemStack {
-    return this.withTags(mapOf("deckId" to deckId))
+fun ItemStack.withSlug(slug: LeagueSlug): ItemStack {
+    return this.withTags(mapOf("slug" to slug))
 }
 
 fun ItemStack.getAction(): String? = RtagItem(this).get<String>("action")

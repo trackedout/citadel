@@ -62,8 +62,7 @@ fun showPlayerBook(plugin: Citadel, player: Player, configApi: ConfigApi, scoreA
             val colour = league.display?.colour?.let { String.format("#%06x", it) } ?: "#ffffff"
             val slug = league.slug ?: "unknown"
             val name = league.displayName ?: slug
-            val shortId = league.display?.shortId
-            val isSelected = currentRunMode?.shortId?.toString() == shortId
+            val isSelected = currentRunMode?.longId == slug
             val description = league.description ?: ""
 
             if (isSelected) {

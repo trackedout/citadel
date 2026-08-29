@@ -29,6 +29,7 @@ class PlayedDeathListener(
         }
 
         plugin.logger.info("$playerName died to the pit, resetting their hardcore deck")
+        val hardcoreSlug = getRunTypeByIdFromCache(plugin.leagueCache, "hardcore").deckType()
         plugin.async(player) {
             eventsApi.eventsPost(
                 Event(
@@ -40,7 +41,7 @@ class PlayedDeathListener(
                     z = player.z,
                     metadata = mapOf(
                         "reason" to "void_death",
-                        "run-type" to "h",
+                        "slug" to hardcoreSlug,
                     )
                 )
             )

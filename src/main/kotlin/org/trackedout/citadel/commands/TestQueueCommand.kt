@@ -17,9 +17,7 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
-import org.trackedout.citadel.inventory.id
 import org.trackedout.citadel.inventory.displayName
-import org.trackedout.citadel.inventory.shortRunType
 import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.client.apis.EventsApi
@@ -68,7 +66,7 @@ class TestQueueCommand(
             val eventName = "joined-queue"
             val count = 1
 
-            val deckId = deckId ?: "p1"
+            val deckId = deckId ?: "practice"
 
             eventsApi.eventsPost(
                 Event(
@@ -81,7 +79,7 @@ class TestQueueCommand(
                     z = z,
                     metadata = mapOf(
                         "deck-id" to deckId,
-                        "run-type" to deckId.shortRunType(),
+                        "slug" to deckId,
                         "dungeon-type" to "season-2",
                     ),
                 )
@@ -92,7 +90,7 @@ class TestQueueCommand(
             val message = "[${current}/${world?.gameTime}] Sent { event=$eventName, count=$count, player=$playerName, location=[$x, $y, $z] } to Dunga Dunga"
             plugin.logger.info(message)
             sender.sendGreyMessage(message)
-            sender.sendGreenMessage("Placing ${playerName} into test dungeon queue with ${deckId.displayName(plugin.leagueCache)} Deck #${deckId.id()}")
+            sender.sendGreenMessage("Placing ${playerName} into test dungeon queue with ${deckId.displayName(plugin.leagueCache)} Deck")
         }
     }
 }

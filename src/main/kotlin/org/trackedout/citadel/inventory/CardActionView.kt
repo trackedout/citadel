@@ -11,7 +11,7 @@ import org.trackedout.client.models.Card
 import kotlin.math.max
 
 class CardActionView : DeckManagementView() {
-    val deckId: State<DeckId> = initialState(SELECTED_DECK)
+    val deckId: State<LeagueSlug> = initialState(SELECTED_DECK)
     val selectedCard: State<Card> = initialState(SELECTED_CARD)
 
 

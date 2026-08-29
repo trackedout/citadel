@@ -9,7 +9,7 @@ import org.bukkit.Material
 import org.trackedout.client.models.Card
 
 open class MoveCardView : DeckManagementView() {
-    val sourceDeckId: State<DeckId> = initialState(SELECTED_DECK)
+    val sourceDeckId: State<LeagueSlug> = initialState(SELECTED_DECK)
     val selectedCard: State<Card> = initialState(SELECTED_CARD)
 
 
@@ -26,15 +26,12 @@ open class MoveCardView : DeckManagementView() {
     override fun onFirstRender(render: RenderContext) {
         val decks = deckMap[render]
 
-        val deckIds = getPrimaryDeckIds(decks)
-        var maxDeckId = deckIds.max()
-        // If there's space for an extra deck, and the list is not missing a deck, allow us to add one
-        if (maxDeckId < 9 && deckIds.size == maxDeckId) {
-            maxDeckId++
+        // One deck per league: offer each known league deck as a move target,
+        // laid out left-to-right. deck ids are league slugs.
+        val layoutChars = "123456789"
+        decks.keys.take(layoutChars.length).forEachIndexed { index, deckId ->
+            renderDeckLink(decks, render, layoutChars[index])(deckId)
         }
-
-        // TODO: Support different deck types
-        (1..maxDeckId).toList().forEach { deckId -> renderDeckLink(decks, render)("p${deckId}") }
 
         render.layoutSlot('X')
             .withItem(namedItem(Material.GOLD_INGOT, "Go back"))
@@ -46,25 +43,24 @@ open class MoveCardView : DeckManagementView() {
     private fun renderDeckLink(
         decks: Map<String, List<Card>>,
         render: RenderContext,
+        slot: Char,
     ) = { deckId: String ->
         val knownDeck = decks[deckId]
-        var cardCount = 0
-        knownDeck?.let { cards ->
-            cardCount = cards.size
-        }
+        val cardCount = knownDeck?.size ?: 0
 
         if (deckId == sourceDeckId[render]) {
             showDisabledDeckLink(
                 render,
-                "You're moving this card from Deck #${deckId}! Choose another",
-                deckId,
+                slot,
+                "You're moving this card from the ${deckId.displayName(plugin[render].leagueCache)} deck! Choose another",
                 Material.GRAY_SHULKER_BOX
             )
         } else {
             showDeckLink(
                 render,
-                "Move to Deck #${deckId} (contains $cardCount cards)",
+                slot,
                 deckId,
+                "Move to ${deckId.displayName(plugin[render].leagueCache)} deck (contains $cardCount cards)",
                 deckId.deckMaterial(plugin[render].leagueCache),
             )
         }
@@ -72,12 +68,12 @@ open class MoveCardView : DeckManagementView() {
 
     private fun showDeckLink(
         render: RenderContext,
-        title: String,
+        slot: Char,
         deckId: String,
+        title: String,
         material: Material,
     ) {
-
-        render.layoutSlot(deckId[0])
+        render.layoutSlot(slot)
             .withItem(namedItem(material, title))
             .onClick { _: StateValueHost? ->
                 moveCardAndShowUpdatedDeck(render, sourceDeckId[render], deckId, selectedCard[render])
@@ -86,11 +82,11 @@ open class MoveCardView : DeckManagementView() {
 
     private fun showDisabledDeckLink(
         render: RenderContext,
+        slot: Char,
         title: String,
-        deckId: String,
         material: Material,
     ) {
-        render.layoutSlot(deckId[0])
+        render.layoutSlot(slot)
             .withItem(namedItem(material, title, NamedTextColor.GRAY))
             .onClick { _: StateValueHost? -> }
     }

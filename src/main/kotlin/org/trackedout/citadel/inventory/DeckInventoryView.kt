@@ -14,7 +14,7 @@ import org.trackedout.citadel.canTakeIntoDungeon
 import org.trackedout.citadel.commands.createCard
 import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.getCard
-import org.trackedout.citadel.getDeckId
+import org.trackedout.citadel.getSlug
 import org.trackedout.citadel.getTradeId
 import org.trackedout.citadel.isDeckedOutCard
 import org.trackedout.citadel.preventRemoval
@@ -24,8 +24,8 @@ import org.trackedout.data.sortedList
 import java.util.function.BiConsumer
 
 open class DeckInventoryView : DeckManagementView() {
-    val deckIdState: State<DeckId> = initialState(SELECTED_DECK)
-    val updateCardVisibilityFunc: State<BiConsumer<DeckId, Map<String, Number>>> = initialState(UPDATE_CARD_VISIBILITY_FUNC)
+    val deckIdState: State<LeagueSlug> = initialState(SELECTED_DECK)
+    val updateCardVisibilityFunc: State<BiConsumer<LeagueSlug, Map<String, Number>>> = initialState(UPDATE_CARD_VISIBILITY_FUNC)
 
 
     override fun onInit(config: ViewConfigBuilder) {
@@ -43,7 +43,7 @@ open class DeckInventoryView : DeckManagementView() {
 
     override fun onClose(event: CloseContext) {
         val player = event.player
-        val deckId = deckIdState[event] as DeckId
+        val deckId = deckIdState[event] as LeagueSlug
         val inventory = (event.container as BukkitViewContainer).inventory
 
         // Put all non-card items back in the players inventory
@@ -52,11 +52,11 @@ open class DeckInventoryView : DeckManagementView() {
             .filter { it != null && it.type != Material.AIR }
             .map { it!! }
             .filterNot { it.preventRemoval() } // Keep these items in the shulker
-            .filter { it.getDeckId() != deckId || (!it.canTakeIntoDungeon() && !it.isDeckedOutCard()) }
+            .filter { it.getSlug() != deckId || (!it.canTakeIntoDungeon() && !it.isDeckedOutCard()) }
             .forEach { item: ItemStack ->
                 plugin[event].logger.info("Inventory contains: ${item.type}x${item.amount} - returning it to ${player.name}")
                 plugin[event].logger.info("Item: $item")
-                plugin[event].logger.info("DeckId: ${item.getDeckId()} - Can take into dungeon: ${item.canTakeIntoDungeon()} - Is Decked Out card: ${item.isDeckedOutCard()}")
+                plugin[event].logger.info("LeagueSlug: ${item.getSlug()} - Can take into dungeon: ${item.canTakeIntoDungeon()} - Is Decked Out card: ${item.isDeckedOutCard()}")
                 player.inventory.addItem(item)
             }
 
@@ -67,11 +67,11 @@ open class DeckInventoryView : DeckManagementView() {
         // For each card in the player's inventory, hide it from the deck
         var cardsToHide = (0 until player.inventory.size).asSequence()
             .map(player.inventory::getItem)
-            .filter { it != null && it.isDeckedOutCard() && it.getDeckId() == deckId }
+            .filter { it != null && it.isDeckedOutCard() && it.getSlug() == deckId }
             // Count the total number of cards in the player's inventory across all stacks
             .map {
                 it!!.getCard()!! to player.inventory
-                    .filter { card -> card != null && card.isDeckedOutCard() && card.getDeckId() == deckId }
+                    .filter { card -> card != null && card.isDeckedOutCard() && card.getSlug() == deckId }
                     .filter { p -> p?.getCard()?.shorthand == it.getCard()?.shorthand }.sumOf { p -> p.amount }
             }
             .onEach { pair: Pair<BrillianceCard, Int> ->
@@ -86,11 +86,11 @@ open class DeckInventoryView : DeckManagementView() {
         // For each item in the player's inventory, hide it from the deck
         val itemsToHide = (0 until player.inventory.size).asSequence()
             .map(player.inventory::getItem)
-            .filter { it != null && it.canTakeIntoDungeon() && it.getDeckId() == deckId }
+            .filter { it != null && it.canTakeIntoDungeon() && it.getSlug() == deckId }
             // Count the total number of this item in the player's inventory across all stacks
             .map {
                 it!!.getTradeId()!! to player.inventory
-                    .filter { item -> item != null && item.canTakeIntoDungeon() && item.getDeckId() == deckId }
+                    .filter { item -> item != null && item.canTakeIntoDungeon() && item.getSlug() == deckId }
                     .filter { p -> p?.getTradeId() == it.getTradeId() }.sumOf { p -> p.amount }
             }
             .onEach { pair: Pair<String, Int> ->
@@ -120,7 +120,7 @@ open class DeckInventoryView : DeckManagementView() {
                 }
         }
 
-        if (deckId.shortRunType() == "p") {
+        if (deckId.isPractice(plugin[render].leagueCache)) {
             render.slot(rowCount(cards), 9)
                 .cancelOnClick()
                 .withItem(namedItem(Material.SLIME_BLOCK, "Add a card"))
@@ -164,7 +164,7 @@ open class DeckInventoryView : DeckManagementView() {
                 return@forEach
             }
 
-            val itemStack = entry.value.itemStack(deckId.displayName(plugin[render].leagueCache).lowercase(), count).withTradeMeta(deckId.shortRunType(), entry.key)
+            val itemStack = entry.value.itemStack(deckId.displayName(plugin[render].leagueCache).lowercase(), count).withTradeMeta(deckId, entry.key)
             render.availableSlot(itemStack)
         }
     }

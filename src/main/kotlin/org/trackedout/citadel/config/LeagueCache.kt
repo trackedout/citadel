@@ -42,12 +42,6 @@ class LeagueCache(
 
     fun getLeagues(): List<League> = leagues.toList()
 
-    fun getLeagueByShortId(shortId: String): League? =
-        leagues.find { it.display?.shortId == shortId }
-
     fun getLeagueBySlug(slug: String): League? =
         leagues.find { it.slug == slug }
-
-    fun getLeagueByPrefix(prefix: String): League? =
-        leagues.find { it.deck?.prefix == prefix }
 }

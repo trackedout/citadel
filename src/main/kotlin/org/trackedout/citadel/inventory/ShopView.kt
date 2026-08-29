@@ -114,7 +114,7 @@ class ShopView : View() {
                     val groups = matchResult.groups
                     val shortType = groups["type"]
                     val longType = getRunTypeByIdFromCache(plugin[event].leagueCache, shortType?.value ?: "u").longId
-                    val league = shortType?.value?.let { plugin[event].leagueCache.getLeagueByShortId(it) }
+                    val league = plugin[event].leagueCache.getLeagueBySlug(longType)
 
                     val sourceType = groups["sourceType"]?.value
                     val sourceCount = groups["sourceCount"]?.value

@@ -121,7 +121,7 @@ class ScoreManagementCommand(
                     y = 0.0,
                     z = 0.0,
                     metadata = mapOf(
-                        "run-type" to trade.runType,
+                        "slug" to trade.runType,
                         "source-scoreboard" to trade.sourceScoreboardName(),
                         "source-inversion-scoreboard" to trade.sourceInversionScoreboardName(),
                         "source-count" to trade.sourceItemCount.toString(),

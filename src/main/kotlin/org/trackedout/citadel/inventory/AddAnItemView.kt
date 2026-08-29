@@ -8,7 +8,7 @@ import org.bukkit.Material
 import org.trackedout.client.models.Card
 
 class AddAnItemView : DeckManagementView() {
-    val deckId: State<DeckId> = initialState(SELECTED_DECK)
+    val deckId: State<LeagueSlug> = initialState(SELECTED_DECK)
 
     override fun onInit(config: ViewConfigBuilder) {
         config.title("Add an Item")
@@ -25,7 +25,7 @@ class AddAnItemView : DeckManagementView() {
 
         intoDungeonItems.entries.forEachIndexed { index, (itemKey, describer) ->
             val runType = deckId[render].displayName(plugin[render].leagueCache).lowercase()
-            val itemStack = describer.itemStack(runType, 1).withTradeMeta(deckId[render].shortRunType(), itemKey)
+            val itemStack = describer.itemStack(runType, 1).withTradeMeta(deckId[render], itemKey)
 
             render.slot(index, itemStack)
                 .onClick { _: StateValueHost? ->
@@ -41,5 +41,5 @@ class AddAnItemView : DeckManagementView() {
         }
     }
 
-    private fun getRunType(render: RenderContext) = deckId[render][0].toString()
+    private fun getRunType(render: RenderContext) = deckId[render]
 }

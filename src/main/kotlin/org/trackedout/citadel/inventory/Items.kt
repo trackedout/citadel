@@ -58,25 +58,26 @@ fun dungeonTome(
 fun dungeonSwiftnessPotion(
     runType: RunType,
     itemCount: Int,
-) = dungeonPotion(runType.displayName, PotionType.SPEED, "Splash Potion of Swiftness", false, true, runType.displayNamedText(), itemCount, splash = true)
+) = dungeonPotion(runType.displayName, runType.deckType(), PotionType.SPEED, "Splash Potion of Swiftness", false, true, runType.displayNamedText(), itemCount, splash = true)
 
 fun dungeonSlownessPotion(
     runType: RunType,
     itemCount: Int,
-) = dungeonPotion(runType.displayName, PotionType.SLOWNESS, "Splash Potion of Slowness", false, true, runType.displayNamedText(), itemCount, splash = true)
+) = dungeonPotion(runType.displayName, runType.deckType(), PotionType.SLOWNESS, "Splash Potion of Slowness", false, true, runType.displayNamedText(), itemCount, splash = true)
 
 fun dungeonWeaknessPotion(
     runType: RunType,
     itemCount: Int,
-) = dungeonPotion(runType.displayName, PotionType.WEAKNESS, "Splash Potion of Weakness", false, false, runType.displayNamedText(), itemCount, splash = true)
+) = dungeonPotion(runType.displayName, runType.deckType(), PotionType.WEAKNESS, "Splash Potion of Weakness", false, false, runType.displayNamedText(), itemCount, splash = true)
 
 fun dungeonHealthPotion(
     runType: RunType,
     itemCount: Int,
-) = dungeonPotion(runType.displayName, PotionType.INSTANT_HEAL, "Potion of Healing", false, true, runType.displayNamedText(), itemCount)
+) = dungeonPotion(runType.displayName, runType.deckType(), PotionType.INSTANT_HEAL, "Potion of Healing", false, true, runType.displayNamedText(), itemCount)
 
 fun dungeonPotion(
     runType: String,
+    slug: String,
     potionType: PotionType,
     displayName: String,
     extended: Boolean = false,
@@ -95,7 +96,7 @@ fun dungeonPotion(
     itemStack.itemMeta = meta
 
     val metadata = mapOf(
-        "deckId" to "${runType.shortRunType()}1",
+        "slug" to slug,
         "tradeId" to "SLOWNESS_POTION"
     )
     return RtagItem.edit(itemStack, fun(tag: RtagItem): ItemStack {
@@ -173,7 +174,7 @@ fun dungeonDeck(runType: RunType, itemCount: Int = 1, materialOverride: Material
     customModelData = 7,
     textColor = runType.displayNamedText(),
     material = materialOverride ?: Material.valueOf(runType.deckMaterial),
-    metadata = mapOf("deckId" to "${runType.shortId}1"),
+    metadata = mapOf("slug" to runType.deckType()),
     itemCount = itemCount,
 )
 
@@ -181,7 +182,7 @@ fun dungeonArtifacts(runType: RunType, itemCount: Int = 1): ItemStack = dungeonI
     name = "❄☠ Collected Artifakes (${runType.displayName}) ☠❄",
     customModelData = 36,
     textColor = runType.displayNamedText(),
-    metadata = mapOf("deckId" to "${runType.shortId}1", "action" to "show-artifakes"),
+    metadata = mapOf("slug" to runType.deckType(), "action" to "show-artifakes"),
     itemCount = itemCount,
 )
 
@@ -189,7 +190,7 @@ fun menuBook(): ItemStack = dungeonItem(
     name = "❄☠ Welcome to Tracked Out ☠❄",
     material = Material.WRITTEN_BOOK,
     textColor = NamedTextColor.GOLD,
-    metadata = mapOf("deckId" to "", "action" to "show-main-menu"),
+    metadata = mapOf("slug" to "", "action" to "show-main-menu"),
     itemCount = 1,
     customModelData = 0,
 ).withLore(text("An introduction to our server!", NamedTextColor.GOLD))
@@ -198,7 +199,7 @@ fun settingsBook(): ItemStack = dungeonItem(
     name = "❄☠ Player Settings ☠❄",
     material = Material.WRITTEN_BOOK,
     textColor = NamedTextColor.AQUA,
-    metadata = mapOf("deckId" to "", "action" to "show-player-settings"),
+    metadata = mapOf("slug" to "", "action" to "show-player-settings"),
     itemCount = 1,
     customModelData = 0,
 ).withLore(text("Configure your Decked Out experience!", NamedTextColor.AQUA))
@@ -207,14 +208,15 @@ fun adminBook(): ItemStack = dungeonItem(
     name = "❄☠ Dungeon Ops ☠❄",
     material = Material.WRITTEN_BOOK,
     textColor = NamedTextColor.RED,
-    metadata = mapOf("deckId" to "", "action" to "show-admin-book"),
+    metadata = mapOf("slug" to "", "action" to "show-admin-book"),
     itemCount = 1,
     customModelData = 0,
 ).withLore(text("Server management tools", NamedTextColor.RED))
 
+// `runType` here is the league slug — written verbatim as the `slug` NBT tag.
 fun ItemStack.withTradeMeta(runType: String, tradeId: String): ItemStack {
     var metadata = mapOf(
-        "deckId" to "${runType.shortRunType()}1",
+        "slug" to runType,
         "tradeId" to tradeId
     )
 
@@ -239,7 +241,8 @@ fun ItemStack.withLore(vararg lore: TextComponent): ItemStack {
 fun ItemStack.oldDungeonItem(): ItemStack {
     this.amount = 999
     return RtagItem.edit(this, fun(tag: RtagItem): ItemStack {
-        tag.remove("deckId")
+        tag.remove("slug")
+        tag.remove("deckId") // legacy tag on old in-world items
         tag.remove("tradeId")
         tag.remove("canTakeIntoDungeon")
         return tag.loadCopy()

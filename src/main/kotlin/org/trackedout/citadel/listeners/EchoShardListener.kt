@@ -36,10 +36,10 @@ import org.trackedout.citadel.commands.showPlayerBook
 import org.trackedout.citadel.debug
 import org.trackedout.citadel.getAction
 import org.trackedout.citadel.getCard
-import org.trackedout.citadel.getDeckId
+import org.trackedout.citadel.getSlug
 import org.trackedout.citadel.getTradeId
-import org.trackedout.citadel.hasDeckId
-import org.trackedout.citadel.inventory.DeckId
+import org.trackedout.citadel.hasSlug
+import org.trackedout.citadel.inventory.LeagueSlug
 import org.trackedout.citadel.inventory.DeckInventoryViewWithoutBack
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.ADD_CARD_FUNC
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.DECK_MAP
@@ -57,7 +57,6 @@ import org.trackedout.citadel.inventory.ShopView.Companion.TRADE_FUNC
 import org.trackedout.citadel.inventory.ShopView.Companion.UPDATE_INVENTORY_FUNC
 import org.trackedout.citadel.inventory.Trade
 import org.trackedout.citadel.inventory.isPractice
-import org.trackedout.citadel.inventory.shortRunType
 import org.trackedout.citadel.isDeckedOutCard
 import org.trackedout.citadel.isDeckedOutShulker
 import org.trackedout.citadel.sendRedMessage
@@ -140,7 +139,7 @@ class EchoShardListener(
                     eventsApi.eventsPost(
                         Event(
                             name = "trade-requested", server = plugin.serverName, player = player.name, count = 1, x = player.x, y = player.y, z = player.z, metadata = mapOf(
-                                "run-type" to trade.runType,
+                                "slug" to trade.runType,
                                 "source-scoreboard" to trade.sourceScoreboardName(),
                                 "source-inversion-scoreboard" to trade.sourceInversionScoreboardName(),
                                 "source-count" to trade.sourceItemCount.toString(),
@@ -258,7 +257,7 @@ class EchoShardListener(
         }
 
         if (event.action == Action.RIGHT_CLICK_AIR || event.action == Action.RIGHT_CLICK_BLOCK) {
-            item.getDeckId()?.let {
+            item.getSlug()?.let {
                 if (item.isDeckedOutShulker() || item.isDeckedOutCard()) {
                     showDeckInventory(event, player, it)
                 }
@@ -298,37 +297,37 @@ class EchoShardListener(
         // TODO: Make this async
         val allCards = inventoryApi.inventoryCardsGet(player = player.name, limit = 1000).results!!
 
-        val updateCardVisibility = BiConsumer<DeckId, Map<String, Number>> { deckIdToUpdate, cardsToHide ->
+        val updateCardVisibility = BiConsumer<LeagueSlug, Map<String, Number>> { deckIdToUpdate, cardsToHide ->
             eventsApi.eventsPost(
                 Event(
                     name = "card-visibility-updated", server = plugin.serverName, player = player.name, count = 1, x = player.x, y = player.y, z = player.z, metadata = mapOf(
-                        "run-type" to deckIdToUpdate.shortRunType(),
+                        "slug" to deckIdToUpdate,
                         "deck-id" to deckIdToUpdate,
                     ).plus(cardsToHide.map { "hide-card-${it.key}" to it.value.toString() })
                 )
             )
         }
 
-        val addCardFunc = BiConsumer<DeckId, Card> { deckId, card ->
+        val addCardFunc = BiConsumer<LeagueSlug, Card> { deckId, card ->
             plugin.async(player) {
                 inventoryApi.inventoryAddCardPost(
                     Card(
                         player = card.player,
                         name = card.name,
-                        deckType = deckId[0].toString(),
+                        deckType = deckId,
                         server = plugin.serverName,
                     )
                 )
             }
         }
 
-        val deleteCardFunc = BiConsumer<DeckId, Card> { deckId, card ->
+        val deleteCardFunc = BiConsumer<LeagueSlug, Card> { deckId, card ->
             plugin.async(player) {
                 inventoryApi.inventoryDeleteCardPost(
                     Card(
                         player = card.player,
                         name = card.name,
-                        deckType = deckId[0].toString(),
+                        deckType = deckId,
                         server = plugin.serverName,
                     )
                 )
@@ -444,7 +443,7 @@ class EchoShardListener(
     }
 
     private fun deleteCard(player: Player, it: ItemStack) {
-        val deckType = it.getDeckId()?.shortRunType()
+        val deckType = it.getSlug()
         val card = it.getCard()
         val tradeId = it.getTradeId()
 
@@ -485,9 +484,9 @@ class EchoShardListener(
         return false
     }
 
-    private fun isRestrictedItem(it: ItemStack) = it.itemMeta != null && it.hasDeckId()
+    private fun isRestrictedItem(it: ItemStack) = it.itemMeta != null && it.hasSlug()
 
-    private fun isPracticeCard(it: ItemStack) = isRestrictedItem(it) && it.isDeckedOutCard() && it.getDeckId()?.isPractice() == true
+    private fun isPracticeCard(it: ItemStack) = isRestrictedItem(it) && it.isDeckedOutCard() && it.getSlug()?.isPractice(plugin.leagueCache) == true
 
-    private fun isPracticeItem(it: ItemStack) = isRestrictedItem(it) && it.canTakeIntoDungeon() && it.getDeckId()?.isPractice() == true
+    private fun isPracticeItem(it: ItemStack) = isRestrictedItem(it) && it.canTakeIntoDungeon() && it.getSlug()?.isPractice(plugin.leagueCache) == true
 }

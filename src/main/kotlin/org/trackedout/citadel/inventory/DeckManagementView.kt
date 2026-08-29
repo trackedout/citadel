@@ -24,10 +24,10 @@ import java.util.function.Consumer
 
 open class DeckManagementView : View() {
     val plugin: State<Citadel> = initialState(PLUGIN)
-    val addCardFunc: State<BiConsumer<DeckId, Card>> = initialState(ADD_CARD_FUNC)
-    val deleteCardFunc: State<BiConsumer<DeckId, Card>> = initialState(DELETE_CARD_FUNC)
-    val moveCardFunc: State<TriConsumer<DeckId, DeckId, Card>> = initialState(MOVE_CARD_FUNC)
-    val joinQueueFunc: State<Consumer<DeckId>> = initialState(JOIN_QUEUE_FUNC)
+    val addCardFunc: State<BiConsumer<LeagueSlug, Card>> = initialState(ADD_CARD_FUNC)
+    val deleteCardFunc: State<BiConsumer<LeagueSlug, Card>> = initialState(DELETE_CARD_FUNC)
+    val moveCardFunc: State<TriConsumer<LeagueSlug, LeagueSlug, Card>> = initialState(MOVE_CARD_FUNC)
+    val joinQueueFunc: State<Consumer<LeagueSlug>> = initialState(JOIN_QUEUE_FUNC)
     val playerName: State<String> = initialState(PLAYER_NAME)
     val deckMap: State<Map<String, List<Card>>> = initialState(DECK_MAP)
 
@@ -44,61 +44,35 @@ open class DeckManagementView : View() {
     }
 
     override fun onFirstRender(render: RenderContext) {
-        // DeckMap is a map of runType to Cards
+        // DeckMap is a map of deck slug (Card.deckType) to Cards
         val decks = deckMap[render]
 
-        // Init each deck link with an empty deck
-        val deckIds = getPrimaryDeckIds(decks)
-        val maxDeckId = deckIds.max()
-
-//        (1..maxDeckId).toList()
-//            .filter { !deckIds.contains(it) }
-//            .forEach { deckId ->
-//                showDeckLink(
-//                    render,
-//                    "View Deck #${deckId} (contains 0 cards)",
-//                    deckId.toString(),
-//                    materialForDeckId(deckId.toString())
-//                )
-//            }
-
         decks.forEach { entry ->
-            val runType = entry.key
+            // With one deck per league, the map key (Card.deckType) is the deck's
+            // slug, which is the LeagueSlug itself.
+            val deckId: LeagueSlug = entry.key
             val allCards = entry.value
-            var i = if (runType.isPractice()) 0 else 18
+            var i = if (deckId.isPractice(plugin[render].leagueCache)) 0 else 18
 
             i += 4 // center decks (only works if we have 1 deck)
 
-            (1..maxDeckId).toList()
-                .map { "${runType}$it" }
-                .forEach { deckId: DeckId ->
-                    val cards = allCards.filterNot { it.hiddenInDecks?.contains(deckId) ?: false }
+            val cards = allCards.filterNot { it.hiddenInDecks?.contains(deckId) ?: false }
 
-                    showDeckLink(
-                        render,
-                        i,
-                        "View ${deckId.displayName(plugin[render].leagueCache)} Deck #${deckId.id()} (contains ${cards.size} cards)",
-                        deckId,
-                        deckId.deckMaterial(plugin[render].leagueCache),
-                    )
-                    i++
-                }
+            showDeckLink(
+                render,
+                i,
+                "View ${deckId.displayName(plugin[render].leagueCache)} Deck (contains ${cards.size} cards)",
+                deckId,
+                deckId.deckMaterial(plugin[render].leagueCache),
+            )
         }
-    }
-
-    internal fun getPrimaryDeckIds(decks: Map<String, List<Card>>): List<Int> {
-//        val deckIds = decks.map { it.key.toIntOrNull() }
-//            .filterNotNull()
-//            .filter { it in 1..9 }
-        // TODO: Do this better
-        return listOf(1)
     }
 
     private fun showDeckLink(
         render: RenderContext,
         location: Int,
         title: String,
-        deckId: DeckId,
+        deckId: LeagueSlug,
         material: Material,
     ) {
         render.slot(location)
@@ -122,8 +96,8 @@ open class DeckManagementView : View() {
         return itemStack.withTags(mapOf("prevent-removal" to "1"))
     }
 
-    internal fun getCards(render: Context, deckId: DeckId): List<Card> {
-        var cards = deckMap[render][deckId.shortRunType()]
+    internal fun getCards(render: Context, deckId: LeagueSlug): List<Card> {
+        var cards = deckMap[render][deckId]
         if (cards == null) {
             cards = emptyList()
         }
@@ -132,7 +106,7 @@ open class DeckManagementView : View() {
 
     internal fun deleteCardAndShowUpdatedDeck(
         render: RenderContext,
-        deckId: DeckId,
+        deckId: LeagueSlug,
         card: Card,
     ) {
         deleteCardFunc[render].accept(deckId, card)
@@ -143,7 +117,7 @@ open class DeckManagementView : View() {
 
     internal fun addCardAndShowUpdatedDeck(
         render: RenderContext,
-        deckId: DeckId,
+        deckId: LeagueSlug,
         card: Card,
     ) {
         addCardFunc[render].accept(deckId, card)
@@ -154,8 +128,8 @@ open class DeckManagementView : View() {
 
     internal fun moveCardAndShowUpdatedDeck(
         render: RenderContext,
-        sourceDeckId: DeckId,
-        targetDeckId: DeckId,
+        sourceDeckId: LeagueSlug,
+        targetDeckId: LeagueSlug,
         card: Card,
     ) {
         moveCardFunc[render].accept(sourceDeckId, targetDeckId, card)
@@ -169,7 +143,7 @@ open class DeckManagementView : View() {
     private fun deckMapWithCardRemoved(
         render: RenderContext,
         originalDeckMap: Map<String, List<Card>>,
-        deckId: DeckId,
+        deckId: LeagueSlug,
         card: Card,
     ): MutableMap<String, List<Card>> {
         val deckMap = originalDeckMap.toMutableMap()
@@ -177,25 +151,25 @@ open class DeckManagementView : View() {
         val cards = getCards(render, deckId)
         val cardToRemove = cards.findLast { it.name == card.name }
 
-        deckMap[deckId.shortRunType()] = cards - cardToRemove!!
+        deckMap[deckId] = cards - cardToRemove!!
         return deckMap
     }
 
     private fun deckMapWithCardAdded(
         render: RenderContext,
         originalDeckMap: Map<String, List<Card>>,
-        deckId: DeckId,
+        deckId: LeagueSlug,
         card: Card,
     ): MutableMap<String, List<Card>> {
         val deckMap = originalDeckMap.toMutableMap()
         val cards = getCards(render, deckId)
-        deckMap[deckId.shortRunType()] = cards + card
+        deckMap[deckId] = cards + card
         return deckMap
     }
 
     internal fun joinQueue(
         render: RenderContext,
-        deckId: DeckId,
+        deckId: LeagueSlug,
     ) {
         joinQueueFunc[render].accept(deckId)
         render.closeForPlayer()
@@ -220,10 +194,10 @@ open class DeckManagementView : View() {
             plugin: Citadel,
             player: Player,
             allCards: List<Card>,
-            addCardFunc: BiConsumer<DeckId, Card>,
-            deleteCardFunc: BiConsumer<DeckId, Card>,
-            moveCardFunc: TriConsumer<DeckId, DeckId, Card>,
-            joinQueueFunc: Consumer<DeckId>,
+            addCardFunc: BiConsumer<LeagueSlug, Card>,
+            deleteCardFunc: BiConsumer<LeagueSlug, Card>,
+            moveCardFunc: TriConsumer<LeagueSlug, LeagueSlug, Card>,
+            joinQueueFunc: Consumer<LeagueSlug>,
         ): MutableMap<String, Any> {
 
             val context = mutableMapOf(
@@ -241,24 +215,23 @@ open class DeckManagementView : View() {
     }
 }
 
-typealias DeckId = String
+typealias LeagueSlug = String
 
-fun DeckId.id(): String = this.last().toString()
+// A league slug identifies a deck (one deck per league). The legacy positional
+// encoding ("<shortRunType><deckNumber>", e.g. "c1") is gone; compatibility with
+// old in-world items is handled at the NBT parse boundary (ItemStack.getSlug).
 
-fun DeckId.shortRunType(): String = this.dropLast(1).lowercase()
-
-fun DeckId.displayName(leagueCache: LeagueCache): String {
-    return getRunTypeByIdFromCache(leagueCache, this.shortRunType()).displayName
+fun LeagueSlug.displayName(leagueCache: LeagueCache): String {
+    return getRunTypeByIdFromCache(leagueCache, this).displayName
 }
 
-fun DeckId.isValidRunType(leagueCache: LeagueCache): Boolean = findRunTypeByIdFromCache(leagueCache, this.shortRunType()) != null
+fun LeagueSlug.isValidRunType(leagueCache: LeagueCache): Boolean = findRunTypeByIdFromCache(leagueCache, this) != null
 
-fun DeckId.isPractice(): Boolean = this.shortRunType() == "p"
-fun DeckId.isCompetitive(): Boolean = this.shortRunType() == "c"
-fun DeckId.isHardcore(): Boolean = this.shortRunType() == "h"
+fun LeagueSlug.isPractice(leagueCache: LeagueCache): Boolean =
+    findRunTypeByIdFromCache(leagueCache, this)?.longId == "practice"
 
-fun DeckId.runType(leagueCache: LeagueCache): RunType = getRunTypeByIdFromCache(leagueCache, this.shortRunType())
+fun LeagueSlug.runType(leagueCache: LeagueCache): RunType = getRunTypeByIdFromCache(leagueCache, this)
 
-fun DeckId.deckMaterial(leagueCache: LeagueCache): Material {
-    return Material.valueOf(getRunTypeByIdFromCache(leagueCache, this.shortRunType()).deckMaterial)
+fun LeagueSlug.deckMaterial(leagueCache: LeagueCache): Material {
+    return Material.valueOf(getRunTypeByIdFromCache(leagueCache, this).deckMaterial)
 }

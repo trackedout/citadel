@@ -55,10 +55,10 @@ class InventoryCommand(
     @CommandPermission("decked-out.inventory.set-run-mode")
     @Description("Set run mode for inventory filtering")
     @CommandCompletion("@leagueSlugs @nothing")
-    fun setRunMode(source: Player, leagueSlugOrShortId: String) {
-        val runType = resolveRunType(leagueSlugOrShortId)
+    fun setRunMode(source: Player, leagueSlug: String) {
+        val runType = resolveRunType(leagueSlug)
         if (runType == null) {
-            source.sendRedMessage("Unknown league or run type: $leagueSlugOrShortId")
+            source.sendRedMessage("Unknown league or run type: $leagueSlug")
             return
         }
 
@@ -264,15 +264,7 @@ class InventoryCommand(
         }
     }
 
-    private fun resolveRunType(leagueSlugOrShortId: String): RunType? {
-        val league = plugin.leagueCache.getLeagueBySlug(leagueSlugOrShortId)
-            ?: plugin.leagueCache.getLeagueByShortId(leagueSlugOrShortId)
-
-        if (league != null) {
-            val shortId = league.display?.shortId ?: return null
-            return findRunTypeByIdFromCache(plugin.leagueCache, shortId)
-        }
-
-        return findRunTypeByIdFromCache(plugin.leagueCache, leagueSlugOrShortId)
+    private fun resolveRunType(leagueSlug: String): RunType? {
+        return findRunTypeByIdFromCache(plugin.leagueCache, leagueSlug)
     }
 }

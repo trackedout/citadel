@@ -113,7 +113,7 @@ class InventoryManager(
                 }
 
                 plugin.logger.fine("${player.name} should have ${maxCardsThatShouldBeInInventory}x${card.shorthand} in their inventory (runType: ${runType.longId})")
-                val itemStack = createCard(plugin, null, card.shorthand, 1, "${runType.shortId}1")
+                val itemStack = createCard(plugin, null, card.shorthand, 1, runType.deckType())
 
                 itemStack?.let {
                     player.ensureInventoryContains(
@@ -170,7 +170,7 @@ class InventoryManager(
                             y = 0.0,
                             z = 0.0,
                             metadata = mapOf(
-                                "run-type" to trade.runType,
+                                "slug" to trade.runType,
                                 "source-scoreboard" to trade.sourceScoreboardName(),
                                 "source-inversion-scoreboard" to trade.sourceInversionScoreboardName(),
                                 "source-count" to trade.sourceItemCount.toString(),
@@ -254,7 +254,7 @@ class InventoryManager(
         plugin.logger.info("Cleaning up old items for ${player.name}")
 
         val itemsToRemove = player.inventory.filter { inventoryItem ->
-            inventoryItem?.hasDeckId() == true && knownItemTracker.none { knownItem -> knownItem.isSimilar(inventoryItem) }
+            inventoryItem?.hasSlug() == true && knownItemTracker.none { knownItem -> knownItem.isSimilar(inventoryItem) }
         }
 
         plugin.logger.info("Removing ${itemsToRemove.size} old items from ${player.name}'s inventory:")

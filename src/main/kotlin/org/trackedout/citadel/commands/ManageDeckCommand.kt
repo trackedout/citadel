@@ -10,7 +10,7 @@ import org.apache.logging.log4j.util.TriConsumer
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
-import org.trackedout.citadel.inventory.DeckId
+import org.trackedout.citadel.inventory.LeagueSlug
 import org.trackedout.citadel.inventory.DeckManagementView
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.createContext
 import org.trackedout.citadel.listeners.createJoinQueueFunc
@@ -36,39 +36,39 @@ class ManageDeckCommand(
         // TODO: Make this async
         val allCards = inventoryApi.inventoryCardsGet(player = player.name, limit = 1000).results!!
 
-        val addCardFunc = BiConsumer<DeckId, Card> { deckId, card ->
+        val addCardFunc = BiConsumer<LeagueSlug, Card> { deckId, card ->
             plugin.async(player) {
                 inventoryApi.inventoryAddCardPost(
                     Card(
                         player = card.player,
                         name = card.name,
-                        deckType = deckId[0].toString(),
+                        deckType = deckId,
                         server = plugin.serverName,
                     )
                 )
             }
         }
 
-        val deleteCardFunc = BiConsumer<DeckId, Card> { deckId, card ->
+        val deleteCardFunc = BiConsumer<LeagueSlug, Card> { deckId, card ->
             plugin.async(player) {
                 inventoryApi.inventoryDeleteCardPost(
                     Card(
                         player = card.player,
                         name = card.name,
-                        deckType = deckId[0].toString(),
+                        deckType = deckId,
                         server = plugin.serverName,
                     )
                 )
             }
         }
 
-        val moveCardFunc = TriConsumer<DeckId, DeckId, Card> { sourceDeckId, targetDeckId, card ->
+        val moveCardFunc = TriConsumer<LeagueSlug, LeagueSlug, Card> { sourceDeckId, targetDeckId, card ->
             plugin.async(player) {
                 inventoryApi.inventoryDeleteCardPost(
                     Card(
                         player = card.player,
                         name = card.name,
-                        deckType = sourceDeckId[0].toString(),
+                        deckType = sourceDeckId,
                         server = plugin.serverName,
                     )
                 )
@@ -77,7 +77,7 @@ class ManageDeckCommand(
                     Card(
                         player = card.player,
                         name = card.name,
-                        deckType = targetDeckId[0].toString(),
+                        deckType = targetDeckId,
                         server = plugin.serverName,
                     )
                 )

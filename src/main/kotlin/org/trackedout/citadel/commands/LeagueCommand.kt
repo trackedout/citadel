@@ -89,7 +89,6 @@ class LeagueCommand(
         plugin.async(player) {
             // Try cache first, then direct API lookup (cache only has active leagues)
             val league = leagueCache.getLeagueBySlug(leagueSlug)
-                ?: leagueCache.getLeagueByShortId(leagueSlug)
                 ?: try { leaguesApi.leaguesSlugGet(leagueSlug) } catch (_: ClientException) { null }
 
             if (league == null) {
@@ -165,7 +164,6 @@ class LeagueCommand(
     fun stopLeague(player: Player, leagueSlug: String) {
         plugin.async(player) {
             val league = leagueCache.getLeagueBySlug(leagueSlug)
-                ?: leagueCache.getLeagueByShortId(leagueSlug)
 
             if (league == null) {
                 player.sendRedMessage("Unknown league: $leagueSlug")
@@ -208,7 +206,7 @@ class LeagueCommand(
             try {
                 val published = leaguesApi.leaguePublish(slug)
                 leagueCache.refresh()
-                player.sendGreenMessage("League '$slug' is now playable as '${published.display?.shortId ?: slug}'.")
+                player.sendGreenMessage("League '$slug' is now playable.")
                 player.sendGreyMessage("Players can select it as a mode and use '/do league play $slug' to test it.")
             } catch (e: ClientException) {
                 player.sendRedMessage("Failed to publish league: ${e.message}")
@@ -233,15 +231,14 @@ class LeagueCommand(
                 return@async
             }
 
-            val shortId = league.display?.shortId
-            if (shortId.isNullOrEmpty() || (league.display?.runTypeId ?: 0) <= 0) {
+            if ((league.display?.runTypeId ?: 0) <= 0) {
                 player.sendRedMessage("League '$slug' isn't published yet. Run '/do league publish $slug' first.")
                 return@async
             }
 
             val dungeonType = league.dungeon?.type ?: slug
-            // Default to deck #1 for the league's run-type (e.g. shortId "ab" -> "ab1").
-            val deckId = "${shortId}1"
+            // One deck per league: the deck identifier is the league slug.
+            val deckId = slug
 
             try {
                 eventsApi.eventsPost(
@@ -255,7 +252,7 @@ class LeagueCommand(
                         z = player.z,
                         metadata = mapOf(
                             "deck-id" to deckId,
-                            "run-type" to shortId,
+                            "slug" to slug,
                             "dungeon-type" to dungeonType,
                         ),
                     )
@@ -308,7 +305,6 @@ class LeagueCommand(
     // still being edited.
     private fun resolveLeague(leagueSlug: String): League? =
         leagueCache.getLeagueBySlug(leagueSlug)
-            ?: leagueCache.getLeagueByShortId(leagueSlug)
             ?: try { leaguesApi.leaguesSlugGet(leagueSlug) } catch (_: ClientException) { null }
 
     // A player may manage a league if they are a network admin (LuckPerms) or the

@@ -64,7 +64,7 @@ class SpectateCommand(
 
                 plugin.logger.info("Found ${claims.size} claims for ${mongoPlayer.playerName}: $claims")
                 claims.firstOrNull()?.let { claim ->
-                    val runType = claim.metadata["run-type"]
+                    val runType = claim.metadata["slug"]
                     val deckId = claim.metadata["deck-id"]
                     val dungeonType = claim.metadata["dungeon-type"]
                     val server = claim.claimant

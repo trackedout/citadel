@@ -10,7 +10,7 @@ import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.data.find
 
-fun createCard(plugin: Citadel?, player: Player?, cardKey: String, count: Int, deckId: String? = null): ItemStack? {
+fun createCard(plugin: Citadel?, player: Player?, cardKey: String, count: Int, slug: String? = null): ItemStack? {
     try {
         val nugget = ItemStack(Material.IRON_NUGGET, count)
         val card = cardConfig.find(cardKey)?.let {
@@ -20,7 +20,7 @@ fun createCard(plugin: Citadel?, player: Player?, cardKey: String, count: Int, d
                 it.lore?.let { lore ->
                     tag.set(lore, "display", "Lore")
                 }
-                deckId?.let { deckIdValue -> tag.set(deckIdValue, "deckId") }
+                slug?.let { slugValue -> tag.set(slugValue, "slug") }
                 tag.set(it.shorthand, "shorthand")
 
                 return tag.loadCopy()
