@@ -15,17 +15,23 @@ import org.trackedout.citadel.config.LeagueCache
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.citadel.sendRedMessage
+import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.LeaguesApi
 import org.trackedout.client.infrastructure.ClientException
+import org.trackedout.client.models.Event
+import org.trackedout.client.models.League
+import org.trackedout.client.models.LeagueMemberRequest
 import org.trackedout.client.models.LeagueSandboxInstance
 import org.trackedout.client.models.LeaguesCreateRequest
 import org.trackedout.client.models.LeaguesCreateRequestBuilders
 
 @CommandAlias("decked-out|do")
+@CommandPermission("decked-out.league")
 class LeagueCommand(
     private val plugin: Citadel,
     private val leagueCache: LeagueCache,
     private val leaguesApi: LeaguesApi,
+    private val eventsApi: EventsApi,
 ) : BaseCommand() {
 
     // Track active polling loops per player to cancel stale ones
@@ -177,6 +183,168 @@ class LeagueCommand(
                 } else {
                     player.sendRedMessage("Failed to stop sandbox: ${e.message}")
                 }
+            }
+        }
+    }
+
+    @Subcommand("league publish")
+    @CommandCompletion("@leagueSlugs")
+    @Description("Publish a league so it becomes a playable mode")
+    fun publishLeague(player: Player, leagueSlug: String) {
+        plugin.async(player) {
+            val league = resolveLeague(leagueSlug)
+            if (league == null) {
+                player.sendRedMessage("Unknown league: $leagueSlug")
+                return@async
+            }
+            val slug = league.slug ?: return@async
+
+            if (!canManageLeague(player, league)) {
+                player.sendRedMessage("You don't have permission to publish '${league.displayName ?: slug}'")
+                return@async
+            }
+
+            player.sendGreyMessage("Publishing league '$slug'...")
+            try {
+                val published = leaguesApi.leaguePublish(slug)
+                leagueCache.refresh()
+                player.sendGreenMessage("League '$slug' is now playable as '${published.display?.shortId ?: slug}'.")
+                player.sendGreyMessage("Players can select it as a mode and use '/do league play $slug' to test it.")
+            } catch (e: ClientException) {
+                player.sendRedMessage("Failed to publish league: ${e.message}")
+            }
+        }
+    }
+
+    @Subcommand("league play")
+    @CommandCompletion("@leagueSlugs")
+    @Description("Queue into a league's dungeon to test it (owner/editor/admin)")
+    fun playLeague(player: Player, leagueSlug: String) {
+        plugin.async(player) {
+            val league = resolveLeague(leagueSlug)
+            if (league == null) {
+                player.sendRedMessage("Unknown league: $leagueSlug")
+                return@async
+            }
+            val slug = league.slug ?: return@async
+
+            if (!canManageLeague(player, league)) {
+                player.sendRedMessage("You don't have permission to play-test '${league.displayName ?: slug}'")
+                return@async
+            }
+
+            val shortId = league.display?.shortId
+            if (shortId.isNullOrEmpty() || (league.display?.runTypeId ?: 0) <= 0) {
+                player.sendRedMessage("League '$slug' isn't published yet. Run '/do league publish $slug' first.")
+                return@async
+            }
+
+            val dungeonType = league.dungeon?.type ?: slug
+            // Default to deck #1 for the league's run-type (e.g. shortId "ab" -> "ab1").
+            val deckId = "${shortId}1"
+
+            try {
+                eventsApi.eventsPost(
+                    Event(
+                        name = "joined-queue",
+                        server = plugin.serverName,
+                        player = player.name,
+                        count = 1,
+                        x = player.x,
+                        y = player.y,
+                        z = player.z,
+                        metadata = mapOf(
+                            "deck-id" to deckId,
+                            "run-type" to shortId,
+                            "dungeon-type" to dungeonType,
+                        ),
+                    )
+                )
+                player.sendGreenMessage("Queuing you into '${league.displayName ?: slug}' (dungeon-type: $dungeonType)...")
+            } catch (e: ClientException) {
+                player.sendRedMessage("Failed to queue: ${e.message}")
+            }
+        }
+    }
+
+    @Subcommand("league editors add")
+    @CommandCompletion("@leagueSlugs @nothing")
+    @Description("Add an editor (builder) to a league")
+    fun addEditor(player: Player, leagueSlug: String, editor: String) {
+        mutateLeague(player, leagueSlug, "add editor '$editor' to") { slug ->
+            leaguesApi.leagueAddEditor(slug, LeagueMemberRequest(player = editor))
+        }
+    }
+
+    @Subcommand("league editors remove")
+    @CommandCompletion("@leagueSlugs @nothing")
+    @Description("Remove an editor (builder) from a league")
+    fun removeEditor(player: Player, leagueSlug: String, editor: String) {
+        mutateLeague(player, leagueSlug, "remove editor '$editor' from") { slug ->
+            leaguesApi.leagueRemoveEditor(slug, LeagueMemberRequest(player = editor))
+        }
+    }
+
+    @Subcommand("league members add")
+    @CommandCompletion("@leagueSlugs @nothing")
+    @Description("Add a member to a league")
+    fun addMember(player: Player, leagueSlug: String, member: String) {
+        mutateLeague(player, leagueSlug, "add member '$member' to") { slug ->
+            leaguesApi.leagueAddMember(slug, LeagueMemberRequest(player = member))
+        }
+    }
+
+    @Subcommand("league members remove")
+    @CommandCompletion("@leagueSlugs @nothing")
+    @Description("Remove a member from a league")
+    fun removeMember(player: Player, leagueSlug: String, member: String) {
+        mutateLeague(player, leagueSlug, "remove member '$member' from") { slug ->
+            leaguesApi.leagueRemoveMember(slug, LeagueMemberRequest(player = member))
+        }
+    }
+
+    // Look up a league by slug or short id, falling back to a direct API lookup
+    // because the cache only holds active (published) leagues while drafts are
+    // still being edited.
+    private fun resolveLeague(leagueSlug: String): League? =
+        leagueCache.getLeagueBySlug(leagueSlug)
+            ?: leagueCache.getLeagueByShortId(leagueSlug)
+            ?: try { leaguesApi.leaguesSlugGet(leagueSlug) } catch (_: ClientException) { null }
+
+    // A player may manage a league if they are a network admin (LuckPerms) or the
+    // league's owner/editor. Editors are the league's builders (owner +
+    // builders.players), which the backend exposes via the builder-allowlist —
+    // the same source the sandbox whitelist uses, so the two never diverge.
+    private fun canManageLeague(player: Player, league: League): Boolean {
+        if (player.hasPermission("decked-out.league.admin")) return true
+        val slug = league.slug ?: return false
+        return try {
+            leaguesApi.leagueBuilderAllowlist(slug).any { it.name == player.name }
+        } catch (_: ClientException) {
+            false
+        }
+    }
+
+    private fun mutateLeague(player: Player, leagueSlug: String, action: String, mutate: (String) -> Unit) {
+        plugin.async(player) {
+            val league = resolveLeague(leagueSlug)
+            if (league == null) {
+                player.sendRedMessage("Unknown league: $leagueSlug")
+                return@async
+            }
+            val slug = league.slug ?: return@async
+
+            if (!canManageLeague(player, league)) {
+                player.sendRedMessage("You don't have permission to manage '${league.displayName ?: slug}'")
+                return@async
+            }
+
+            try {
+                mutate(slug)
+                leagueCache.refresh()
+                player.sendGreenMessage("Updated '$slug': $action league.")
+            } catch (e: ClientException) {
+                player.sendRedMessage("Failed to $action league: ${e.message}")
             }
         }
     }

@@ -245,7 +245,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(TrophyCommand(this, configApi))
         manager.registerCommand(BookCommand(this, configApi, scoreApi))
         manager.registerCommand(PartyCommand(this, partiesApi, gameRegistryApi, gameRegistryCache))
-        manager.registerCommand(LeagueCommand(this, leagueCache, leaguesApi))
+        manager.registerCommand(LeagueCommand(this, leagueCache, leaguesApi, eventsApi))
 
         gameRegistryCache.startRefreshTask()
         leagueCache.startRefreshTask()
