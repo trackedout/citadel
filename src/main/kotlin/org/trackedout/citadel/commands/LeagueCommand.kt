@@ -70,7 +70,7 @@ class LeagueCommand(
                 leaguesApi.leaguesCreate(request)
                 leagueCache.refresh()
 
-                player.sendGreenMessage("League '$slug' created! World seeded from builders2.")
+                player.sendGreenMessage("League '$slug' created! World seeded from builders2")
                 player.sendGreyMessage("Use '/do league edit $slug' to start building.")
             } catch (e: ClientException) {
                 if (e.statusCode == 409) {
@@ -206,7 +206,7 @@ class LeagueCommand(
             try {
                 val published = leaguesApi.leaguePublish(slug)
                 leagueCache.refresh()
-                player.sendGreenMessage("League '$slug' is now playable.")
+                player.sendGreenMessage("League '$slug' is now playable")
                 player.sendGreyMessage("Players can select it as a mode and use '/do league play $slug' to test it.")
             } catch (e: ClientException) {
                 player.sendRedMessage("Failed to publish league: ${e.message}")
@@ -232,12 +232,12 @@ class LeagueCommand(
             }
 
             if ((league.display?.runTypeId ?: 0) <= 0) {
-                player.sendRedMessage("League '$slug' isn't published yet. Run '/do league publish $slug' first.")
+                player.sendRedMessage("League '$slug' isn't published yet. Run '/do league publish $slug' first")
                 return@async
             }
 
-            val dungeonType = league.dungeon?.type ?: slug
-            // One deck per league: the deck identifier is the league slug.
+            // One deck per league: the deck identifier is the league slug. The
+            // backend derives dungeon-type from the league; we only send the slug.
             val deckId = slug
 
             try {
@@ -253,11 +253,10 @@ class LeagueCommand(
                         metadata = mapOf(
                             "deck-id" to deckId,
                             "slug" to slug,
-                            "dungeon-type" to dungeonType,
                         ),
                     )
                 )
-                player.sendGreenMessage("Queuing you into '${league.displayName ?: slug}' (dungeon-type: $dungeonType)...")
+                player.sendGreenMessage("Queuing you into '${league.displayName ?: slug}'...")
             } catch (e: ClientException) {
                 player.sendRedMessage("Failed to queue: ${e.message}")
             }
@@ -338,7 +337,7 @@ class LeagueCommand(
             try {
                 mutate(slug)
                 leagueCache.refresh()
-                player.sendGreenMessage("Updated '$slug': $action league.")
+                player.sendGreenMessage("Updated '$slug': $action league")
             } catch (e: ClientException) {
                 player.sendRedMessage("Failed to $action league: ${e.message}")
             }

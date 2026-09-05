@@ -80,7 +80,6 @@ class TestQueueCommand(
                     metadata = mapOf(
                         "deck-id" to deckId,
                         "slug" to deckId,
-                        "dungeon-type" to "season-2",
                     ),
                 )
             )

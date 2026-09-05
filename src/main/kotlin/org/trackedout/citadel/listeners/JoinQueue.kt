@@ -13,10 +13,8 @@ import java.util.function.Consumer
 fun createJoinQueueFunc(citadel: Citadel, eventsApi: EventsApi, player: Player): Consumer<String> {
     val joinQueueFunc = Consumer<LeagueSlug> { deckId ->
         citadel.async(player) {
-            // deckId is the league slug (one deck per league).
-            val league = citadel.leagueCache.getLeagueBySlug(deckId)
-            val dungeonType = league?.dungeon?.type ?: "default"
-
+            // deckId is the league slug (one deck per league). The backend derives
+            // dungeon-type from the league; we only send the slug.
             eventsApi.eventsPost(
                 Event(
                     name = "joined-queue",
@@ -29,7 +27,6 @@ fun createJoinQueueFunc(citadel: Citadel, eventsApi: EventsApi, player: Player):
                     metadata = mapOf(
                         "deck-id" to deckId,
                         "slug" to deckId,
-                        "dungeon-type" to dungeonType,
                     )
                 )
             )
