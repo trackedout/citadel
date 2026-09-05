@@ -29,11 +29,18 @@ import org.trackedout.client.models.Event
 import org.trackedout.client.models.Score
 import org.trackedout.citadel.config.RunType
 import org.trackedout.citadel.config.LeagueCache
-import org.trackedout.citadel.config.findRunTypeByIdFromCache
+import org.trackedout.citadel.config.runTypeFromLeague
 import org.trackedout.citadel.config.getRunTypesFromCache
 import org.trackedout.data.sortedList
 
-const val INVENTORY_FILTER_MODE_SCOREBOARD = "do2.inventory.filter-mode-id"
+// Per-player config key holding the canonical league SLUG the player selected as
+// their run mode. This fully replaces the old numeric `do2.inventory.filter-mode-id`
+// scoreboard, which was ambiguous after the slug migration (all season-N leagues
+// share runTypeId 2). It is a config, not a scoreboard.
+const val FILTER_MODE_SLUG_CONFIG = "filter-mode-slug"
+
+// Default run-mode slug when a player has no filter-mode-slug set.
+const val DEFAULT_FILTER_MODE_SLUG = "season-2"
 
 class InventoryManager(
     private val plugin: Citadel,
@@ -60,7 +67,7 @@ class InventoryManager(
             }
 
             scores = scores.filter { isInventoryRelatedScore(plugin.leagueCache, it) }
-            val inventoryFilterRunType = getInventoryFilterForPlayer(this.plugin, this.scoreApi, playerName)
+            val inventoryFilterRunType = getInventoryFilterForPlayer(this.plugin, this.configApi, playerName)
             if (inventoryFilterRunType != null) {
                 val tradeSourcesForFilter = getTradeSourcesForRunTypes(listOf(inventoryFilterRunType))
                 scores = scores.map { score: Score ->
@@ -409,22 +416,21 @@ fun isInventoryRelatedScore(leagueCache: LeagueCache, score: Score): Boolean {
 }
 
 fun getInventoryFilterForPlayer(
-    plugin: Citadel, scoreApi: ScoreApi, playerName: String
+    plugin: Citadel, configApi: ConfigApi, playerName: String
 ): RunType? {
-    // RunType filter (if any) to select which run type we display
-    val inventoryFilterMode = scoreApi.scoresGet(
-        playerName,
-        prefixFilter = INVENTORY_FILTER_MODE_SCOREBOARD
-    ).results!!.firstOrNull()
+    // The run-mode filter is the league SLUG, stored per-player in the
+    // `filter-mode-slug` config. Defaults to season-2 when unset.
+    val slug = try {
+        configApi.configsGet(playerName, FILTER_MODE_SLUG_CONFIG).value
+    } catch (e: Exception) {
+        null
+    }?.takeIf { it.isNotEmpty() } ?: DEFAULT_FILTER_MODE_SLUG
 
-    // If the filter is set, only include scores for that run type
-    plugin.logger.info("Inventory filter for $playerName is ${inventoryFilterMode?.value}")
-    val inventoryFilterRunType = inventoryFilterMode?.let { runTypeId: Score ->
-        val runType = findRunTypeByIdFromCache(plugin.leagueCache, runTypeId.value.toString())
-        plugin.logger.info("Run type for $playerName is $runType")
-
-        runType
+    val runType = plugin.leagueCache.getLeagueBySlug(slug)?.let { runTypeFromLeague(it) }
+    if (runType == null) {
+        plugin.logger.warning("Inventory filter slug '$slug' for $playerName did not resolve to a league")
+    } else {
+        plugin.logger.info("Inventory filter for $playerName resolved by slug '$slug' -> ${runType.longId}")
     }
-
-    return inventoryFilterRunType
+    return runType
 }

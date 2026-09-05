@@ -4,18 +4,20 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.trackedout.citadel.Citadel
-import org.trackedout.citadel.INVENTORY_FILTER_MODE_SCOREBOARD
+import org.trackedout.citadel.FILTER_MODE_SLUG_CONFIG
 import org.trackedout.citadel.async
+import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.ScoreApi
+import org.trackedout.client.models.Config
 import org.trackedout.client.models.Event
-import org.trackedout.client.models.Score
 import org.trackedout.citadel.config.getRunTypeByIdFromCache
 
 class PlayedDeathListener(
     private val plugin: Citadel,
     private val eventsApi: EventsApi,
     private val scoreApi: ScoreApi,
+    private val configApi: ConfigApi,
 ) : Listener {
 
     @EventHandler(ignoreCancelled = true)
@@ -46,13 +48,12 @@ class PlayedDeathListener(
                 )
             )
 
-            scoreApi.scoresPost(
-                listOf(
-                    Score(
-                        player = playerName,
-                        key = INVENTORY_FILTER_MODE_SCOREBOARD,
-                        value = getRunTypeByIdFromCache(plugin.leagueCache, "hardcore").runTypeId.toBigDecimal(),
-                    )
+            // Reset the player's run mode to hardcore via the filter-mode-slug config.
+            configApi.configsAddConfigPost(
+                Config(
+                    entity = playerName,
+                    key = FILTER_MODE_SLUG_CONFIG,
+                    value = "hardcore",
                 )
             )
         }

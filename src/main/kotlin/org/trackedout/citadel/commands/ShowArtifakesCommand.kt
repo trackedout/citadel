@@ -22,6 +22,7 @@ import org.trackedout.citadel.getInventoryFilterForPlayer
 import org.trackedout.citadel.inventory.BasicItemView
 import org.trackedout.citadel.runOnNextTick
 import org.trackedout.citadel.sendRedMessage
+import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.citadel.config.RunType
 import org.trackedout.citadel.config.getRunTypeByIdFromCache
@@ -30,6 +31,7 @@ import org.trackedout.citadel.config.getRunTypeByIdFromCache
 class ShowArtifakesCommand(
     private val plugin: Citadel,
     private val scoreApi: ScoreApi,
+    private val configApi: ConfigApi,
     private val viewFrame: ViewFrame,
 ) : BaseCommand() {
 
@@ -38,7 +40,7 @@ class ShowArtifakesCommand(
     @CommandCompletion("@runTypes @nothing")
     fun showArtifakes(source: CommandSender, runType: RunType?) {
         if (source is Player) {
-            showArtifakeUIForPlayer(this.plugin, this.viewFrame, source, source.name, this.scoreApi, runType)
+            showArtifakeUIForPlayer(this.plugin, this.viewFrame, source, source.name, this.scoreApi, this.configApi, runType)
         } else {
             source.sendRedMessage("Cannot show your artifakes as you are not a player. Use /do artifakes <playerName>")
         }
@@ -49,7 +51,7 @@ class ShowArtifakesCommand(
     @Description("Show artifakes for target player")
     @CommandCompletion("@runTypes @dbPlayers @nothing")
     fun showArtifakesForPlayer(source: CommandSender, runType: RunType?, targetPlayer: String) {
-        showArtifakeUIForPlayer(this.plugin, this.viewFrame, source, targetPlayer, this.scoreApi, runType)
+        showArtifakeUIForPlayer(this.plugin, this.viewFrame, source, targetPlayer, this.scoreApi, this.configApi, runType)
     }
 }
 
@@ -59,10 +61,15 @@ fun showArtifakeUIForPlayer(
     source: CommandSender,
     playerName: String,
     scoreApi: ScoreApi,
+    configApi: ConfigApi,
     runType: RunType? = null,
 ) {
     plugin.async(source) {
-        val runType = runType ?: getInventoryFilterForPlayer(plugin, scoreApi, playerName) ?: getRunTypeByIdFromCache(plugin.leagueCache, "c")
+        // getInventoryFilterForPlayer defaults to season-2 when the player has no
+        // filter set; the outer fallback covers an unresolvable slug.
+        val runType = runType
+            ?: getInventoryFilterForPlayer(plugin, configApi, playerName)
+            ?: getRunTypeByIdFromCache(plugin.leagueCache, "2")
         val runTypeLongId = runType.longId
         val scores = scoreApi.scoresGet(playerName, prefixFilter = "${runTypeLongId}-do2.artifakes.").results!!
 

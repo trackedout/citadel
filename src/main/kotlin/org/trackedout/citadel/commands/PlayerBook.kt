@@ -5,11 +5,12 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
-import org.trackedout.citadel.INVENTORY_FILTER_MODE_SCOREBOARD
+import org.trackedout.citadel.DEFAULT_FILTER_MODE_SLUG
+import org.trackedout.citadel.FILTER_MODE_SLUG_CONFIG
 import org.trackedout.citadel.async
 import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.ScoreApi
-import org.trackedout.citadel.config.findRunTypeByIdFromCache
+import org.trackedout.citadel.config.runTypeFromLeague
 
 fun showPlayerBook(plugin: Citadel, player: Player, configApi: ConfigApi, scoreApi: ScoreApi, page: Int = 0) {
     plugin.async(player) {
@@ -18,9 +19,9 @@ fun showPlayerBook(plugin: Citadel, player: Player, configApi: ConfigApi, scoreA
         } catch (e: Exception) { emptyList() }
 
         val currentRunMode = try {
-            val score = scoreApi.scoresGet(player.name, prefixFilter = INVENTORY_FILTER_MODE_SCOREBOARD)
-                .results?.firstOrNull()
-            score?.let { findRunTypeByIdFromCache(plugin.leagueCache, it.value.toString()) }
+            val slug = configs.find { it.key == FILTER_MODE_SLUG_CONFIG }?.value?.takeIf { it.isNotEmpty() }
+                ?: DEFAULT_FILTER_MODE_SLUG
+            plugin.leagueCache.getLeagueBySlug(slug)?.let { runTypeFromLeague(it) }
         } catch (e: Exception) { null }
 
         val skipDoor = configs.find { it.key == "skip-door" }?.value == "true"
