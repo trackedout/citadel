@@ -85,6 +85,10 @@ dependencies {
     runtimeOnly "net.megavex:scoreboard-library-modern:$scoreboardLibraryVersion" // 1.17+
 
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    // Adventure MiniMessage is provided by paper-api at runtime, but paper-api is
+    // compileOnly, so pull MiniMessage explicitly onto the test classpath so book
+    // layout tests can deserialize/validate pages.
+    testImplementation 'net.kyori:adventure-text-minimessage:4.25.0'
 }
 
 test {
