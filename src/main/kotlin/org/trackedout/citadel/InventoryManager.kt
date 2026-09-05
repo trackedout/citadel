@@ -55,6 +55,11 @@ class InventoryManager(
 
     fun updateInventoryBasedOnScore(player: Player) {
         val knownItemTracker = mutableSetOf<ItemStack>()
+        // Ordered list of the items the player SHOULD end up with, collected before any
+        // inventory mutation. We reconcile the live inventory only after old items have
+        // been cleared, so newly-added items reclaim the freed slots instead of landing
+        // in later empty slots (which left gaps in the hotbar when switching run modes).
+        val desiredItems = mutableListOf<ItemStack>()
 
         plugin.async(player) {
             val playerName = player.name
@@ -85,6 +90,7 @@ class InventoryManager(
                     updatePlayerInventoryForState(
                         player,
                         knownItemTracker,
+                        desiredItems,
                         inventoryFilterRunType,
                         scores.associate { it.key!! to it.value!!.toInt() },
                         score.key!!,
@@ -92,16 +98,20 @@ class InventoryManager(
                     )
                 }
 
-            ensurePlayerInventoryReflectsItemsOutsideOfDeck(player, knownItemTracker, inventoryFilterRunType)
+            ensurePlayerInventoryReflectsItemsOutsideOfDeck(player, knownItemTracker, desiredItems, inventoryFilterRunType)
             syncAdvancements(player)
 
+            // Clear old items FIRST so their slots are freed, then place the desired items
+            // into those freed slots. Doing this in the reverse order left gaps.
             cleanUpOldItems(player, knownItemTracker)
+            desiredItems.forEach { player.ensureInventoryContains(it) }
         }
     }
 
     private fun ensurePlayerInventoryReflectsItemsOutsideOfDeck(
         player: Player,
         knownItemTracker: MutableSet<ItemStack>,
+        desiredItems: MutableList<ItemStack>,
         inventoryFilterRunType: RunType?
     ) {
         // For each card in the player's inventory, ensure they only have the correct amount
@@ -123,8 +133,9 @@ class InventoryManager(
                 val itemStack = createCard(plugin, null, card.shorthand, 1, runType.deckType())
 
                 itemStack?.let {
-                    player.ensureInventoryContains(
+                    want(
                         knownItemTracker,
+                        desiredItems,
                         it.clone().apply { amount = zeroSupportedItemCount(maxCardsThatShouldBeInInventory) }
                     )
                 }
@@ -144,8 +155,9 @@ class InventoryManager(
                 val itemStack = scoreboardDescriber.itemStack(runType.longId, 1)
 
                 itemStack.let {
-                    player.ensureInventoryContains(
+                    want(
                         knownItemTracker,
+                        desiredItems,
                         it.withTradeMeta(runType.longId, itemKey).clone()
                             .apply { amount = zeroSupportedItemCount(maxItemsThatShouldBeInInventory) }
                     )
@@ -201,6 +213,7 @@ class InventoryManager(
     private fun updatePlayerInventoryForState(
         player: Player,
         knownItemTracker: MutableSet<ItemStack>,
+        desiredItems: MutableList<ItemStack>,
         inventoryFilterRunType: RunType?,
         scores: Map<String, Int>,
         key: String,
@@ -221,8 +234,9 @@ class InventoryManager(
                         itemCount -= scores.getOrDefault(inversionScoreKey, 0)
                     }
 
-                    player.ensureInventoryContains(
+                    want(
                         knownItemTracker,
+                        desiredItems,
                         sb.itemStack(runType, itemCount).withTradeMeta(runType, it.key)
                     )
                 }
@@ -244,17 +258,29 @@ class InventoryManager(
                     } catch (e: ClientException) {
                         null
                     }
-                    player.ensureInventoryContains(knownItemTracker, dungeonDeck(runType, itemCount, materialOverride))
-                    player.ensureInventoryContains(knownItemTracker, dungeonArtifacts(runType, itemCount))
+                    want(knownItemTracker, desiredItems, dungeonDeck(runType, itemCount, materialOverride))
+                    want(knownItemTracker, desiredItems, dungeonArtifacts(runType, itemCount))
                 }
             }
         }
 
-        player.ensureInventoryContains(knownItemTracker, menuBook())
-        player.ensureInventoryContains(knownItemTracker, settingsBook())
+        want(knownItemTracker, desiredItems, menuBook())
+        want(knownItemTracker, desiredItems, settingsBook())
         if (player.hasPermission("decked-out.book.admin")) {
-            player.ensureInventoryContains(knownItemTracker, adminBook())
+            want(knownItemTracker, desiredItems, adminBook())
         }
+    }
+
+    // Record an item the player should end up with. Populates the cleanup-matching set
+    // (knownItemTracker) and the ordered apply list (desiredItems). No inventory mutation
+    // happens here — that is deferred to the apply phase so cleared slots can be reused.
+    private fun want(
+        knownItemTracker: MutableSet<ItemStack>,
+        desiredItems: MutableList<ItemStack>,
+        itemStack: ItemStack
+    ) {
+        knownItemTracker.add(itemStack)
+        desiredItems.add(itemStack)
     }
 
     private fun cleanUpOldItems(player: Player, knownItemTracker: MutableSet<ItemStack>) {
@@ -267,15 +293,13 @@ class InventoryManager(
         plugin.logger.info("Removing ${itemsToRemove.size} old items from ${player.name}'s inventory:")
         itemsToRemove.forEach { item ->
             plugin.logger.info(" - Removing old item: $item")
-            player.ensureInventoryContains(knownItemTracker, item!!.apply { amount = 0 })
+            player.inventory.remove(item!!)
         }
 
         plugin.logger.info("Finished cleaning up old items for ${player.name}")
     }
 
-    private fun Player.ensureInventoryContains(knownItemTracker: MutableSet<ItemStack>, itemStack: ItemStack) {
-        knownItemTracker.add(itemStack)
-
+    private fun Player.ensureInventoryContains(itemStack: ItemStack) {
         val targetAmount = if (itemStack.amount == 999) 0 else itemStack.amount
         plugin.logger.fine("Ensuring ${this.name} has ${targetAmount}x ${itemStack.type.name} (name: ${itemStack.name()})")
 
