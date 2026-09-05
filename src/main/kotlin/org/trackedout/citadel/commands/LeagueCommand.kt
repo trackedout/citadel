@@ -14,6 +14,7 @@ import org.trackedout.citadel.async
 import org.trackedout.citadel.config.LeagueCache
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
+import org.trackedout.citadel.userMessage
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.LeaguesApi
@@ -258,7 +259,7 @@ class LeagueCommand(
                 )
                 player.sendGreenMessage("Queuing you into '${league.displayName ?: slug}'...")
             } catch (e: ClientException) {
-                player.sendRedMessage("Failed to queue: ${e.message}")
+                player.sendRedMessage("Failed to queue: ${e.userMessage()}")
             }
         }
     }

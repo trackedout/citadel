@@ -2,7 +2,6 @@ package org.trackedout.citadel
 
 import co.aikar.commands.InvalidCommandArgument
 import co.aikar.commands.PaperCommandManager
-import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import me.devnatan.inventoryframework.ViewFrame
 import net.megavex.scoreboardlibrary.api.ScoreboardLibrary
@@ -69,7 +68,6 @@ import org.trackedout.client.apis.PartiesApi
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.apis.StatusApi
 import org.trackedout.client.apis.TasksApi
-import org.trackedout.client.infrastructure.ClientError
 import org.trackedout.client.infrastructure.ClientException
 import org.trackedout.citadel.config.RunType
 import org.trackedout.citadel.config.findRunTypeByIdFromCache
@@ -328,8 +326,6 @@ class Citadel : JavaPlugin() {
     }
 }
 
-private val gson = Gson()
-
 fun getEnvOrDefault(key: String, default: String): String {
     var value = System.getenv(key)
     if (value == null || value.isEmpty()) {
@@ -392,16 +388,7 @@ fun Citadel.runLaterOnATick(delay: Long, unit: () -> Unit) {
 }
 
 private fun getMessage(e: Exception): String? {
-    var message = e.message
-    if (e is ClientException && e.response is ClientError<*>) {
-        message = ((e.response as ClientError<*>).body as String).ifEmpty { e.message }
-        try {
-            gson.fromJson(message, DungaDungaException::class.java).message?.let { message = it }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-    return message
+    return if (e is ClientException) e.userMessage() else e.message
 }
 
 data class DungaDungaException(
