@@ -16,11 +16,13 @@ For a list of changes, see the [latest release notes](https://github.com/tracked
 #### Shop Management:
 | Command | Description | Permission Required |
 |---|---|---|
-| `/do shop edit` | Shop management | `decked-out.shop.admin` |
 | `/do shop rename [name]` | Set shop name | `decked-out.shop.admin` |
 | `/do shop info` | Show shop info | `decked-out.shop.admin` |
 | `/do shop disable [x] [y] [z]` | Disable shop at location | `decked-out.shop.admin` |
 | `/do shop enable [x] [y] [z]` | Enable shop at location | `decked-out.shop.admin` |
+| `/do shop add [trade]` | Add a trade (`<slug>:<SOURCE>x<n>=<TARGET>x<m>[,...][:r]`) | `decked-out.shop.admin` |
+| `/do shop remove [trade]` | Remove a trade (or `ALL`) | `decked-out.shop.admin` |
+| `/do shop rewrite` | Migrate legacy char-prefixed trades to the slug syntax | `decked-out.shop.admin` |
 
 #### Deck Access (deprecated):
 | Command | Description | Permission Required |

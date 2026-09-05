@@ -84,7 +84,12 @@ class ShopView : View() {
         const val SHOP_RULES: String = "shop-rules-list"
         const val TRADE_FUNC: String = "trade-func"
         const val UPDATE_INVENTORY_FUNC: String = "update-inventory-func"
-        val SHOP_RULES_REGEX = "^(?<repeat>r|)(?<type>[a-z])(?<sourceType>.+?)x(?<sourceCount>\\d{1,3})=[a-z](?<targetTypes>(?:.+?x\\d{1,3},?)+)$".toRegex()
+        // Slug-native grammar (hard cutover from the legacy single-char run-type prefix):
+        //   <slug>:<SOURCE>x<n>=<TARGET>x<m>[,<TARGET>x<m>...][:r]
+        // The league slug is stated once for the whole rule; targets carry no prefix.
+        // A trailing ":r" marks the trade as repeating.
+        val SHOP_RULES_REGEX =
+            "^(?<slug>[a-z0-9-]+):(?<sourceType>.+?)x(?<sourceCount>\\d{1,3})=(?<targetTypes>(?:.+?x\\d{1,3},?)+?)(?::(?<repeat>r))?$".toRegex()
         val SHOP_RULE_TARGET_REGEX = "^(?<targetType>.+?)x(?<targetCount>\\d{1,3})$".toRegex()
     }
 
@@ -112,8 +117,9 @@ class ShopView : View() {
             shopRules[event].forEach { rule ->
                 SHOP_RULES_REGEX.matchEntire(rule)?.let { matchResult ->
                     val groups = matchResult.groups
-                    val shortType = groups["type"]
-                    val longType = getRunTypeByIdFromCache(plugin[event].leagueCache, shortType?.value ?: "u").longId
+                    val slug = groups["slug"]?.value ?: "u"
+                    val runType = getRunTypeByIdFromCache(plugin[event].leagueCache, slug)
+                    val longType = runType.longId
                     val league = plugin[event].leagueCache.getLeagueBySlug(longType)
 
                     val sourceType = groups["sourceType"]?.value
@@ -121,7 +127,7 @@ class ShopView : View() {
                     val targetTypes = groups["targetTypes"]?.value
                     val repeat = groups["repeat"]?.value?.let { it == "r" } ?: false
 
-                    println("Rule: Convert { type=$longType, sourceType=$sourceType, sourceCount=$sourceCount, targetTypes=$targetTypes)")
+                    println("Rule: Convert { slug=$longType, sourceType=$sourceType, sourceCount=$sourceCount, targetTypes=$targetTypes)")
                     if (longType == unknownRunType.longId || sourceType == null || sourceCount == null || targetTypes == null) {
                         System.err.println("An expected regex group is missing from match, skipping rule: $rule")
                         return@let
@@ -169,15 +175,15 @@ class ShopView : View() {
                                     name = targetCard.replace("-", "_"),
                                 )
 
-                                addCardFunc[event].accept(longType[0].toString(), newCard)
+                                addCardFunc[event].accept(runType.deckType(), newCard)
                             }
                             player.sendGreenMessage("Added ${cardsToAdd}x ${card.name} to your $longType deck")
                         }
                     } else if (targetType.equals("QUEUE", ignoreCase = true)) {
                         sendTradeMessage = false
                         eventToSend = {
-                            println("Placing ${player.name} in queue with Deck ID #${longType}1")
-                            joinQueueFunc[event].accept("${shortType?.value ?: throw Exception("Shop type not defined")}1")
+                            println("Placing ${player.name} in queue with Deck ${longType}")
+                            joinQueueFunc[event].accept(longType)
                         }
                     } else if (sourceType == "TOME" && targetType.equals("DUMMY", ignoreCase = true)) {
                         sendTradeMessage = false
@@ -200,7 +206,7 @@ class ShopView : View() {
                                     name = targetItem,
                                 )
 
-                                addCardFunc[event].accept(longType[0].toString(), newCard)
+                                addCardFunc[event].accept(runType.deckType(), newCard)
                             }
                             player.sendGreenMessage("Added ${itemsToAdd}x $targetItem to your $longType deck")
                         }

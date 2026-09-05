@@ -183,7 +183,11 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(ScoreManagementCommand(this, scoreApi, eventsApi, inventoryManager, inventoryApi))
         manager.registerCommand(ShutdownDungeonsCommand(this, eventsApi, tasksApi))
         manager.registerCommand(ScheduleJobCommand(this, tasksApi))
-        manager.registerCommand(ShopCommand(this))
+        val shopCommand = ShopCommand(this)
+        manager.registerCommand(shopCommand)
+        manager.commandCompletions.registerAsyncCompletion("shopTrades") { c ->
+            c.player?.let { shopCommand.tradesForTargetedShop(it) } ?: emptyList()
+        }
         manager.registerCommand(TestQueueCommand(eventsApi))
 
         manager.setDefaultExceptionHandler { _, _, sender, _, throwable ->
