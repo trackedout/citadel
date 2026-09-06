@@ -13,8 +13,23 @@ import java.util.function.Consumer
 fun createJoinQueueFunc(citadel: Citadel, eventsApi: EventsApi, player: Player): Consumer<String> {
     val joinQueueFunc = Consumer<LeagueSlug> { deckId ->
         citadel.async(player) {
-            // deckId is the league slug (one deck per league). The backend derives
-            // dungeon-type from the league; we only send the slug.
+            // The player's client protocol is injected onto the GameProfile by the
+            // EmberSeeker proxy at login. Forward it so the backend can reject
+            // queuing when it doesn't match the league's expected MC version.
+            val clientProtocol = player.playerProfile.properties
+                .firstOrNull { it.name == "clientProtocol" }
+                ?.value
+
+            val metadata = buildMap {
+                // deckId is the league slug (one deck per league). The backend derives
+                // dungeon-type from the league; we only send the slug.
+                put("deck-id", deckId)
+                put("slug", deckId)
+                if (clientProtocol != null) {
+                    put("mc-protocol", clientProtocol)
+                }
+            }
+
             eventsApi.eventsPost(
                 Event(
                     name = "joined-queue",
@@ -24,10 +39,7 @@ fun createJoinQueueFunc(citadel: Citadel, eventsApi: EventsApi, player: Player):
                     x = player.x,
                     y = player.y,
                     z = player.z,
-                    metadata = mapOf(
-                        "deck-id" to deckId,
-                        "slug" to deckId,
-                    )
+                    metadata = metadata,
                 )
             )
 
