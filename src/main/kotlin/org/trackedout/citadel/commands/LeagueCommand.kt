@@ -14,6 +14,7 @@ import org.trackedout.citadel.async
 import org.trackedout.citadel.config.LeagueCache
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
+import org.trackedout.citadel.sendMiniMessage
 import org.trackedout.citadel.userMessage
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.EventsApi
@@ -79,6 +80,27 @@ class LeagueCommand(
                 } else {
                     player.sendRedMessage("Failed to create league: ${e.message}")
                 }
+            }
+        }
+    }
+
+    @Subcommand("league list")
+    @Description("List all active leagues")
+    fun listLeagues(player: Player) {
+        plugin.async(player) {
+            val leagues = leagueCache.getLeagues().sortedBy { it.slug ?: "" }
+            if (leagues.isEmpty()) {
+                player.sendGreyMessage("No active leagues")
+                return@async
+            }
+
+            player.sendGreenMessage("Active leagues (${leagues.size}):")
+            leagues.forEach { league ->
+                val slug = league.slug ?: "?"
+                val name = league.displayName ?: slug
+                val state = league.state ?: "?"
+                val hex = "#%06x".format((league.display?.colour ?: 0x555555) and 0xffffff)
+                player.sendMiniMessage("<gray>- <$hex>$slug</$hex> ($name) — $state</gray>")
             }
         }
     }
@@ -153,7 +175,15 @@ class LeagueCommand(
                 player.sendGreyMessage("Sandbox allocated on slot $slot for league '$slug'. Starting Fargate task...")
                 waitForRunningAndTransfer(player, slug, slot)
             } catch (e: ClientException) {
-                player.sendRedMessage("Failed to launch sandbox: ${e.message}")
+                // Leagues built on a persistent build server (builders/builders2)
+                // reject on-demand sandboxes with 409. That's expected — point the
+                // editor at the persistent server instead of surfacing a raw error.
+                if (e.statusCode == 409) {
+                    player.sendGreyMessage("'${league.displayName ?: slug}' is built on the persistent build server")
+                    player.sendGreyMessage("Use '/server builders2' to edit it")
+                } else {
+                    player.sendRedMessage("Failed to launch sandbox: ${e.message}")
+                }
             }
         }
     }
