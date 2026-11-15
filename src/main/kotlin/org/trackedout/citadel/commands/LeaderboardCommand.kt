@@ -74,7 +74,7 @@ class LeaderboardCommand(
 
             val scores = scoreCollection.find(
                 Filters.and(
-                    Filters.eq("key", "leaderboard-hardcore-do2.lifetime.escaped.tomes")
+                    Filters.eq("key", "leaderboard-do2-s2-hardcore-do2.lifetime.escaped.tomes")
                 )
             ).toList()
 

@@ -17,16 +17,16 @@ class PlayerBookLayoutTest {
 
     // The three competitive seasons from the screenshot that originally clipped.
     private val threeSeasons = listOf(
-        league("season-1", "Season 1", "The first competitive season of Decked Out 2"),
-        league("season-2", "Season 2", "The second competitive season of Decked Out 2"),
-        league("season-3", "Season 3", "The third competitive season of Decked Out 2"),
+        league("do2-s1-comp", "Season 1", "The first competitive season of Decked Out 2"),
+        league("do2-s2-comp", "Season 2", "The second competitive season of Decked Out 2"),
+        league("do2-s3-comp", "Season 3", "The third competitive season of Decked Out 2"),
     )
 
     @Test
     fun `all player book pages fit within a book page height`() {
         val pages = buildPlayerBookPages(
             leagues = threeSeasons,
-            currentRunModeSlug = "season-3",
+            currentRunModeSlug = "do2-s3-comp",
             skipDoor = false,
             allowSpectating = true,
             shulkerStyle = "CYAN",

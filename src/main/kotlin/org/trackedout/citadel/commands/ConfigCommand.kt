@@ -36,10 +36,10 @@ val editableConfigs = listOf(
 
 private val configDescriptions = mapOf(
     "skip-door" to "Enable this to skip the door animation",
-    "dungeon-type" to "The type of dungeon to generate (default / season-2)",
+    "dungeon-type" to "The type of dungeon to generate (default / do2-s2-comp)",
     "allow-spectating" to "Allow players to spectate your runs",
     "shulker-style" to "Shulker box colour (in competitive mode)",
-    "default-dungeon-type" to "Dungeon season to use when queuing (default / season-2)",
+    "default-dungeon-type" to "Dungeon season to use when queuing (default / do2-s2-comp)",
 )
 
 private fun configDescription(key: String?): String = configDescriptions[key]?.let { "<gray>$it</gray>" } ?: ""
@@ -86,7 +86,7 @@ class ConfigCommand(
       {
         entity: 'd800', // Could be player name or dungeon ID
         key: 'dungeon-type',
-        value: 'season-2'
+        value: 'do2-s2-comp'
       }
      */
 

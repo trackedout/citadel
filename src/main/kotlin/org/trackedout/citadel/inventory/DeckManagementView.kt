@@ -228,7 +228,7 @@ fun LeagueSlug.displayName(leagueCache: LeagueCache): String {
 fun LeagueSlug.isValidRunType(leagueCache: LeagueCache): Boolean = findRunTypeByIdFromCache(leagueCache, this) != null
 
 fun LeagueSlug.isPractice(leagueCache: LeagueCache): Boolean =
-    findRunTypeByIdFromCache(leagueCache, this)?.longId == "practice"
+    findRunTypeByIdFromCache(leagueCache, this)?.longId == "do2-s2-practice"
 
 fun LeagueSlug.runType(leagueCache: LeagueCache): RunType = getRunTypeByIdFromCache(leagueCache, this)
 

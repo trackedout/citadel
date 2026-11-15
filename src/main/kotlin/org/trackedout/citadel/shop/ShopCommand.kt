@@ -41,9 +41,9 @@ class ShopCommand(
 
         // Legacy single-char run-type prefix -> canonical league slug.
         private val LEGACY_CHAR_TO_SLUG = mapOf(
-            "p" to "practice",
-            "c" to "season-3",
-            "h" to "hardcore",
+            "p" to "do2-s2-practice",
+            "c" to "do2-s3-comp",
+            "h" to "do2-s2-hardcore",
         )
 
         // Rewrite a single legacy char-prefixed rule to the slug syntax
@@ -130,7 +130,7 @@ class ShopCommand(
         if (!trade.matches(SHOP_RULES_REGEX)) {
             player.sendRedMessage("Invalid trade syntax: '$trade'")
             player.sendRedMessage("Expected: <slug>:<SOURCE>x<n>=<TARGET>x<m>[,<TARGET>x<m>...][:r]")
-            player.sendRedMessage("Example: season-3:CROWNx10=SHARDx1")
+            player.sendRedMessage("Example: do2-s3-comp:CROWNx10=SHARDx1")
             return
         }
 

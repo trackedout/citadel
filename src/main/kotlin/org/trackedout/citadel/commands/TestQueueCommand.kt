@@ -37,10 +37,10 @@ class TestQueueCommand(
         help.showHelp();
     }
 
-    @Subcommand("queue season-2")
+    @Subcommand("queue do2-s2-comp")
     @Syntax("[deckId] [player]")
-    @CommandPermission("decked-out.queue.season-2")
-    @Description("Queue for a season-2 test dungeon, optionally targeting a player and deck ID")
+    @CommandPermission("decked-out.queue.do2-s2-comp")
+    @Description("Queue for a do2-s2-comp test dungeon, optionally targeting a player and deck ID")
     fun queueSeason2(sender: CommandSender, @Optional deckId: String?, @Optional target: OnlinePlayer?) {
         var player = target?.player
         if (player == null && sender is OnlinePlayer) {
@@ -66,7 +66,7 @@ class TestQueueCommand(
             val eventName = "joined-queue"
             val count = 1
 
-            val deckId = deckId ?: "practice"
+            val deckId = deckId ?: "do2-s2-practice"
 
             eventsApi.eventsPost(
                 Event(

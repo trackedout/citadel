@@ -65,7 +65,7 @@ fun showArtifakeUIForPlayer(
     runType: RunType? = null,
 ) {
     plugin.async(source) {
-        // getInventoryFilterForPlayer defaults to season-2 when the player has no
+        // getInventoryFilterForPlayer defaults to do2-s2-comp when the player has no
         // filter set; the outer fallback covers an unresolvable slug.
         val runType = runType
             ?: getInventoryFilterForPlayer(plugin, configApi, playerName)

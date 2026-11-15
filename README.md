@@ -90,7 +90,7 @@ For a list of changes, see the [latest release notes](https://github.com/tracked
 #### Queue:
 | Command | Description | Permission Required |
 |---|---|---|
-| `/do queue season-2 [deckId] [player]` | Queue for a season-2 test dungeon | `decked-out.queue.season-2` |
+| `/do queue do2-s2-comp [deckId] [player]` | Queue for a do2-s2-comp test dungeon | `decked-out.queue.do2-s2-comp` |
 
 #### Spectating:
 | Command | Description | Permission Required |

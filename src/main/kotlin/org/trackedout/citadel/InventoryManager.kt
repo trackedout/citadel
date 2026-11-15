@@ -40,7 +40,7 @@ import org.trackedout.data.sortedList
 const val FILTER_MODE_SLUG_CONFIG = "filter-mode-slug"
 
 // Default run-mode slug when a player has no filter-mode-slug set.
-const val DEFAULT_FILTER_MODE_SLUG = "season-2"
+const val DEFAULT_FILTER_MODE_SLUG = "do2-s2-comp"
 
 class InventoryManager(
     private val plugin: Citadel,
@@ -169,10 +169,10 @@ class InventoryManager(
 
     private fun ensurePlayerHasPracticeShards(playerName: String, scores: List<Score>): Boolean {
         tradeItems["SHARD"]?.let { tradeItem ->
-            scores.find { score -> score.key == tradeItem.sourceScoreboardName("practice") }?.let { score ->
+            scores.find { score -> score.key == tradeItem.sourceScoreboardName("do2-s2-practice") }?.let { score ->
                 if (score.value!!.toInt() <= 10) {
                     val trade = Trade(
-                        runType = "practice",
+                        runType = "do2-s2-practice",
                         sourceType = "dummy",
                         sourceItemCount = 0,
                         targetType = "SHARD",
@@ -443,7 +443,7 @@ fun getInventoryFilterForPlayer(
     plugin: Citadel, configApi: ConfigApi, playerName: String
 ): RunType? {
     // The run-mode filter is the league SLUG, stored per-player in the
-    // `filter-mode-slug` config. Defaults to season-2 when unset.
+    // `filter-mode-slug` config. Defaults to do2-s2-comp when unset.
     val slug = try {
         configApi.configsGet(playerName, FILTER_MODE_SLUG_CONFIG).value
     } catch (e: Exception) {

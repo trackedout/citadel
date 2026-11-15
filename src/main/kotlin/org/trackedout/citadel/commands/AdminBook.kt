@@ -35,7 +35,7 @@ fun showAdminBook(plugin: Citadel, player: Player, configApi: ConfigApi) {
         fun dungeonLine(d: String): String {
             val type = dungeonTypes[d] ?: "default"
             val s1Btn = if (type == "default") "<gold>[<u>S1</u>]</gold>" else "<click:run_command:'/do config set $d dungeon-type default'><gold>[S1]</gold></click>"
-            val s2Btn = if (type == "season-2") "<aqua>[<u>S2</u>]</aqua>" else "<click:run_command:'/do config set $d dungeon-type season-2'><aqua>[S2]</aqua></click>"
+            val s2Btn = if (type == "do2-s2-comp") "<aqua>[<u>S2</u>]</aqua>" else "<click:run_command:'/do config set $d dungeon-type do2-s2-comp'><aqua>[S2]</aqua></click>"
             val shutdownBtn = "<click:run_command:'/do shutdown-dungeon $d'><red>[X]</red></click>"
             return "  $d $s1Btn $s2Btn $shutdownBtn"
         }
@@ -43,7 +43,7 @@ fun showAdminBook(plugin: Citadel, player: Player, configApi: ConfigApi) {
         fun queueTypeBtn(runType: String, label: String, colour: String): String {
             val current = queueDungeonTypes[runType] ?: "default"
             val s1Btn = if (current == "default") "<gold>[<u>S1</u>]</gold>" else "<click:run_command:'/do config set $runType default-dungeon-type default'><gold>[S1]</gold></click>"
-            val s2Btn = if (current == "season-2") "<aqua>[<u>S2</u>]</aqua>" else "<click:run_command:'/do config set $runType default-dungeon-type season-2'><aqua>[S2]</aqua></click>"
+            val s2Btn = if (current == "do2-s2-comp") "<aqua>[<u>S2</u>]</aqua>" else "<click:run_command:'/do config set $runType default-dungeon-type do2-s2-comp'><aqua>[S2]</aqua></click>"
             return "  <$colour>$label</$colour> $s1Btn $s2Btn"
         }
 
