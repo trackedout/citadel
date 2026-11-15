@@ -27,6 +27,7 @@ import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.infrastructure.ClientException
 import org.trackedout.client.models.Event
 import org.trackedout.client.models.Score
+import org.trackedout.citadel.config.PRACTICE_SLUG
 import org.trackedout.citadel.config.RunType
 import org.trackedout.citadel.config.LeagueCache
 import org.trackedout.citadel.config.runTypeFromLeague
@@ -41,6 +42,18 @@ const val FILTER_MODE_SLUG_CONFIG = "filter-mode-slug"
 
 // Default run-mode slug when a player has no filter-mode-slug set.
 const val DEFAULT_FILTER_MODE_SLUG = "do2-s2-comp"
+
+// Name of the shard balance scoreboard. Same in every league namespace.
+const val SHARDS_SCOREBOARD = "do2.inventory.shards"
+
+// Lobby advancements mirror what the player earned in the competitive league.
+const val ADVANCEMENT_SOURCE_SLUG = DEFAULT_FILTER_MODE_SLUG
+
+// Advancement scores are keyed advancement-<namespace>#<path>#<criterion>.
+const val ADVANCEMENT_KEY_PREFIX = "advancement-"
+
+// Identifies a score: its key is only unique within the league namespace (slug).
+data class ScoreRef(val slug: String, val key: String)
 
 class InventoryManager(
     private val plugin: Citadel,
@@ -63,7 +76,7 @@ class InventoryManager(
 
         plugin.async(player) {
             val playerName = player.name
-            plugin.logger.info("Fetching scores for $playerName (filtering for prefixes: ${tradeSourceScores(plugin.leagueCache)})")
+            plugin.logger.info("Fetching scores for $playerName (filtering for scoreboards: ${tradeSourceScoreboards()})")
             var scores = scoreApi.getInventoryRelatedScores(plugin.leagueCache, playerName)
 
             if (ensurePlayerHasPracticeShards(playerName, scores)) {
@@ -71,13 +84,12 @@ class InventoryManager(
                 scores = scoreApi.getInventoryRelatedScores(plugin.leagueCache, playerName)
             }
 
-            scores = scores.filter { isInventoryRelatedScore(plugin.leagueCache, it) }
+            scores = scores.filter { isInventoryRelatedScore(it) }
             val inventoryFilterRunType = getInventoryFilterForPlayer(this.plugin, this.configApi, playerName)
             if (inventoryFilterRunType != null) {
-                val tradeSourcesForFilter = getTradeSourcesForRunTypes(listOf(inventoryFilterRunType))
                 scores = scores.map { score: Score ->
                     // If the run type is valid, but the score is not for that run type, set it to zero
-                    if (!tradeSourcesForFilter.contains(score.key!!)) {
+                    if (score.slug != inventoryFilterRunType.longId) {
                         return@map score.copy(value = 0.toBigDecimal())
                     }
 
@@ -85,6 +97,7 @@ class InventoryManager(
                 }
             }
 
+            val scoreValues = scores.associate { ScoreRef(it.slug!!, it.key!!) to it.value!!.toInt() }
             scores
                 .forEach { score ->
                     updatePlayerInventoryForState(
@@ -92,8 +105,8 @@ class InventoryManager(
                         knownItemTracker,
                         desiredItems,
                         inventoryFilterRunType,
-                        scores.associate { it.key!! to it.value!!.toInt() },
-                        score.key!!,
+                        scoreValues,
+                        ScoreRef(score.slug!!, score.key!!),
                         score.value!!.toInt()
                     )
                 }
@@ -169,10 +182,10 @@ class InventoryManager(
 
     private fun ensurePlayerHasPracticeShards(playerName: String, scores: List<Score>): Boolean {
         tradeItems["SHARD"]?.let { tradeItem ->
-            scores.find { score -> score.key == tradeItem.sourceScoreboardName("do2-s2-practice") }?.let { score ->
+            scores.find { score -> score.slug == PRACTICE_SLUG && score.key == tradeItem.sourceScoreboardName() }?.let { score ->
                 if (score.value!!.toInt() <= 10) {
                     val trade = Trade(
-                        runType = "do2-s2-practice",
+                        runType = PRACTICE_SLUG,
                         sourceType = "dummy",
                         sourceItemCount = 0,
                         targetType = "SHARD",
@@ -215,53 +228,53 @@ class InventoryManager(
         knownItemTracker: MutableSet<ItemStack>,
         desiredItems: MutableList<ItemStack>,
         inventoryFilterRunType: RunType?,
-        scores: Map<String, Int>,
-        key: String,
+        scores: Map<ScoreRef, Int>,
+        score: ScoreRef,
         value: Int
     ) {
-        plugin.logger.info("Player ${player.name} has inventory score $key=$value")
+        val (slug, key) = score
+        plugin.logger.info("Player ${player.name} has inventory score $slug/$key=$value")
 
-        for (runType in effectiveRunTypes().map { it.longId }) {
-            baseTradeItems.forEach { it: Map.Entry<String, ScoreboardDescriber> ->
-                val sb = it.value
-                val sourceScoreKey = sb.sourceScoreboardName(runType)
-                if (sourceScoreKey == key) {
-                    plugin.logger.info("Score $key matches ${it.key} ($runType)")
+        val runType = effectiveRunTypes().find { it.longId == slug }
+        if (runType == null) {
+            plugin.logger.warning("Ignoring score $slug/$key for ${player.name}: no league with that slug")
+            return
+        }
 
-                    var itemCount = value
-                    val inversionScoreKey = sb.sourceInversionScoreboardName(runType)
-                    if (sourceScoreKey != inversionScoreKey) {
-                        itemCount -= scores.getOrDefault(inversionScoreKey, 0)
-                    }
+        baseTradeItems.forEach { it: Map.Entry<String, ScoreboardDescriber> ->
+            val sb = it.value
+            val sourceScoreKey = sb.sourceScoreboardName()
+            if (sourceScoreKey == key) {
+                plugin.logger.info("Score $slug/$key matches ${it.key}")
 
-                    want(
-                        knownItemTracker,
-                        desiredItems,
-                        sb.itemStack(runType, itemCount).withTradeMeta(runType, it.key)
-                    )
+                var itemCount = value
+                val inversionScoreKey = sb.sourceInversionScoreboardName()
+                if (sourceScoreKey != inversionScoreKey) {
+                    itemCount -= scores.getOrDefault(ScoreRef(slug, inversionScoreKey), 0)
                 }
+
+                want(
+                    knownItemTracker,
+                    desiredItems,
+                    sb.itemStack(slug, itemCount).withTradeMeta(slug, it.key)
+                )
             }
         }
 
-        for (runType in effectiveRunTypes()) {
-            when (key) {
-                // Shards
-                "do2.inventory.shards.${runType.longId}" -> {
-                    var itemCount = 1
-                    if (inventoryFilterRunType != null && inventoryFilterRunType != runType) {
-                        itemCount = 0
-                    }
-                    val materialOverride = try {
-                        configApi.configsGet(player.name, "shulker-style").value
-                            ?.uppercase()
-                            ?.let { Material.valueOf("${it}_SHULKER_BOX") }
-                    } catch (e: ClientException) {
-                        null
-                    }
-                    want(knownItemTracker, desiredItems, dungeonDeck(runType, itemCount, materialOverride))
-                    want(knownItemTracker, desiredItems, dungeonArtifacts(runType, itemCount))
-                }
+        if (key == SHARDS_SCOREBOARD) {
+            var itemCount = 1
+            if (inventoryFilterRunType != null && inventoryFilterRunType != runType) {
+                itemCount = 0
             }
+            val materialOverride = try {
+                configApi.configsGet(player.name, "shulker-style").value
+                    ?.uppercase()
+                    ?.let { Material.valueOf("${it}_SHULKER_BOX") }
+            } catch (e: ClientException) {
+                null
+            }
+            want(knownItemTracker, desiredItems, dungeonDeck(runType, itemCount, materialOverride))
+            want(knownItemTracker, desiredItems, dungeonArtifacts(runType, itemCount))
         }
 
         want(knownItemTracker, desiredItems, menuBook())
@@ -342,13 +355,11 @@ class InventoryManager(
         val playerName = player.name
 
         try {
-            val runType = "c".displayName(plugin.leagueCache).lowercase()
-            val advancementFilter = "$runType-advancement-"
-
-            plugin.logger.info("Score filter for advancements: $advancementFilter")
+            plugin.logger.info("Fetching advancement scores for $playerName from namespace '$ADVANCEMENT_SOURCE_SLUG'")
             val scores = scoreApi.scoresGet(
                 player = playerName,
-                prefixFilter = advancementFilter,
+                slug = ADVANCEMENT_SOURCE_SLUG,
+                prefixFilter = ADVANCEMENT_KEY_PREFIX,
                 limit = 10000,
             )
 
@@ -367,14 +378,14 @@ class InventoryManager(
 
                     scores.results!!
                         .asSequence()
-                        .filter { it.key!!.startsWith(advancementFilter) }
-                        .map { it.copy(key = it.key?.substring(advancementFilter.length)) }
+                        .filter { it.key!!.startsWith(ADVANCEMENT_KEY_PREFIX) }
+                        .map { it.copy(key = it.key?.substring(ADVANCEMENT_KEY_PREFIX.length)) }
                         .filter { it.key!!.isNotBlank() && it.key!!.contains("#") }
                         .filter { it.key!!.contains("hidden") || it.key!!.contains("visible") }
                         .filter { it.value!!.toInt() > 0 }
                         .toList()
                         .forEach { score ->
-                            // e.g. competitive-advancement-do2#hidden/survival/win_50_times#given_by_commands
+                            // e.g. advancement-do2#hidden/survival/win_50_times#given_by_commands
                             val split = score.key!!.split("#")
                             var namespace = "do2"
                             var key = split[0]
@@ -418,25 +429,27 @@ class InventoryManager(
     }
 }
 
-fun tradeSourceScores(leagueCache: LeagueCache) = getTradeSourcesForRunTypes(getRunTypesFromCache(leagueCache))
-
-fun getTradeSourcesForRunTypes(runTypes: List<RunType>) = baseTradeItems.values.flatMap {
-    runTypes.map(RunType::longId).map { runType ->
-        listOf(
-            it.sourceScoreboardName(runType),
-            it.sourceInversionScoreboardName(runType),
-        )
-    }.flatten()
+// The scoreboards that drive the player's inventory. Their names are the same in
+// every league: a league's scores live in its own namespace (the score's slug).
+fun tradeSourceScoreboards() = baseTradeItems.values.flatMap {
+    listOf(
+        it.sourceScoreboardName(),
+        it.sourceInversionScoreboardName(),
+    )
 }.filterNot { it.isBlank() }.distinct()
 
+// Fetches the inventory scoreboards across all of the player's leagues. Each
+// score carries the slug of the league it belongs to. Scores without a slug
+// predate namespacing and belong to no league, so they are dropped here.
 fun ScoreApi.getInventoryRelatedScores(leagueCache: LeagueCache, playerName: String): List<Score> {
-    return tradeSourceScores(leagueCache).flatMap {
+    val knownSlugs = getRunTypesFromCache(leagueCache).map { it.longId }.toSet()
+    return tradeSourceScoreboards().flatMap {
         this.scoresGet(playerName, prefixFilter = it).results!!
-    }
+    }.filter { it.slug in knownSlugs }
 }
 
-fun isInventoryRelatedScore(leagueCache: LeagueCache, score: Score): Boolean {
-    return tradeSourceScores(leagueCache).contains(score.key!!)
+fun isInventoryRelatedScore(score: Score): Boolean {
+    return tradeSourceScoreboards().contains(score.key!!)
 }
 
 fun getInventoryFilterForPlayer(

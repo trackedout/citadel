@@ -13,6 +13,7 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.config.PRACTICE_SLUG
 import org.trackedout.citadel.withTags
 import org.trackedout.client.models.Card
 import org.trackedout.citadel.config.LeagueCache
@@ -228,7 +229,7 @@ fun LeagueSlug.displayName(leagueCache: LeagueCache): String {
 fun LeagueSlug.isValidRunType(leagueCache: LeagueCache): Boolean = findRunTypeByIdFromCache(leagueCache, this) != null
 
 fun LeagueSlug.isPractice(leagueCache: LeagueCache): Boolean =
-    findRunTypeByIdFromCache(leagueCache, this)?.longId == "do2-s2-practice"
+    findRunTypeByIdFromCache(leagueCache, this)?.longId == PRACTICE_SLUG
 
 fun LeagueSlug.runType(leagueCache: LeagueCache): RunType = getRunTypeByIdFromCache(leagueCache, this)
 

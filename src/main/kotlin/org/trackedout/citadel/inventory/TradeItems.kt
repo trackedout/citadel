@@ -11,28 +11,31 @@ import org.trackedout.citadel.config.LeagueCache
 
 private fun resolveRunType(runType: String) = getRunTypeByIdFromCache(LeagueCache.instance, runType)
 
+// Scoreboard names are the same in every league: a league's scores live in its
+// own namespace (the score's slug), so a describer only needs the runType to
+// build the item stack.
 interface ScoreboardDescriber {
-    fun sourceScoreboardName(runType: String): String
-    fun sourceInversionScoreboardName(runType: String): String = sourceScoreboardName(runType)
-    fun targetScoreboardName(runType: String): String = sourceScoreboardName(runType)
+    fun sourceScoreboardName(): String
+    fun sourceInversionScoreboardName(): String = sourceScoreboardName()
+    fun targetScoreboardName(): String = sourceScoreboardName()
     fun itemStack(runType: String, count: Int): ItemStack
 }
 
 interface ItemWithoutScoreboard : ScoreboardDescriber {
-    override fun sourceScoreboardName(runType: String): String {
+    override fun sourceScoreboardName(): String {
         return ""
     }
 }
 
 val queueItems: Map<String, ScoreboardDescriber> = mapOf(
     "DUMMY" to object : ScoreboardDescriber {
-        override fun sourceScoreboardName(runType: String): String = ""
+        override fun sourceScoreboardName(): String = ""
 
         override fun itemStack(runType: String, count: Int): ItemStack = ItemStack(Material.STICK)
     },
 
     "QUEUE" to object : ScoreboardDescriber {
-        override fun sourceScoreboardName(runType: String): String = "queue"
+        override fun sourceScoreboardName(): String = "queue"
 
         override fun itemStack(runType: String, count: Int): ItemStack = ItemStack(Material.STICK)
     }
@@ -40,12 +43,12 @@ val queueItems: Map<String, ScoreboardDescriber> = mapOf(
 
 val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
     "CROWN" to object : ScoreboardDescriber {
-        override fun sourceScoreboardName(runType: String): String {
-            return "${runType}-do2.lifetime.escaped.crowns"
+        override fun sourceScoreboardName(): String {
+            return "do2.lifetime.escaped.crowns"
         }
 
-        override fun sourceInversionScoreboardName(runType: String): String {
-            return "${runType}-do2.lifetime.spent.crowns"
+        override fun sourceInversionScoreboardName(): String {
+            return "do2.lifetime.spent.crowns"
         }
 
         override fun itemStack(runType: String, count: Int): ItemStack {
@@ -54,12 +57,12 @@ val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
     },
 
     "TOME" to object : ScoreboardDescriber {
-        override fun sourceScoreboardName(runType: String): String {
-            return "${runType}-do2.lifetime.escaped.tomes"
+        override fun sourceScoreboardName(): String {
+            return "do2.lifetime.escaped.tomes"
         }
 
-        override fun sourceInversionScoreboardName(runType: String): String {
-            return "${runType}-do2.lifetime.spent.tomes"
+        override fun sourceInversionScoreboardName(): String {
+            return "do2.lifetime.spent.tomes"
         }
 
         override fun itemStack(runType: String, count: Int): ItemStack {
@@ -68,8 +71,8 @@ val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
     },
 
     "SHARD" to object : ScoreboardDescriber {
-        override fun sourceScoreboardName(runType: String): String {
-            return "do2.inventory.shards.${runType}"
+        override fun sourceScoreboardName(): String {
+            return "do2.inventory.shards"
         }
 
         override fun itemStack(runType: String, count: Int): ItemStack {
@@ -78,12 +81,12 @@ val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
     },
 
     "SHARD_FRAGMENT" to object : ScoreboardDescriber {
-        override fun sourceScoreboardName(runType: String): String {
-            return "${runType}-do2.lifetime.escaped.shard_fragments"
+        override fun sourceScoreboardName(): String {
+            return "do2.lifetime.escaped.shard_fragments"
         }
 
-        override fun sourceInversionScoreboardName(runType: String): String {
-            return "${runType}-do2.lifetime.spent.shard_fragments"
+        override fun sourceInversionScoreboardName(): String {
+            return "do2.lifetime.spent.shard_fragments"
         }
 
         override fun itemStack(runType: String, count: Int): ItemStack {
@@ -92,8 +95,8 @@ val baseTradeItems: Map<String, ScoreboardDescriber> = mapOf(
     },
 
     "GAUNTLET_TROPHY" to object : ScoreboardDescriber {
-        override fun sourceScoreboardName(runType: String): String {
-            return "${runType}-do2.lifetime.gauntlet_survival"
+        override fun sourceScoreboardName(): String {
+            return "do2.lifetime.gauntlet_survival"
         }
 
         override fun itemStack(runType: String, count: Int): ItemStack {
@@ -222,7 +225,7 @@ val tradeItemsWithQueueTypes = tradeItems.plus(queueItems)
 fun cardDescribers(): Map<String, ScoreboardDescriber> {
     return cardConfig.entries.associate {
         it.key to object : ScoreboardDescriber {
-            override fun sourceScoreboardName(runType: String): String {
+            override fun sourceScoreboardName(): String {
                 return ""
             }
 

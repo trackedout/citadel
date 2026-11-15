@@ -14,6 +14,7 @@ import org.trackedout.citadel.runOnNextTick
 
 import org.trackedout.citadel.async
 import org.trackedout.citadel.mongo.MongoDBManager
+import org.trackedout.citadel.config.HARDCORE_SLUG
 import org.trackedout.citadel.mongo.MongoScore
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendRedMessage
@@ -74,7 +75,8 @@ class LeaderboardCommand(
 
             val scores = scoreCollection.find(
                 Filters.and(
-                    Filters.eq("key", "leaderboard-do2-s2-hardcore-do2.lifetime.escaped.tomes")
+                    Filters.eq("slug", HARDCORE_SLUG),
+                    Filters.eq("key", "leaderboard-do2.lifetime.escaped.tomes")
                 )
             ).toList()
 

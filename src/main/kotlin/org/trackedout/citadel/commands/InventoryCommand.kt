@@ -14,6 +14,8 @@ import net.kyori.adventure.text.format.TextColor
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.SHARDS_SCOREBOARD
+import org.trackedout.citadel.config.HARDCORE_SLUG
 import org.trackedout.citadel.FILTER_MODE_SLUG_CONFIG
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
@@ -67,10 +69,11 @@ class InventoryCommand(
 
         plugin.async(source) {
 
-            if (runType.longId == "do2-s2-hardcore") {
+            if (runType.longId == HARDCORE_SLUG) {
                 val hardcoreShards = scoreApi.scoresGet(
                     source.name,
-                    prefixFilter = "do2.inventory.shards.do2-s2-hardcore"
+                    slug = HARDCORE_SLUG,
+                    prefixFilter = SHARDS_SCOREBOARD
                 ).results!!.firstOrNull()
 
                 if (hardcoreShards == null) {

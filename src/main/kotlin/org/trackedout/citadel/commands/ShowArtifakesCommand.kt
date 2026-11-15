@@ -55,6 +55,8 @@ class ShowArtifakesCommand(
     }
 }
 
+private const val ARTIFAKES_SCOREBOARD_PREFIX = "do2.artifakes."
+
 fun showArtifakeUIForPlayer(
     plugin: Citadel,
     viewFrame: ViewFrame,
@@ -71,7 +73,7 @@ fun showArtifakeUIForPlayer(
             ?: getInventoryFilterForPlayer(plugin, configApi, playerName)
             ?: getRunTypeByIdFromCache(plugin.leagueCache, "2")
         val runTypeLongId = runType.longId
-        val scores = scoreApi.scoresGet(playerName, prefixFilter = "${runTypeLongId}-do2.artifakes.").results!!
+        val scores = scoreApi.scoresGet(playerName, slug = runTypeLongId, prefixFilter = ARTIFAKES_SCOREBOARD_PREFIX).results!!
 
         val artifactConfig = loadArtifactConfig()
 
@@ -82,7 +84,7 @@ fun showArtifakeUIForPlayer(
         val items = mutableMapOf<Int, ItemStack>()
         var artifactIndex = 0
         artifactConfig?.entries?.sortedBy { it.value.emberValue }?.forEach { (shortKey, props) ->
-            val artifakeScoreKey = "${runTypeLongId}-do2.artifakes.${shortKey}"
+            val artifakeScoreKey = "$ARTIFAKES_SCOREBOARD_PREFIX${shortKey}"
             items[artifactIndex] = props.itemStackNotYetAcquired(1)
 //            items[artifactIndex] = props.itemStack(props.id, 1)
             scores.find { it.key == artifakeScoreKey }?.let { score ->

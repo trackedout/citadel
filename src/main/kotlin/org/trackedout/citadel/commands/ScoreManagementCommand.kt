@@ -10,6 +10,8 @@ import co.aikar.commands.annotation.Syntax
 import org.bukkit.command.CommandSender
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
+import org.trackedout.citadel.SHARDS_SCOREBOARD
+import org.trackedout.citadel.ScoreRef
 import org.trackedout.citadel.async
 import org.trackedout.citadel.displayNamedText
 import org.trackedout.citadel.getInventoryRelatedScores
@@ -46,52 +48,34 @@ class ScoreManagementCommand(
         plugin.async(source) {
             val scores = scoreApi.getInventoryRelatedScores(plugin.leagueCache, playerName)
 
-            val applicableScores = scores.filter { isInventoryRelatedScore(plugin.leagueCache, it) }
+            val applicableScores = scores.filter { isInventoryRelatedScore(it) }
             if (applicableScores.isEmpty()) {
                 source.sendRedMessage("No applicable scores found for $playerName")
                 return@async
             }
 
             source.sendMessage("$playerName has the following scores (minus spent):")
+            val scoreValues = scores.associate { ScoreRef(it.slug!!, it.key!!) to it.value!!.toInt() }
             for (runType in getRunTypesFromCache(plugin.leagueCache)) {
-                fun sortKey(score: Score): String? {
-                    return score.key?.replace("${runType.longId}-", "")?.replace(runType.longId, "")
-                }
-
-                applicableScores.filter { it.key?.contains(runType.longId) == true }.sortedBy { sortKey(it) }.forEach { score->
-                    listScores(source, scores.associate { it.key!! to it.value!!.toInt() }, score.key!!, score.value!!.toInt())
+                applicableScores.filter { it.slug == runType.longId }.sortedBy { it.key }.forEach { score ->
+                    listScore(source, runType, scoreValues, score.key!!, score.value!!.toInt())
                 }
             }
         }
     }
 
-    private fun listScores(source: CommandSender, scores: Map<String, Int>, key: String, value: Int) {
-        for (runType in getRunTypesFromCache(plugin.leagueCache)) {
-            when (key) {
-                // Shards
-                "do2.inventory.shards.${runType.longId}" -> {
-                    source.sendMessage("- ${runType.displayName} Shards (${key}) = $value", runType.displayNamedText())
-                }
-
-                // Shard Fragments (escaped minus spent)
-                "${runType.longId}-do2.lifetime.escaped.shard_fragments" -> {
-                    val itemCount = value - scores.getOrDefault("${runType.longId}-do2.lifetime.spent.shard_fragments", 0)
-                    source.sendMessage("- ${runType.displayName} Shard Fragments (${key}) = $itemCount", runType.displayNamedText())
-                }
-
-                // Crowns (escaped minus spent)
-                "${runType.longId}-do2.lifetime.escaped.crowns" -> {
-                    val itemCount = value - scores.getOrDefault("${runType.longId}-do2.lifetime.spent.crowns", 0)
-                    source.sendMessage("- ${runType.displayName} Crowns (${key}) = $itemCount", runType.displayNamedText())
-                }
-
-                // Tomes (escaped minus spent)
-                "${runType.longId}-do2.lifetime.escaped.tomes" -> {
-                    val itemCount = value - scores.getOrDefault("${runType.longId}-do2.lifetime.spent.tomes", 0)
-                    source.sendMessage("- ${runType.displayName} Tomes (${key}) = $itemCount", runType.displayNamedText())
-                }
-            }
+    private fun listScore(source: CommandSender, runType: RunType, scores: Map<ScoreRef, Int>, key: String, value: Int) {
+        fun spent(spentKey: String) = scores.getOrDefault(ScoreRef(runType.longId, spentKey), 0)
+        val label = when (key) {
+            SHARDS_SCOREBOARD -> "Shards" to value
+            // Escaped minus spent
+            "do2.lifetime.escaped.shard_fragments" -> "Shard Fragments" to value - spent("do2.lifetime.spent.shard_fragments")
+            "do2.lifetime.escaped.crowns" -> "Crowns" to value - spent("do2.lifetime.spent.crowns")
+            "do2.lifetime.escaped.tomes" -> "Tomes" to value - spent("do2.lifetime.spent.tomes")
+            else -> return
         }
+
+        source.sendMessage("- ${runType.displayName} ${label.first} (${key}) = ${label.second}", runType.displayNamedText())
     }
 
     @Subcommand("give-item")

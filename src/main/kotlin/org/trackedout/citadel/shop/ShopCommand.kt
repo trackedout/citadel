@@ -20,6 +20,8 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.bukkit.persistence.PersistentDataType
 import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.config.HARDCORE_SLUG
+import org.trackedout.citadel.config.PRACTICE_SLUG
 import org.trackedout.citadel.inventory.ShopView.Companion.SHOP_RULES_REGEX
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendRedMessage
@@ -41,9 +43,9 @@ class ShopCommand(
 
         // Legacy single-char run-type prefix -> canonical league slug.
         private val LEGACY_CHAR_TO_SLUG = mapOf(
-            "p" to "do2-s2-practice",
+            "p" to PRACTICE_SLUG,
             "c" to "do2-s3-comp",
-            "h" to "do2-s2-hardcore",
+            "h" to HARDCORE_SLUG,
         )
 
         // Rewrite a single legacy char-prefixed rule to the slug syntax

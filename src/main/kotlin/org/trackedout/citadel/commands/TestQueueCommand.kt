@@ -16,6 +16,7 @@ import org.bukkit.command.BlockCommandSender
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.config.PRACTICE_SLUG
 import org.trackedout.citadel.async
 import org.trackedout.citadel.inventory.displayName
 import org.trackedout.citadel.sendGreyMessage
@@ -66,7 +67,7 @@ class TestQueueCommand(
             val eventName = "joined-queue"
             val count = 1
 
-            val deckId = deckId ?: "do2-s2-practice"
+            val deckId = deckId ?: PRACTICE_SLUG
 
             eventsApi.eventsPost(
                 Event(

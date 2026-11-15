@@ -8,6 +8,7 @@ data class MongoScore(
     @param:BsonId val id: ObjectId,
 
     val player: String,
+    val slug: String?,
     val key: String,
     val value: Long,
     val metadata: Map<String, String>?,
