@@ -55,6 +55,16 @@ fun ItemStack.isDeckedOutShulker(): Boolean {
 
 fun ItemStack.hasSlug(): Boolean = RtagItem(this).hasTag("slug")
 
+// Items handed out before league slugs carry a positional `deckId` tag (p1, c1, h1)
+// instead of `slug`. Citadel no longer creates them, so they are always out of date.
+const val LEGACY_DECK_ID_TAG = "deckId"
+
+fun ItemStack.hasLegacyDeckId(): Boolean = RtagItem(this).hasTag(LEGACY_DECK_ID_TAG)
+
+// Items Citadel owns in a player's inventory: tagged with a league slug, or a
+// pre-slug item it should replace
+fun ItemStack.isManagedDungeonItem(): Boolean = hasSlug() || hasLegacyDeckId()
+
 // Items are tagged with their league `slug` in NBT.
 fun ItemStack.getSlug(): String? {
     return RtagItem(this).get<String>("slug")

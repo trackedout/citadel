@@ -291,7 +291,7 @@ class InventoryManager(
         plugin.logger.info("Cleaning up old items for ${player.name}")
 
         val itemsToRemove = player.inventory.filter { inventoryItem ->
-            inventoryItem?.hasSlug() == true && knownItemTracker.none { knownItem -> knownItem.isSimilar(inventoryItem) }
+            inventoryItem?.isManagedDungeonItem() == true && knownItemTracker.none { knownItem -> knownItem.isSimilar(inventoryItem) }
         }
 
         plugin.logger.info("Removing ${itemsToRemove.size} old items from ${player.name}'s inventory:")

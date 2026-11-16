@@ -38,7 +38,7 @@ import org.trackedout.citadel.getAction
 import org.trackedout.citadel.getCard
 import org.trackedout.citadel.getSlug
 import org.trackedout.citadel.getTradeId
-import org.trackedout.citadel.hasSlug
+import org.trackedout.citadel.isManagedDungeonItem
 import org.trackedout.citadel.inventory.LeagueSlug
 import org.trackedout.citadel.inventory.DeckInventoryViewWithoutBack
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.ADD_CARD_FUNC
@@ -484,7 +484,7 @@ class EchoShardListener(
         return false
     }
 
-    private fun isRestrictedItem(it: ItemStack) = it.itemMeta != null && it.hasSlug()
+    private fun isRestrictedItem(it: ItemStack) = it.itemMeta != null && it.isManagedDungeonItem()
 
     private fun isPracticeCard(it: ItemStack) = isRestrictedItem(it) && it.isDeckedOutCard() && it.getSlug()?.isPractice(plugin.leagueCache) == true
 

@@ -1,5 +1,6 @@
 package org.trackedout.citadel.inventory
 
+import org.trackedout.citadel.LEGACY_DECK_ID_TAG
 import com.saicone.rtag.RtagItem
 import net.kyori.adventure.text.Component.text
 import net.kyori.adventure.text.TextComponent
@@ -242,7 +243,7 @@ fun ItemStack.oldDungeonItem(): ItemStack {
     this.amount = 999
     return RtagItem.edit(this, fun(tag: RtagItem): ItemStack {
         tag.remove("slug")
-        tag.remove("deckId") // legacy tag on old in-world items
+        tag.remove(LEGACY_DECK_ID_TAG)
         tag.remove("tradeId")
         tag.remove("canTakeIntoDungeon")
         return tag.loadCopy()
