@@ -20,8 +20,6 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.bukkit.persistence.PersistentDataType
 import org.trackedout.citadel.Citadel
-import org.trackedout.citadel.config.HARDCORE_SLUG
-import org.trackedout.citadel.config.PRACTICE_SLUG
 import org.trackedout.citadel.inventory.ShopView.Companion.SHOP_RULES_REGEX
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendRedMessage
@@ -34,38 +32,6 @@ import xyz.upperlevel.spigot.book.BookUtil.PageBuilder
 class ShopCommand(
     private val plugin: Citadel,
 ) : BaseCommand() {
-
-    companion object {
-        // Legacy grammar: [r]<char><SOURCE>x<n>=<char><TARGET>x<m>[,<TARGET>x<m>...]
-        // The leading char (and the per-target char after '=') selected the run type.
-        private val LEGACY_RULE_REGEX =
-            "^(?<repeat>r|)(?<type>[a-z])(?<sourceType>.+?)x(?<sourceCount>\\d{1,3})=[a-z](?<targetTypes>(?:.+?x\\d{1,3},?)+)$".toRegex()
-
-        // Legacy single-char run-type prefix -> canonical league slug.
-        private val LEGACY_CHAR_TO_SLUG = mapOf(
-            "p" to PRACTICE_SLUG,
-            "c" to "do2-s3-comp",
-            "h" to HARDCORE_SLUG,
-        )
-
-        // Rewrite a single legacy char-prefixed rule to the slug syntax
-        // (<slug>:<SOURCE>x<n>=<TARGETS>[:r]). Returns null if the rule is not
-        // legacy (e.g. already in slug form or unrecognised).
-        fun rewriteLegacyRule(rule: String): String? {
-            val match = LEGACY_RULE_REGEX.matchEntire(rule) ?: return null
-            val groups = match.groups
-
-            val char = groups["type"]?.value ?: return null
-            val slug = LEGACY_CHAR_TO_SLUG[char] ?: return null
-            val sourceType = groups["sourceType"]?.value ?: return null
-            val sourceCount = groups["sourceCount"]?.value ?: return null
-            val targetTypes = groups["targetTypes"]?.value ?: return null
-            val repeat = groups["repeat"]?.value == "r"
-
-            val suffix = if (repeat) ":r" else ""
-            return "$slug:${sourceType}x$sourceCount=$targetTypes$suffix"
-        }
-    }
 
     @Subcommand("rename")
     @CommandPermission("decked-out.shop.admin")
@@ -165,16 +131,16 @@ class ShopCommand(
 
     @Subcommand("rewrite")
     @CommandPermission("decked-out.shop.admin")
-    @Description("Shop management - migrate legacy char-prefixed trades to the slug syntax")
+    @Description("Shop management - rewrite legacy and previous-slug trades to the current slugs")
     fun rewriteTrades(player: Player) {
         executeOnValidShop(player) { tileState, shopData ->
             val rewritten = shopData.trades.map { rule ->
-                rewriteLegacyRule(rule) ?: rule
+                ShopRuleRewriter.rewrite(rule) ?: rule
             }
 
             val changed = rewritten.filterIndexed { i, r -> r != shopData.trades[i] }
             if (changed.isEmpty()) {
-                player.sendGreenMessage("No legacy trades to rewrite; shop already uses the slug syntax")
+                player.sendGreenMessage("No trades to rewrite; shop already uses the current slugs")
                 return@executeOnValidShop
             }
 
