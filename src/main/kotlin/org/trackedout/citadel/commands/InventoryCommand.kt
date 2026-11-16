@@ -16,6 +16,7 @@ import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.SHARDS_SCOREBOARD
 import org.trackedout.citadel.config.HARDCORE_SLUG
+import org.trackedout.citadel.config.isSelectableRunMode
 import org.trackedout.citadel.FILTER_MODE_SLUG_CONFIG
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
@@ -64,6 +65,11 @@ class InventoryCommand(
         val runType = resolveRunType(leagueSlug)
         if (runType == null) {
             source.sendRedMessage("Unknown league or run type: $leagueSlug")
+            return
+        }
+
+        if (plugin.leagueCache.getLeagueBySlug(runType.longId)?.isSelectableRunMode() != true) {
+            source.sendRedMessage("${runType.displayName} is not available to select")
             return
         }
 

@@ -10,6 +10,7 @@ import org.trackedout.citadel.FILTER_MODE_SLUG_CONFIG
 import org.trackedout.citadel.async
 import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.ScoreApi
+import org.trackedout.citadel.config.isSelectableRunMode
 import org.trackedout.citadel.config.runTypeFromLeague
 
 fun showPlayerBook(plugin: Citadel, player: Player, configApi: ConfigApi, scoreApi: ScoreApi, page: Int = 0) {
@@ -29,7 +30,7 @@ fun showPlayerBook(plugin: Citadel, player: Player, configApi: ConfigApi, scoreA
         val shulkerStyle = configs.find { it.key == "shulker-style" }?.value ?: "CYAN"
 
         val pages = buildPlayerBookPages(
-            leagues = plugin.leagueCache.getLeagues(),
+            leagues = plugin.leagueCache.getLeagues().filter { it.isSelectableRunMode() },
             currentRunModeSlug = currentRunMode?.longId,
             skipDoor = skipDoor,
             allowSpectating = allowSpectating,
