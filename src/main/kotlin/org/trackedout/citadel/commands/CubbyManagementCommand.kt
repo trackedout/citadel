@@ -44,7 +44,7 @@ class CubbyManagementCommand(
                 cubby.parent = player.world.getCubbyByName("cubby")
                 cubby.priority = 15
                 cubby.members.addPlayer(player.name)
-                player.sendGreenMessage("This cubby is now yours!")
+                player.sendGreenMessage("This cubby is now yours! Step out and walk back in again to enter creative mode")
             } else {
                 player.sendRedMessage("You need to be in a cubby to claim it")
 
