@@ -5,13 +5,9 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
-import org.trackedout.citadel.DEFAULT_FILTER_MODE_SLUG
-import org.trackedout.citadel.FILTER_MODE_SLUG_CONFIG
 import org.trackedout.citadel.async
 import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.ScoreApi
-import org.trackedout.citadel.config.isSelectableRunMode
-import org.trackedout.citadel.config.runTypeFromLeague
 
 fun showPlayerBook(plugin: Citadel, player: Player, configApi: ConfigApi, scoreApi: ScoreApi, page: Int = 0) {
     plugin.async(player) {
@@ -20,9 +16,7 @@ fun showPlayerBook(plugin: Citadel, player: Player, configApi: ConfigApi, scoreA
         } catch (e: Exception) { emptyList() }
 
         val currentRunMode = try {
-            val slug = configs.find { it.key == FILTER_MODE_SLUG_CONFIG }?.value?.takeIf { it.isNotEmpty() }
-                ?: DEFAULT_FILTER_MODE_SLUG
-            plugin.leagueCache.getLeagueBySlug(slug)?.let { runTypeFromLeague(it) }
+            plugin.runModes.current(player.name)
         } catch (e: Exception) { null }
 
         val skipDoor = configs.find { it.key == "skip-door" }?.value == "true"
@@ -30,7 +24,7 @@ fun showPlayerBook(plugin: Citadel, player: Player, configApi: ConfigApi, scoreA
         val shulkerStyle = configs.find { it.key == "shulker-style" }?.value ?: "CYAN"
 
         val pages = buildPlayerBookPages(
-            leagues = plugin.leagueCache.getLeagues().filter { it.isSelectableRunMode() },
+            leagues = plugin.runModes.selectableLeagues(player.name),
             currentRunModeSlug = currentRunMode?.longId,
             skipDoor = skipDoor,
             allowSpectating = allowSpectating,

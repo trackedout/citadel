@@ -16,8 +16,7 @@ import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.SHARDS_SCOREBOARD
 import org.trackedout.citadel.config.HARDCORE_SLUG
-import org.trackedout.citadel.config.isSelectableRunMode
-import org.trackedout.citadel.FILTER_MODE_SLUG_CONFIG
+import org.trackedout.citadel.config.FILTER_MODE_SLUG_CONFIG
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
 import org.trackedout.citadel.config.cardConfig
@@ -68,12 +67,12 @@ class InventoryCommand(
             return
         }
 
-        if (plugin.leagueCache.getLeagueBySlug(runType.longId)?.isSelectableRunMode() != true) {
-            source.sendRedMessage("${runType.displayName} is not available to select")
-            return
-        }
-
         plugin.async(source) {
+            val league = plugin.leagueCache.getLeagueBySlug(runType.longId)
+            if (league == null || !plugin.runModes.isSelectable(league, source.name)) {
+                source.sendRedMessage("${runType.displayName} is not available to select")
+                return@async
+            }
 
             if (runType.longId == HARDCORE_SLUG) {
                 val hardcoreShards = scoreApi.scoresGet(

@@ -263,7 +263,7 @@ class EchoShardListener(
                 }
 
                 if (item.getAction() == "show-artifakes") {
-                    showArtifakeUIForPlayer(plugin, viewFrame, player, player.name, scoreApi, configApi)
+                    showArtifakeUIForPlayer(plugin, viewFrame, player, player.name, scoreApi)
                 }
             }
         }

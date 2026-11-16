@@ -18,6 +18,7 @@ import org.trackedout.citadel.commands.BookCommand
 import org.trackedout.citadel.commands.ConfigCommand
 import org.trackedout.citadel.commands.party.GameRegistryCache
 import org.trackedout.citadel.config.LeagueCache
+import org.trackedout.citadel.config.RunModes
 import org.trackedout.citadel.commands.party.PartyCommand
 import org.trackedout.citadel.commands.CubbyManagementCommand
 import org.trackedout.citadel.commands.InventoryCommand
@@ -86,6 +87,7 @@ class Citadel : JavaPlugin() {
     val mongoURI by lazy { getEnvOrDefault("MONGODB_URL", "") }
     lateinit var leaderboardTaskRunner: LeaderboardTaskRunner
     lateinit var leagueCache: LeagueCache
+    lateinit var runModes: RunModes
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -166,6 +168,7 @@ class Citadel : JavaPlugin() {
         val gameRegistryCache = GameRegistryCache(this, gameRegistryApi)
 
         leagueCache = LeagueCache(this, leaguesApi)
+        runModes = RunModes(leagueCache, configApi, inventoryApi, logger)
 
         val inventoryManager = InventoryManager(this, inventoryApi, scoreApi, eventsApi, configApi)
 
@@ -240,7 +243,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(SpectateCommand(this, eventsApi, configApi, viewFrame))
         manager.registerCommand(ConfigCommand(this, configApi))
         manager.registerCommand(ShulkerStyleCommand(configApi, inventoryManager))
-        manager.registerCommand(ShowArtifakesCommand(this, scoreApi, configApi, viewFrame))
+        manager.registerCommand(ShowArtifakesCommand(this, scoreApi, viewFrame))
         manager.registerCommand(CubbyManagementCommand(this))
         manager.registerCommand(LeaderboardCommand(this, configApi))
         manager.registerCommand(UnstuckCommand(this))

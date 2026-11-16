@@ -5,7 +5,7 @@ import org.bukkit.event.Listener
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.config.HARDCORE_SLUG
-import org.trackedout.citadel.FILTER_MODE_SLUG_CONFIG
+import org.trackedout.citadel.config.FILTER_MODE_SLUG_CONFIG
 import org.trackedout.citadel.async
 import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.EventsApi

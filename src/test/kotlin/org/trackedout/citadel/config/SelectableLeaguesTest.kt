@@ -9,17 +9,20 @@ class SelectableLeaguesTest {
     private fun leagueIn(state: String?) = League(slug = "do2-s2-comp", state = state)
 
     @Test
-    fun `active league is selectable`() = assertTrue(leagueIn("active").isSelectableRunMode())
+    fun `active league is selectable without a deck`() = assertTrue(leagueIn("active").isSelectableRunMode(playerHasDeck = false))
 
     @Test
-    fun `completed league is selectable`() = assertTrue(leagueIn("completed").isSelectableRunMode())
+    fun `completed league is selectable with a deck`() = assertTrue(leagueIn("completed").isSelectableRunMode(playerHasDeck = true))
 
     @Test
-    fun `draft league is not selectable`() = assertFalse(leagueIn("draft").isSelectableRunMode())
+    fun `completed league is not selectable without a deck`() = assertFalse(leagueIn("completed").isSelectableRunMode(playerHasDeck = false))
 
     @Test
-    fun `archived league is not selectable`() = assertFalse(leagueIn("archived").isSelectableRunMode())
+    fun `draft league is not selectable`() = assertFalse(leagueIn("draft").isSelectableRunMode(playerHasDeck = true))
 
     @Test
-    fun `league with unknown state is not selectable`() = assertFalse(leagueIn(null).isSelectableRunMode())
+    fun `archived league is not selectable`() = assertFalse(leagueIn("archived").isSelectableRunMode(playerHasDeck = true))
+
+    @Test
+    fun `league with unknown state is not selectable`() = assertFalse(leagueIn(null).isSelectableRunMode(playerHasDeck = true))
 }

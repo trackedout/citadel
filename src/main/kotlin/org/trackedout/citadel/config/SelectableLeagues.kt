@@ -5,7 +5,12 @@ import org.trackedout.client.models.League
 private const val STATE_ACTIVE = "active"
 private const val STATE_COMPLETED = "completed"
 
-// A league a player may pick as their run mode: one that is running, or a finished
-// one whose deck they can still view. Draft and archived leagues, and leagues
-// whose state is unknown, are not offered.
-fun League.isSelectableRunMode(): Boolean = state == STATE_ACTIVE || state == STATE_COMPLETED
+// Whether a player may pick a league as their run mode. A running league is
+// always offered. A finished one is offered only to players who have a deck in
+// it, so they can look back at it; everyone else would just see an empty deck.
+// Draft and archived leagues, and leagues whose state is unknown, are never offered.
+fun League.isSelectableRunMode(playerHasDeck: Boolean): Boolean = when (state) {
+    STATE_ACTIVE -> true
+    STATE_COMPLETED -> playerHasDeck
+    else -> false
+}
