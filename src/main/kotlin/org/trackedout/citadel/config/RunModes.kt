@@ -2,6 +2,7 @@ package org.trackedout.citadel.config
 
 import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.InventoryApi
+import org.trackedout.client.models.Config
 import org.trackedout.client.models.League
 import java.util.logging.Logger
 
@@ -43,6 +44,12 @@ class RunModes(
             logger.info("Run mode '$chosenSlug' is not available to $playerName, using '$DEFAULT_RUN_MODE_SLUG'")
         }
         return leagueCache.getLeagueBySlug(DEFAULT_RUN_MODE_SLUG)?.let { runTypeFromLeague(it) }
+    }
+
+    // Store the player's run mode. Callers check isSelectable first and refresh the
+    // player's inventory afterwards.
+    fun choose(playerName: String, slug: String) {
+        configApi.configsAddConfigPost(Config(entity = playerName, key = FILTER_MODE_SLUG_CONFIG, value = slug))
     }
 
     private fun hasDeckIn(playerName: String, slug: String): Boolean =

@@ -19,7 +19,6 @@ import org.trackedout.citadel.commands.ConfigCommand
 import org.trackedout.citadel.config.LeagueCache
 import org.trackedout.citadel.config.RunModes
 import org.trackedout.citadel.commands.party.PartyCommand
-import org.trackedout.citadel.commands.party.supportsParties
 import org.trackedout.citadel.commands.CubbyManagementCommand
 import org.trackedout.citadel.commands.InventoryCommand
 import org.trackedout.citadel.commands.LeaderboardCommand
@@ -238,7 +237,9 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(UnstuckCommand(this))
         manager.registerCommand(TrophyCommand(this, configApi))
         manager.registerCommand(BookCommand(this, configApi, scoreApi))
-        manager.registerCommand(PartyCommand(this, partiesApi))
+        val partyCommand = PartyCommand(this, partiesApi, inventoryManager)
+        partyCommand.registerCompletions(manager)
+        manager.registerCommand(partyCommand)
         manager.registerCommand(LeagueCommand(this, leagueCache, leaguesApi, eventsApi))
 
         leagueCache.startRefreshTask()
@@ -264,10 +265,6 @@ class Citadel : JavaPlugin() {
         manager.commandCompletions.registerStaticCompletion("toggleableConfigs", toggleableConfigs)
         manager.commandCompletions.registerStaticCompletion("editableConfigs", editableConfigs)
         manager.commandCompletions.registerStaticCompletion("shulkerColors", shulkerColors)
-        manager.commandCompletions.registerAsyncCompletion("partyLeagues") { context ->
-            val playerName = context.player?.name ?: return@registerAsyncCompletion emptyList()
-            runModes.selectableLeagues(playerName).filter { it.supportsParties() }.mapNotNull { it.slug }
-        }
         manager.commandCompletions.registerAsyncCompletion("trophySections") { _ ->
             loadTrophySections().keys.toList()
         }
