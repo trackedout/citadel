@@ -16,10 +16,10 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.commands.BookCommand
 import org.trackedout.citadel.commands.ConfigCommand
-import org.trackedout.citadel.commands.party.GameRegistryCache
 import org.trackedout.citadel.config.LeagueCache
 import org.trackedout.citadel.config.RunModes
 import org.trackedout.citadel.commands.party.PartyCommand
+import org.trackedout.citadel.commands.party.supportsParties
 import org.trackedout.citadel.commands.CubbyManagementCommand
 import org.trackedout.citadel.commands.InventoryCommand
 import org.trackedout.citadel.commands.LeaderboardCommand
@@ -62,7 +62,6 @@ import org.trackedout.citadel.mongo.MongoPlayer
 import org.trackedout.citadel.shop.ShopCommand
 import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.EventsApi
-import org.trackedout.client.apis.GameRegistryApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.LeaguesApi
 import org.trackedout.client.apis.PartiesApi
@@ -149,14 +148,6 @@ class Citadel : JavaPlugin() {
                 .build()
         )
 
-        val gameRegistryApi = GameRegistryApi(
-            basePath = dungaAPIPath,
-            client = OkHttpClient.Builder()
-                .connectTimeout(5.seconds.toJavaDuration())
-                .callTimeout(30.seconds.toJavaDuration())
-                .build()
-        )
-
         val leaguesApi = LeaguesApi(
             basePath = dungaAPIPath,
             client = OkHttpClient.Builder()
@@ -165,8 +156,6 @@ class Citadel : JavaPlugin() {
                 .build()
         )
 
-        val gameRegistryCache = GameRegistryCache(this, gameRegistryApi)
-
         leagueCache = LeagueCache(this, leaguesApi)
         runModes = RunModes(leagueCache, configApi, inventoryApi, logger)
 
@@ -174,7 +163,7 @@ class Citadel : JavaPlugin() {
 
         MongoDBManager.initialize(mongoURI)
 
-        registerCommandCompletions(gameRegistryCache)
+        registerCommandCompletions()
 
         // https://github.com/aikar/commands/wiki/Real-World-Examples
         manager.enableUnstableAPI("help")
@@ -249,10 +238,9 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(UnstuckCommand(this))
         manager.registerCommand(TrophyCommand(this, configApi))
         manager.registerCommand(BookCommand(this, configApi, scoreApi))
-        manager.registerCommand(PartyCommand(this, partiesApi, gameRegistryApi, gameRegistryCache))
+        manager.registerCommand(PartyCommand(this, partiesApi))
         manager.registerCommand(LeagueCommand(this, leagueCache, leaguesApi, eventsApi))
 
-        gameRegistryCache.startRefreshTask()
         leagueCache.startRefreshTask()
 
         val echoShardListener = EchoShardListener(this, inventoryApi, eventsApi, scoreApi, configApi, viewFrame, inventoryManager)
@@ -261,7 +249,7 @@ class Citadel : JavaPlugin() {
         logger.info("Citadel has been enabled. Server name: $serverName")
     }
 
-    private fun registerCommandCompletions(gameRegistryCache: GameRegistryCache) {
+    private fun registerCommandCompletions() {
         manager.commandCompletions.registerAsyncCompletion("runTypes") { _ ->
             getRunTypesFromCache(leagueCache).map { it.longId }
         }
@@ -276,8 +264,9 @@ class Citadel : JavaPlugin() {
         manager.commandCompletions.registerStaticCompletion("toggleableConfigs", toggleableConfigs)
         manager.commandCompletions.registerStaticCompletion("editableConfigs", editableConfigs)
         manager.commandCompletions.registerStaticCompletion("shulkerColors", shulkerColors)
-        manager.commandCompletions.registerAsyncCompletion("gameNames") { _ ->
-            gameRegistryCache.getGameNames()
+        manager.commandCompletions.registerAsyncCompletion("partyLeagues") { context ->
+            val playerName = context.player?.name ?: return@registerAsyncCompletion emptyList()
+            runModes.selectableLeagues(playerName).filter { it.supportsParties() }.mapNotNull { it.slug }
         }
         manager.commandCompletions.registerAsyncCompletion("trophySections") { _ ->
             loadTrophySections().keys.toList()

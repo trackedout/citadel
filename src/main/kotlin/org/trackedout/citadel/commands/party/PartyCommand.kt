@@ -15,18 +15,17 @@ import org.trackedout.citadel.async
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendMiniMessage
 import org.trackedout.citadel.sendRedMessage
-import org.trackedout.client.apis.GameRegistryApi
 import org.trackedout.client.apis.PartiesApi
 import org.trackedout.client.models.PartiesInvitePostRequest
 import org.trackedout.client.models.PartiesPostRequest
 import org.trackedout.client.models.Party
 
+// A party plays a league together: the leader queues as usual, and when they pass
+// through the dungeon door the rest of the party is sent in with them
 @CommandAlias("party")
 class PartyCommand(
     private val plugin: Citadel,
     private val partiesApi: PartiesApi,
-    private val gameRegistryApi: GameRegistryApi,
-    private val gameRegistry: GameRegistryCache,
 ) : BaseCommand() {
 
     @HelpCommand
@@ -35,29 +34,24 @@ class PartyCommand(
     }
 
     @Subcommand("create")
-    @Syntax("<game>")
-    @CommandCompletion("@gameNames")
-    @Description("Create a party for a minigame")
-    fun create(player: Player, game: String) {
-        val permission = "tracked-out.game.$game"
-        if (!player.hasPermission(permission)) {
-            player.sendRedMessage("You don't have permission to play $game")
-            return
-        }
-
+    @Syntax("<league>")
+    @CommandCompletion("@partyLeagues @nothing")
+    @Description("Create a party for a league")
+    fun create(player: Player, slug: String) {
         plugin.async(player) {
-            val minigame = gameRegistry.getGame(game)
-            if (minigame == null) {
-                player.sendRedMessage("Unknown minigame: $game")
+            val league = plugin.leagueCache.getLeagueBySlug(slug)
+            if (league == null || !plugin.runModes.isSelectable(league, player.name)) {
+                player.sendRedMessage("$slug is not available to play")
                 return@async
             }
-            if (minigame.enabled != true) {
-                player.sendRedMessage("Minigame $game is currently disabled")
+            if (!league.supportsParties()) {
+                player.sendRedMessage("${league.displayName} does not support parties")
                 return@async
             }
 
-            val party = partiesApi.partiesPost(PartiesPostRequest(leader = player.name, game = game))
-            player.sendGreenMessage("Party created for ${minigame.displayName}! Invite players with /party invite <player>")
+            partiesApi.partiesPost(PartiesPostRequest(leader = player.name, slug = slug))
+            player.sendGreenMessage("Party created for ${league.displayName}! Invite players with /party invite <player>")
+            player.sendMiniMessage("<gray>Queue as usual. When you pass through the dungeon door, your party is sent in with you</gray>")
         }
     }
 
@@ -77,11 +71,9 @@ class PartyCommand(
             }
 
             partiesApi.partiesInvitePost(party.id!!, PartiesInvitePostRequest(player = targetName))
-            val minigame = gameRegistry.getGame(party.game!!)
-            val displayName = minigame?.displayName ?: party.game
 
             player.sendGreenMessage("Invited $targetName to the party")
-            target.sendMiniMessage("<green>${player.name} invited you to play <gold>$displayName</gold>! Type <aqua>/party join ${player.name}</aqua></green>")
+            target.sendMiniMessage("<green>${player.name} invited you to play <gold>${leagueName(party)}</gold>! Type <aqua>/party join ${player.name}</aqua></green>")
         }
     }
 
@@ -99,12 +91,10 @@ class PartyCommand(
             }
 
             val updatedParty = partiesApi.partiesJoinPost(leaderParty.id!!, PartiesInvitePostRequest(player = player.name))
-            val memberCount = updatedParty.members?.size ?: 0
-            val minigame = gameRegistry.getGame(updatedParty.game!!)
-            val maxPlayers = minigame?.maxPlayers ?: 0
+            val size = partySize(updatedParty)
 
             updatedParty.members?.forEach { memberName ->
-                Bukkit.getPlayer(memberName)?.sendGreenMessage("${player.name} joined the party! ($memberCount/$maxPlayers)")
+                Bukkit.getPlayer(memberName)?.sendGreenMessage("${player.name} joined the party! ($size)")
             }
         }
     }
@@ -143,23 +133,6 @@ class PartyCommand(
         }
     }
 
-    @Subcommand("queue")
-    @Description("Start the queue for your party")
-    fun queue(player: Player) {
-        plugin.async(player) {
-            val party = getOwnParty(player) ?: return@async
-            if (!assertLeader(player, party)) return@async
-
-            partiesApi.partiesQueuePost(party.id!!, PartiesInvitePostRequest(player = player.name))
-            val minigame = gameRegistry.getGame(party.game!!)
-            val displayName = minigame?.displayName ?: party.game
-
-            party.members?.forEach { memberName ->
-                Bukkit.getPlayer(memberName)?.sendMiniMessage("<aqua>Queued for $displayName!</aqua>")
-            }
-        }
-    }
-
     @Subcommand("disband")
     @Description("Disband your party")
     fun disband(player: Player) {
@@ -181,15 +154,21 @@ class PartyCommand(
     fun info(player: Player) {
         plugin.async(player) {
             val party = getOwnParty(player) ?: return@async
-            val minigame = gameRegistry.getGame(party.game!!)
-            val displayName = minigame?.displayName ?: party.game
 
             player.sendMiniMessage("<green>--- Party Info ---</green>")
-            player.sendMiniMessage("<gray>Game:</gray> <gold>$displayName</gold>")
+            player.sendMiniMessage("<gray>League:</gray> <gold>${leagueName(party)}</gold>")
             player.sendMiniMessage("<gray>Leader:</gray> <aqua>${party.leader}</aqua>")
-            player.sendMiniMessage("<gray>Members:</gray> <white>${party.members?.joinToString(", ")}</white>")
+            player.sendMiniMessage("<gray>Members (${partySize(party)}):</gray> <white>${party.members?.joinToString(", ")}</white>")
             player.sendMiniMessage("<gray>State:</gray> <white>${party.state ?: "unknown"}</white>")
         }
+    }
+
+    private fun leagueName(party: Party): String =
+        party.slug?.let { plugin.leagueCache.getLeagueBySlug(it)?.displayName } ?: party.slug ?: "unknown"
+
+    private fun partySize(party: Party): String {
+        val maxPlayers = party.slug?.let { plugin.leagueCache.getLeagueBySlug(it)?.maxPartySize }
+        return "${party.members?.size ?: 0}/${maxPlayers ?: "?"}"
     }
 
     private fun getOwnParty(player: Player): Party? {
