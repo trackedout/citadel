@@ -269,6 +269,10 @@ class Citadel : JavaPlugin() {
             val leagues = leagueCache.getLeagues()
             leagues.mapNotNull { it.slug }
         }
+        manager.commandCompletions.registerAsyncCompletion("selectableRunModes") { context ->
+            val playerName = context.player?.name ?: return@registerAsyncCompletion emptyList()
+            runModes.selectableLeagues(playerName).mapNotNull { it.slug }
+        }
         manager.commandCompletions.registerStaticCompletion("toggleableConfigs", toggleableConfigs)
         manager.commandCompletions.registerStaticCompletion("editableConfigs", editableConfigs)
         manager.commandCompletions.registerStaticCompletion("shulkerColors", shulkerColors)

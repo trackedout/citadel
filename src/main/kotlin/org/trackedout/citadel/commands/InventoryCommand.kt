@@ -59,7 +59,7 @@ class InventoryCommand(
     @Subcommand("run-mode")
     @CommandPermission("decked-out.inventory.set-run-mode")
     @Description("Set run mode for inventory filtering")
-    @CommandCompletion("@leagueSlugs @nothing")
+    @CommandCompletion("@selectableRunModes @nothing")
     fun setRunMode(source: Player, leagueSlug: String) {
         val runType = resolveRunType(leagueSlug)
         if (runType == null) {
