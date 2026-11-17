@@ -22,10 +22,7 @@ import org.trackedout.client.apis.LeaguesApi
 import org.trackedout.client.infrastructure.ClientException
 import org.trackedout.client.models.Event
 import org.trackedout.client.models.League
-import org.trackedout.client.models.LeagueMemberRequest
 import org.trackedout.client.models.LeagueSandboxInstance
-import org.trackedout.client.models.LeaguesCreateRequest
-import org.trackedout.client.models.LeaguesCreateRequestBuilders
 
 @CommandAlias("decked-out|do")
 @CommandPermission("decked-out.league")
@@ -38,51 +35,6 @@ class LeagueCommand(
 
     // Track active polling loops per player to cancel stale ones
     private val activePolling = ConcurrentHashMap<String, Long>()
-
-    @Subcommand("league create")
-    @CommandCompletion("@nothing")
-    @CommandPermission("decked-out.league.create")
-    @Description("Create a new league with a world seeded from builders2")
-    fun createLeague(player: Player, slug: String) {
-        plugin.async(player) {
-            if (!slug.matches(Regex("^[a-z0-9-]+$"))) {
-                player.sendRedMessage("Invalid slug: must be lowercase alphanumeric with hyphens only")
-                return@async
-            }
-
-            val existing = leagueCache.getLeagueBySlug(slug)
-            if (existing != null) {
-                player.sendRedMessage("League '$slug' already exists")
-                return@async
-            }
-
-            player.sendGreyMessage("Creating league '$slug' and seeding world from builders2...")
-
-            try {
-                val request = LeaguesCreateRequest(
-                    slug = slug,
-                    displayName = slug.replace("-", " ").replaceFirstChar { it.uppercase() },
-                    owner = player.name,
-                    builders = LeaguesCreateRequestBuilders(
-                        players = emptyList(),
-                        idleTimeoutMinutes = 30,
-                    ),
-                )
-
-                leaguesApi.leaguesCreate(request)
-                leagueCache.refresh()
-
-                player.sendGreenMessage("League '$slug' created! World seeded from builders2")
-                player.sendGreyMessage("Use '/do league edit $slug' to start building.")
-            } catch (e: ClientException) {
-                if (e.statusCode == 409) {
-                    player.sendRedMessage("League '$slug' already exists")
-                } else {
-                    player.sendRedMessage("Failed to create league: ${e.message}")
-                }
-            }
-        }
-    }
 
     @Subcommand("league list")
     @Description("List all active leagues")
@@ -216,35 +168,6 @@ class LeagueCommand(
         }
     }
 
-    @Subcommand("league publish")
-    @CommandCompletion("@leagueSlugs")
-    @Description("Publish a league so it becomes a playable mode")
-    fun publishLeague(player: Player, leagueSlug: String) {
-        plugin.async(player) {
-            val league = resolveLeague(leagueSlug)
-            if (league == null) {
-                player.sendRedMessage("Unknown league: $leagueSlug")
-                return@async
-            }
-            val slug = league.slug ?: return@async
-
-            if (!canManageLeague(player, league)) {
-                player.sendRedMessage("You don't have permission to publish '${league.displayName ?: slug}'")
-                return@async
-            }
-
-            player.sendGreyMessage("Publishing league '$slug'...")
-            try {
-                val published = leaguesApi.leaguePublish(slug)
-                leagueCache.refresh()
-                player.sendGreenMessage("League '$slug' is now playable")
-                player.sendGreyMessage("Players can select it as a mode and use '/do league play $slug' to test it.")
-            } catch (e: ClientException) {
-                player.sendRedMessage("Failed to publish league: ${e.message}")
-            }
-        }
-    }
-
     @Subcommand("league play")
     @CommandCompletion("@leagueSlugs")
     @Description("Queue into a league's dungeon to test it (owner/editor/admin)")
@@ -263,7 +186,7 @@ class LeagueCommand(
             }
 
             if ((league.display?.runTypeId ?: 0) <= 0) {
-                player.sendRedMessage("League '$slug' isn't published yet. Run '/do league publish $slug' first")
+                player.sendRedMessage("League '$slug' isn't published yet. Set its state to active in the leagues repo and sync it")
                 return@async
             }
 
@@ -294,42 +217,6 @@ class LeagueCommand(
         }
     }
 
-    @Subcommand("league editors add")
-    @CommandCompletion("@leagueSlugs @nothing")
-    @Description("Add an editor (builder) to a league")
-    fun addEditor(player: Player, leagueSlug: String, editor: String) {
-        mutateLeague(player, leagueSlug, "add editor '$editor' to") { slug ->
-            leaguesApi.leagueAddEditor(slug, LeagueMemberRequest(player = editor))
-        }
-    }
-
-    @Subcommand("league editors remove")
-    @CommandCompletion("@leagueSlugs @nothing")
-    @Description("Remove an editor (builder) from a league")
-    fun removeEditor(player: Player, leagueSlug: String, editor: String) {
-        mutateLeague(player, leagueSlug, "remove editor '$editor' from") { slug ->
-            leaguesApi.leagueRemoveEditor(slug, LeagueMemberRequest(player = editor))
-        }
-    }
-
-    @Subcommand("league members add")
-    @CommandCompletion("@leagueSlugs @nothing")
-    @Description("Add a member to a league")
-    fun addMember(player: Player, leagueSlug: String, member: String) {
-        mutateLeague(player, leagueSlug, "add member '$member' to") { slug ->
-            leaguesApi.leagueAddMember(slug, LeagueMemberRequest(player = member))
-        }
-    }
-
-    @Subcommand("league members remove")
-    @CommandCompletion("@leagueSlugs @nothing")
-    @Description("Remove a member from a league")
-    fun removeMember(player: Player, leagueSlug: String, member: String) {
-        mutateLeague(player, leagueSlug, "remove member '$member' from") { slug ->
-            leaguesApi.leagueRemoveMember(slug, LeagueMemberRequest(player = member))
-        }
-    }
-
     // Look up a league by slug or short id, falling back to a direct API lookup
     // because the cache only holds active (published) leagues while drafts are
     // still being edited.
@@ -348,30 +235,6 @@ class LeagueCommand(
             leaguesApi.leagueBuilderAllowlist(slug).any { it.name == player.name }
         } catch (_: ClientException) {
             false
-        }
-    }
-
-    private fun mutateLeague(player: Player, leagueSlug: String, action: String, mutate: (String) -> Unit) {
-        plugin.async(player) {
-            val league = resolveLeague(leagueSlug)
-            if (league == null) {
-                player.sendRedMessage("Unknown league: $leagueSlug")
-                return@async
-            }
-            val slug = league.slug ?: return@async
-
-            if (!canManageLeague(player, league)) {
-                player.sendRedMessage("You don't have permission to manage '${league.displayName ?: slug}'")
-                return@async
-            }
-
-            try {
-                mutate(slug)
-                leagueCache.refresh()
-                player.sendGreenMessage("Updated '$slug': $action league")
-            } catch (e: ClientException) {
-                player.sendRedMessage("Failed to $action league: ${e.message}")
-            }
         }
     }
 
