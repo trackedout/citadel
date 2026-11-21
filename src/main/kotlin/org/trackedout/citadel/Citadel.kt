@@ -88,7 +88,8 @@ class Citadel : JavaPlugin() {
     val mongoURI by lazy { getEnvOrDefault("MONGODB_URL", "") }
     lateinit var leaderboardTaskRunner: LeaderboardTaskRunner
     lateinit var leagueCache: LeagueCache
-    private lateinit var worldsApi: WorldsApi
+    lateinit var worldsApi: WorldsApi
+        private set
     lateinit var runModes: RunModes
 
     override fun onEnable() {

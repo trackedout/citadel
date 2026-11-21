@@ -12,82 +12,34 @@ import org.trackedout.citadel.mongo.MongoDungeon
 import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.infrastructure.ClientException
 
+private const val ACTIVE_LEAGUE_STATE = "active"
+
 fun showAdminBook(plugin: Citadel, player: Player, configApi: ConfigApi) {
     plugin.async(player) {
+        val knownWorlds = plugin.worldsApi.worldsGet().results.orEmpty()
+            .map { AdminWorld(it.slug, it.buildServer?.value) }
+            .sortedBy { it.slug }
+
+        val activeWorldSlugs = plugin.leagueCache.getLeagues()
+            .filter { it.state == ACTIVE_LEAGUE_STATE }
+            .mapNotNull { it.world }
+            .toSet()
+
         val database = MongoDBManager.getDatabase("dunga-dunga")
         val dungeons = database.getCollection("instances", MongoDungeon::class.java)
             .find(Filters.regex("name", "^d8[0-9]{2}"))
             .sortedBy { it.name }
-            .map { it.name }
+            .map { AdminDungeon(it.name, dungeonType(configApi, it.name)) }
 
-        val dungeonTypes = dungeons.associateWith { d ->
-            try {
-                configApi.configsGet(d, "dungeon-type").value ?: "default"
-            } catch (e: ClientException) { "default" }
-        }
-
-        val queueDungeonTypes = listOf("practice", "competitive", "hardcore").associateWith { runType ->
-            try {
-                configApi.configsGet(runType, "default-dungeon-type").value ?: "default"
-            } catch (e: ClientException) { "default" }
-        }
-
-        fun dungeonLine(d: String): String {
-            val type = dungeonTypes[d] ?: "default"
-            val s1Btn = if (type == "default") "<gold>[<u>S1</u>]</gold>" else "<click:run_command:'/do config set $d dungeon-type default'><gold>[S1]</gold></click>"
-            val s2Btn = if (type == "do2-s2-comp") "<aqua>[<u>S2</u>]</aqua>" else "<click:run_command:'/do config set $d dungeon-type do2-s2-comp'><aqua>[S2]</aqua></click>"
-            val shutdownBtn = "<click:run_command:'/do shutdown-dungeon $d'><red>[X]</red></click>"
-            return "  $d $s1Btn $s2Btn $shutdownBtn"
-        }
-
-        fun queueTypeBtn(runType: String, label: String, colour: String): String {
-            val current = queueDungeonTypes[runType] ?: "default"
-            val s1Btn = if (current == "default") "<gold>[<u>S1</u>]</gold>" else "<click:run_command:'/do config set $runType default-dungeon-type default'><gold>[S1]</gold></click>"
-            val s2Btn = if (current == "do2-s2-comp") "<aqua>[<u>S2</u>]</aqua>" else "<click:run_command:'/do config set $runType default-dungeon-type do2-s2-comp'><aqua>[S2]</aqua></click>"
-            return "  <$colour>$label</$colour> $s1Btn $s2Btn"
-        }
-
-        fun toggleLabel(label: String, on: Boolean) = if (on) "<green>[$label: ON]</green>" else "<red>[$label: OFF]</red>"
-
-        val pages = listOf(
-            """
-  <italic><red>Dungeon Management</red></italic>
-
-${dungeons.joinToString("\n") { dungeonLine(it) }}
-
- <click:run_command:'/do shutdown-all-empty-dungeons'><red>[Shutdown All Empty]</red></click>
-            """.trimIndent(),
-
-            """
-     <italic><gold>Run Mode Defaults</gold></italic>
-     <gray>(for ALL players)</gray>
-
-${queueTypeBtn("practice", "Practice    ", "green")}
-
-${queueTypeBtn("competitive", "Competitive ", "aqua")}
-
-${queueTypeBtn("hardcore", "Hardcore   ", "red")}
-            """.trimIndent(),
-
-            """
-      <italic><gold>Backups</gold></italic>
-
-<click:run_command:'/k8s create-snapshot builders'><aqua>[Snapshot Builders]</aqua></click>
-
-<click:run_command:'/k8s create-snapshot builders2'><aqua>[Snapshot Builders2]</aqua></click>
-
-<click:run_command:'/k8s backup-database'><aqua>[Backup Database]</aqua></click>
-            """.trimIndent(),
-
-            """
-    <italic><gold>Debug Configs</gold></italic>
-
-<click:run_command:'/do details'>${toggleLabel("Dungeon Details", player.scoreboardTags.contains("details"))}</click>
-<click:run_command:'/do status'>${toggleLabel("Network Status", player.scoreboardTags.contains("debug"))}</click>
-<click:run_command:'/do debug'>${toggleLabel("Click Debug", plugin.config.getBoolean("debug"))}</click>
-
-<click:run_command:'/do config show'><gold>[List Configs]</gold></click>
-            """.trimIndent(),
+        val pages = buildAdminBookPages(
+            dungeons = dungeons,
+            assignableWorlds = knownWorlds.filter { it.slug in activeWorldSlugs },
+            knownWorlds = knownWorlds,
+            toggles = AdminToggles(
+                details = player.scoreboardTags.contains("details"),
+                networkStatus = player.scoreboardTags.contains("debug"),
+                clickDebug = plugin.config.getBoolean("debug"),
+            ),
         )
 
         val components = pages.map { MiniMessage.miniMessage().deserialize(it) }
@@ -95,3 +47,10 @@ ${queueTypeBtn("hardcore", "Hardcore   ", "red")}
         player.openBook(book)
     }
 }
+
+private fun dungeonType(configApi: ConfigApi, dungeon: String): String? =
+    try {
+        configApi.configsGet(dungeon, "dungeon-type").value
+    } catch (e: ClientException) {
+        null
+    }
