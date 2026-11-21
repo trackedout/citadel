@@ -8,6 +8,7 @@ import org.trackedout.citadel.buildServer
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.citadel.sendRedMessage
+import org.trackedout.citadel.userMessage
 import org.trackedout.client.apis.LeaguesApi
 import org.trackedout.client.apis.WorldsApi
 import org.trackedout.client.infrastructure.ClientException
@@ -40,7 +41,7 @@ class WorldEditor(
             return
         }
 
-        val leagueSlug = sandboxLeagueSlug ?: findLeagueSlugPlaying(player, world.slug) ?: return
+        val leagueSlug = sandboxLeagueSlug ?: findSandboxLeagueSlug(player, world.slug) ?: return
         editInSandbox(player, world.slug, leagueSlug)
     }
 
@@ -52,7 +53,7 @@ class WorldEditor(
             return
         }
 
-        val leagueSlug = sandboxLeagueSlug ?: findLeagueSlugPlaying(player, world.slug) ?: return
+        val leagueSlug = sandboxLeagueSlug ?: findSandboxLeagueSlug(player, world.slug) ?: return
         try {
             leaguesApi.leagueSandboxStop(leagueSlug)
             player.sendGreenMessage("Sandbox for '${world.slug}' is shutting down")
@@ -89,18 +90,28 @@ class WorldEditor(
             false
         }
 
-    private fun findLeagueSlugPlaying(player: Player, worldSlug: String): String? {
-        val leagueSlug = try {
-            leaguesApi.leaguesGet().results.orEmpty().firstOrNull { it.world == worldSlug }?.slug
+    // The backend allows one sandbox per world, so prefer the league that already has
+    // one running over the first league that plays the world
+    private fun findSandboxLeagueSlug(player: Player, worldSlug: String): String? {
+        val leagueSlugs = try {
+            leaguesApi.leaguesGet().results.orEmpty().filter { it.world == worldSlug }.mapNotNull { it.slug }
         } catch (e: ClientException) {
             player.sendRedMessage("Failed to look up leagues for '$worldSlug': ${e.message}")
             return null
         }
-        if (leagueSlug == null) {
+        if (leagueSlugs.isEmpty()) {
             player.sendRedMessage("No league plays '$worldSlug', so there is no sandbox to start for it")
+            return null
         }
-        return leagueSlug
+        return leagueSlugs.firstOrNull { hasLiveSandbox(it) } ?: leagueSlugs.first()
     }
+
+    private fun hasLiveSandbox(leagueSlug: String): Boolean =
+        try {
+            leaguesApi.leagueSandboxGet(leagueSlug).state in LIVE_STATES
+        } catch (e: ClientException) {
+            false
+        }
 
     private fun sendToBuildServer(player: Player, worldSlug: String, buildServer: String) {
         player.sendGreyMessage("Sending you to $buildServer to edit $worldSlug")
@@ -159,7 +170,7 @@ class WorldEditor(
         if (e.statusCode == 409 && buildServer != null) {
             sendToBuildServer(player, worldSlug, buildServer)
         } else {
-            player.sendRedMessage("Failed to launch sandbox: ${e.message}")
+            player.sendRedMessage("Failed to launch sandbox: ${e.userMessage()}")
         }
     }
 
@@ -210,5 +221,9 @@ class WorldEditor(
             out.writeUTF(serverName)
             player.sendPluginMessage(plugin, "BungeeCord", out.toByteArray())
         })
+    }
+
+    private companion object {
+        val LIVE_STATES = setOf(LeagueSandboxInstance.State.RUNNING, LeagueSandboxInstance.State.LAUNCHING)
     }
 }
