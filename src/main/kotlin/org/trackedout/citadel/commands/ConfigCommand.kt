@@ -30,16 +30,13 @@ val toggleableConfigs = listOf(
 // Requires 'decked-out.config.edit' permission
 val editableConfigs = listOf(
     "dungeon-type",
-    "datapack-version",
-    "default-dungeon-type",
 )
 
 private val configDescriptions = mapOf(
     "skip-door" to "Enable this to skip the door animation",
-    "dungeon-type" to "The type of dungeon to generate (default / do2-s2-comp)",
+    "dungeon-type" to "The world a warm dungeon serves (a world slug, see /do world list)",
     "allow-spectating" to "Allow players to spectate your runs",
     "shulker-style" to "Shulker box colour (in competitive mode)",
-    "default-dungeon-type" to "Dungeon season to use when queuing (default / do2-s2-comp)",
 )
 
 private fun configDescription(key: String?): String = configDescriptions[key]?.let { "<gray>$it</gray>" } ?: ""
@@ -86,7 +83,7 @@ class ConfigCommand(
       {
         entity: 'd800', // Could be player name or dungeon ID
         key: 'dungeon-type',
-        value: 'do2-s2-comp'
+        value: 'do2-s3'
       }
      */
 
