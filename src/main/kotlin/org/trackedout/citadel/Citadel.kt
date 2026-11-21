@@ -23,6 +23,8 @@ import org.trackedout.citadel.commands.CubbyManagementCommand
 import org.trackedout.citadel.commands.InventoryCommand
 import org.trackedout.citadel.commands.LeaderboardCommand
 import org.trackedout.citadel.commands.LeagueCommand
+import org.trackedout.citadel.commands.WorldCommand
+import org.trackedout.citadel.commands.WorldEditor
 import org.trackedout.citadel.commands.LogEventCommand
 import org.trackedout.citadel.commands.ManageDeckCommand
 import org.trackedout.citadel.commands.ScheduleJobCommand
@@ -67,6 +69,7 @@ import org.trackedout.client.apis.PartiesApi
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.apis.StatusApi
 import org.trackedout.client.apis.TasksApi
+import org.trackedout.client.apis.WorldsApi
 import org.trackedout.client.infrastructure.ClientException
 import org.trackedout.citadel.config.RunType
 import org.trackedout.citadel.config.findRunTypeByIdFromCache
@@ -85,6 +88,7 @@ class Citadel : JavaPlugin() {
     val mongoURI by lazy { getEnvOrDefault("MONGODB_URL", "") }
     lateinit var leaderboardTaskRunner: LeaderboardTaskRunner
     lateinit var leagueCache: LeagueCache
+    private lateinit var worldsApi: WorldsApi
     lateinit var runModes: RunModes
 
     override fun onEnable() {
@@ -148,6 +152,14 @@ class Citadel : JavaPlugin() {
         )
 
         val leaguesApi = LeaguesApi(
+            basePath = dungaAPIPath,
+            client = OkHttpClient.Builder()
+                .connectTimeout(5.seconds.toJavaDuration())
+                .callTimeout(30.seconds.toJavaDuration())
+                .build()
+        )
+
+        worldsApi = WorldsApi(
             basePath = dungaAPIPath,
             client = OkHttpClient.Builder()
                 .connectTimeout(5.seconds.toJavaDuration())
@@ -240,7 +252,9 @@ class Citadel : JavaPlugin() {
         val partyCommand = PartyCommand(this, partiesApi, inventoryManager)
         partyCommand.registerCompletions(manager)
         manager.registerCommand(partyCommand)
-        manager.registerCommand(LeagueCommand(this, leagueCache, leaguesApi, eventsApi))
+        val worldEditor = WorldEditor(this, worldsApi, leaguesApi)
+        manager.registerCommand(LeagueCommand(this, leagueCache, leaguesApi, eventsApi, worldEditor))
+        manager.registerCommand(WorldCommand(this, worldsApi, worldEditor))
 
         leagueCache.startRefreshTask()
 
@@ -257,6 +271,9 @@ class Citadel : JavaPlugin() {
         manager.commandCompletions.registerAsyncCompletion("leagueSlugs") { _ ->
             val leagues = leagueCache.getLeagues()
             leagues.mapNotNull { it.slug }
+        }
+        manager.commandCompletions.registerAsyncCompletion("worldSlugs") { _ ->
+            worldsApi.worldsGet().results.orEmpty().map { it.slug }
         }
         manager.commandCompletions.registerAsyncCompletion("selectableRunModes") { context ->
             val playerName = context.player?.name ?: return@registerAsyncCompletion emptyList()

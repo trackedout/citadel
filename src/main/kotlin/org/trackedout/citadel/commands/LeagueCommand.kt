@@ -6,8 +6,6 @@ import co.aikar.commands.annotation.CommandCompletion
 import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Description
 import co.aikar.commands.annotation.Subcommand
-import com.google.common.io.ByteStreams
-import java.util.concurrent.ConcurrentHashMap
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
@@ -22,7 +20,6 @@ import org.trackedout.client.apis.LeaguesApi
 import org.trackedout.client.infrastructure.ClientException
 import org.trackedout.client.models.Event
 import org.trackedout.client.models.League
-import org.trackedout.client.models.LeagueSandboxInstance
 
 @CommandAlias("decked-out|do")
 @CommandPermission("decked-out.league")
@@ -31,10 +28,8 @@ class LeagueCommand(
     private val leagueCache: LeagueCache,
     private val leaguesApi: LeaguesApi,
     private val eventsApi: EventsApi,
+    private val worldEditor: WorldEditor,
 ) : BaseCommand() {
-
-    // Track active polling loops per player to cancel stale ones
-    private val activePolling = ConcurrentHashMap<String, Long>()
 
     @Subcommand("league list")
     @Description("List all active leagues")
@@ -59,113 +54,37 @@ class LeagueCommand(
 
     @Subcommand("league edit")
     @CommandCompletion("@leagueSlugs")
-    @Description("Connect to the league's sandbox build server")
+    @Description("Alias for /do world edit, using the world the league plays")
     fun editLeague(player: Player, leagueSlug: String) {
         plugin.async(player) {
-            // Try cache first, then direct API lookup (cache only has active leagues)
-            val league = leagueCache.getLeagueBySlug(leagueSlug)
-                ?: try { leaguesApi.leaguesSlugGet(leagueSlug) } catch (_: ClientException) { null }
-
-            if (league == null) {
-                player.sendRedMessage("Unknown league: $leagueSlug")
-                return@async
-            }
-
-            val slug = league.slug ?: return@async
-
-            // Check permission via allowlist
-            try {
-                val allowlist = leaguesApi.leagueBuilderAllowlist(slug)
-                val allowedNames = allowlist.map { it.name }
-                if (!allowedNames.contains(player.name)) {
-                    player.sendRedMessage("You don't have build access to '${league.displayName ?: slug}'")
-                    return@async
-                }
-            } catch (e: ClientException) {
-                player.sendRedMessage("Failed to check permissions: ${e.message}")
-                return@async
-            }
-
-            // Check if sandbox is already running
-            val instance = try {
-                leaguesApi.leagueSandboxGet(slug)
-            } catch (e: ClientException) {
-                if (e.statusCode == 404) null
-                else {
-                    player.sendRedMessage("Failed to check sandbox status: ${e.message}")
-                    return@async
-                }
-            }
-
-            if (instance != null) {
-                when (instance.state) {
-                    LeagueSandboxInstance.State.RUNNING -> {
-                        player.sendGreyMessage("Connecting to sandbox...")
-                        transferPlayer(player, instance.slot!!)
-                        return@async
-                    }
-                    LeagueSandboxInstance.State.LAUNCHING -> {
-                        player.sendGreyMessage("Sandbox is starting up, waiting...")
-                        waitForRunningAndTransfer(player, slug, instance.slot!!)
-                        return@async
-                    }
-                    else -> {} // STOPPING/STOPPED — launch a new one
-                }
-            }
-
-            // Launch new sandbox
-            player.sendGreyMessage("Starting sandbox for '${league.displayName ?: slug}'...")
-
-            try {
-                val launched = leaguesApi.leagueSandboxLaunch(slug)
-                val slot = launched.slot
-                    ?: run {
-                        player.sendRedMessage("Failed to allocate sandbox slot")
-                        return@async
-                    }
-
-                player.sendGreyMessage("Sandbox allocated on slot $slot for league '$slug'. Starting Fargate task...")
-                waitForRunningAndTransfer(player, slug, slot)
-            } catch (e: ClientException) {
-                // Leagues built on a persistent build server (builders/builders2)
-                // reject on-demand sandboxes with 409. That's expected — point the
-                // editor at the persistent server instead of surfacing a raw error.
-                if (e.statusCode == 409) {
-                    player.sendGreyMessage("'${league.displayName ?: slug}' is built on the persistent build server")
-                    player.sendGreyMessage("Use '/server builders2' to edit it")
-                } else {
-                    player.sendRedMessage("Failed to launch sandbox: ${e.message}")
-                }
-            }
+            val world = resolveWorldSlug(player, leagueSlug) ?: return@async
+            player.sendGreyMessage("League '$leagueSlug' plays world '$world', editing the world")
+            worldEditor.edit(player, world, sandboxLeagueSlug = leagueSlug)
         }
     }
 
     @Subcommand("league stop")
     @CommandCompletion("@leagueSlugs")
     @CommandPermission("decked-out.league.stop")
-    @Description("Stop a league's sandbox build server")
+    @Description("Alias for /do world stop, using the world the league plays")
     fun stopLeague(player: Player, leagueSlug: String) {
         plugin.async(player) {
-            val league = leagueCache.getLeagueBySlug(leagueSlug)
-
-            if (league == null) {
-                player.sendRedMessage("Unknown league: $leagueSlug")
-                return@async
-            }
-
-            val slug = league.slug ?: return@async
-
-            try {
-                leaguesApi.leagueSandboxStop(slug)
-                player.sendGreenMessage("Sandbox for '$slug' is shutting down")
-            } catch (e: ClientException) {
-                if (e.statusCode == 404) {
-                    player.sendGreyMessage("No running sandbox for '$slug'")
-                } else {
-                    player.sendRedMessage("Failed to stop sandbox: ${e.message}")
-                }
-            }
+            val world = resolveWorldSlug(player, leagueSlug) ?: return@async
+            worldEditor.stop(player, world, sandboxLeagueSlug = leagueSlug)
         }
+    }
+
+    private fun resolveWorldSlug(player: Player, leagueSlug: String): String? {
+        val league = resolveLeague(leagueSlug)
+        if (league == null) {
+            player.sendRedMessage("Unknown league: $leagueSlug")
+            return null
+        }
+        val world = league.world
+        if (world == null) {
+            player.sendRedMessage("League '$leagueSlug' has no world")
+        }
+        return world
     }
 
     @Subcommand("league play")
@@ -236,54 +155,5 @@ class LeagueCommand(
         } catch (_: ClientException) {
             false
         }
-    }
-
-    private fun waitForRunningAndTransfer(player: Player, slug: String, slot: String) {
-        val maxAttempts = 60
-        val pollIntervalMs = 5000L
-        val pollId = System.currentTimeMillis()
-        val playerKey = "${player.uniqueId}:$slug"
-        activePolling[playerKey] = pollId
-
-        for (attempt in 1..maxAttempts) {
-            Thread.sleep(pollIntervalMs)
-
-            if (!player.isOnline) return
-            if (activePolling[playerKey] != pollId) return // superseded by a newer poll
-
-            val instance = try {
-                leaguesApi.leagueSandboxGet(slug)
-            } catch (e: ClientException) {
-                continue
-            }
-
-            when (instance.state) {
-                LeagueSandboxInstance.State.RUNNING -> {
-                    player.sendGreenMessage("Sandbox ready!")
-                    transferPlayer(player, slot)
-                    return
-                }
-                LeagueSandboxInstance.State.STOPPED, LeagueSandboxInstance.State.STOPPING -> {
-                    player.sendRedMessage("Sandbox failed to start")
-                    return
-                }
-                else -> {
-                    if (attempt % 6 == 0) {
-                        player.sendGreyMessage("Still starting... (${attempt * 5}s)")
-                    }
-                }
-            }
-        }
-
-        player.sendRedMessage("Sandbox failed to start within 5 minutes")
-    }
-
-    private fun transferPlayer(player: Player, serverName: String) {
-        plugin.server.scheduler.runTask(plugin, Runnable {
-            val out = ByteStreams.newDataOutput()
-            out.writeUTF("Connect")
-            out.writeUTF(serverName)
-            player.sendPluginMessage(plugin, "BungeeCord", out.toByteArray())
-        })
     }
 }
