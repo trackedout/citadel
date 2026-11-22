@@ -9,6 +9,15 @@ enum class CubbyFacing(val dx: Int, val dz: Int) {
 
     /** Number of clockwise quarter turns that turn this facing into [target]. */
     fun quarterTurnsTo(target: CubbyFacing): Int = (target.ordinal - ordinal + CubbyFacing.entries.size) % CubbyFacing.entries.size
+
+    companion object {
+        private const val DEGREES_PER_QUARTER_TURN = 90f
+        private const val SOUTH_AT_YAW_ZERO = 2
+
+        /** Minecraft yaw: 0 is south, 90 west, 180 north, -90 east. */
+        fun fromYaw(yaw: Float): CubbyFacing =
+            entries[Math.floorMod(Math.round(yaw / DEGREES_PER_QUARTER_TURN) + SOUTH_AT_YAW_ZERO, entries.size)]
+    }
 }
 
 data class Size(val x: Int, val y: Int, val z: Int) {
@@ -34,6 +43,15 @@ data class Box(
     val size = Size(maxX - minX + 1, maxY - minY + 1, maxZ - minZ + 1)
 
     fun contains(x: Int, y: Int, z: Int) = x in minX..maxX && y in minY..maxY && z in minZ..maxZ
+
+    fun intersects(other: Box) = minX <= other.maxX && maxX >= other.minX &&
+        minY <= other.maxY && maxY >= other.minY &&
+        minZ <= other.maxZ && maxZ >= other.minZ
+
+    fun shifted(dx: Int, dz: Int) = Box(minX + dx, minY, minZ + dz, maxX + dx, maxY, maxZ + dz)
+
+    /** Block count along the given direction. */
+    fun extent(direction: CubbyFacing) = if (direction.dx != 0) size.x else size.z
 
     /** Whether the block lies beyond this box's edge in the direction of [facing]. */
     fun isBeyondEdge(x: Int, z: Int, facing: CubbyFacing) = when (facing) {

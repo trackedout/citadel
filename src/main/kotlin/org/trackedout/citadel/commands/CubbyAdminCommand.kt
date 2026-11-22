@@ -20,7 +20,15 @@ import org.trackedout.citadel.cubby.Box
 import org.trackedout.citadel.cubby.CUBBY_PREFIX
 import org.trackedout.citadel.cubby.CubbyArchive
 import org.trackedout.citadel.cubby.CubbyBlocks
+import org.trackedout.citadel.cubby.CubbyDefinitionPlanner
+import org.trackedout.citadel.cubby.CubbyFacing
 import org.trackedout.citadel.cubby.CubbyFlags
+import org.trackedout.citadel.cubby.DEFAULT_WALL_GAP
+import org.trackedout.citadel.cubby.PlannedCubby
+import org.trackedout.citadel.cubby.max
+import org.trackedout.citadel.cubby.min
+import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion
+import org.trackedout.citadel.regionManager
 import org.trackedout.citadel.cubby.CubbyReset
 import org.trackedout.citadel.cubby.CubbyTemplate
 import org.trackedout.citadel.cubby.CubbyTemplateStore
@@ -34,6 +42,7 @@ import org.trackedout.citadel.sendMessage
 import org.trackedout.citadel.sendRedMessage
 
 private const val ADMIN_PERMISSION = "decked-out.cubby.admin"
+private const val MAX_CUBBIES_PER_DEFINE = 50
 private const val CONFIRM_HINT = "Nothing was changed. Add --confirm to apply."
 
 /** Admin tooling to maintain cubbies. Every command only reports what it would do unless given --confirm. */
@@ -93,6 +102,51 @@ class CubbyAdminCommand(
         reset.saveRegions(cubbyWorld.world)
         plugin.logger.info("${source.name} reset ${cubby.id}, previously owned by ${plan.owners.joinToString().ifEmpty { "nobody" }}")
         source.sendGreenMessage("Reset ${cubby.id}")
+    }
+
+    @Subcommand("cubby define")
+    @Description("Define <count> more cubby regions in a row next to your WorldEdit selection (one cubby). Options: --direction <north|east|south|west>, --gap <blocks>")
+    fun defineCubbies(player: Player, count: Int, @Optional args: Array<String>?) {
+        val flags = CubbyFlags.of(args)
+        val cubbyWorld = CubbyWorld(player.world)
+        val rowDirection = rowDirection(player, flags.value("direction")) ?: return
+        val reference = selectedBox(player) ?: return
+        if (count !in 1..MAX_CUBBIES_PER_DEFINE) {
+            player.sendRedMessage("Count must be between 1 and $MAX_CUBBIES_PER_DEFINE")
+            return
+        }
+
+        val existing = cubbyWorld.cubbies.associate { it.id to it.toBox() }
+        val gap = flags.intValue("gap") ?: DEFAULT_WALL_GAP
+        val planned = CubbyDefinitionPlanner.plan(reference, rowDirection, count, gap, cubbyWorld.nextNumber(), existing)
+
+        warnIfUncommonShape(player, cubbyWorld, reference.size)
+        planned.forEach { player.sendMessage("${it.id}: ${it.box.min()} to ${it.box.max()}${overlapText(it)}", if (it.overlaps.isEmpty()) NamedTextColor.WHITE else NamedTextColor.RED) }
+
+        if (planned.any { it.overlaps.isNotEmpty() }) {
+            player.sendRedMessage("Cannot define cubbies that overlap existing ones. Nothing was changed")
+            return
+        }
+        if (!flags.confirmed) {
+            player.sendMessage("$CONFIRM_HINT Only regions are defined: copy the cubby itself, with the ender chest at its front, using WorldEdit.", NamedTextColor.GRAY)
+            return
+        }
+
+        val regionManager = checkNotNull(player.world.regionManager()) { "No region manager for ${player.world.name}" }
+        planned.forEach { regionManager.addRegion(ProtectedCuboidRegion(it.id, it.box.min(), it.box.max())) }
+        regionManager.saveChanges()
+        plugin.logger.info("${player.name} defined ${planned.joinToString { it.id }}")
+        player.sendGreenMessage("Defined ${planned.size} cubby region(s): ${planned.first().id} to ${planned.last().id}")
+    }
+
+    private fun overlapText(planned: PlannedCubby) =
+        if (planned.overlaps.isEmpty()) "" else " OVERLAPS ${planned.overlaps.joinToString()}"
+
+    private fun rowDirection(player: Player, name: String?): CubbyFacing? {
+        if (name == null) return CubbyFacing.fromYaw(player.location.yaw)
+        val direction = CubbyFacing.entries.firstOrNull { it.name.equals(name, ignoreCase = true) }
+        if (direction == null) player.sendRedMessage("Direction must be one of ${CubbyFacing.entries.joinToString().lowercase()}")
+        return direction
     }
 
     private fun templateBox(source: CommandSender, cubbyWorld: CubbyWorld, fromCubby: String?): Box? {

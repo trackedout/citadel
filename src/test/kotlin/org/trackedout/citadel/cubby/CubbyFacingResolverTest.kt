@@ -56,6 +56,16 @@ class CubbyFacingResolverTest {
     }
 
     @Test
+    fun `facing is read from minecraft yaw`() {
+        assertEquals(CubbyFacing.SOUTH, CubbyFacing.fromYaw(0f))
+        assertEquals(CubbyFacing.WEST, CubbyFacing.fromYaw(90f))
+        assertEquals(CubbyFacing.NORTH, CubbyFacing.fromYaw(180f))
+        assertEquals(CubbyFacing.NORTH, CubbyFacing.fromYaw(-180f))
+        assertEquals(CubbyFacing.EAST, CubbyFacing.fromYaw(-90f))
+        assertEquals(CubbyFacing.EAST, CubbyFacing.fromYaw(-100f))
+    }
+
+    @Test
     fun `odd quarter turns swap the horizontal size`() {
         assertEquals(Size(10, 7, 9), Size(9, 7, 10).rotated(1))
         assertEquals(Size(9, 7, 10), Size(9, 7, 10).rotated(2))
