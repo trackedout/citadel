@@ -304,9 +304,8 @@ class EchoShardListener(
                     showDeckInventory(event, player, slug)
                 }
 
-                override fun queue() {
-                    createJoinQueueFunc(plugin, eventsApi, player).accept(slug)
-                }
+                // A queue item only queues once it is placed in a shop trade, never on its own
+                override fun queue() = Unit
 
                 override fun showCollection(action: CatalogLobbyAction) {
                     showCollection(plugin, viewFrame, scoreApi, player, player.name, slug, action)
