@@ -1,25 +1,24 @@
 package org.trackedout.citadel
 
 import org.bukkit.GameRule
-import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.advancement.Advancement
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.commands.createCard
-import org.trackedout.citadel.config.cardConfig
-import org.trackedout.citadel.inventory.ScoreboardDescriber
+import org.trackedout.citadel.config.CatalogCache
+import org.trackedout.citadel.config.CatalogData
+import org.trackedout.citadel.inventory.ABSENT_ITEM_AMOUNT
 import org.trackedout.citadel.inventory.Trade
-import org.trackedout.citadel.inventory.baseTradeItems
-import org.trackedout.citadel.inventory.displayName
-import org.trackedout.citadel.inventory.dungeonArtifacts
-import org.trackedout.citadel.inventory.dungeonDeck
-import org.trackedout.citadel.inventory.intoDungeonItems
+import org.trackedout.citadel.inventory.adminBook
+import org.trackedout.citadel.inventory.heldCount
+import org.trackedout.citadel.inventory.lobbyEntryCount
+import org.trackedout.citadel.inventory.lobbyEntrySpec
 import org.trackedout.citadel.inventory.menuBook
 import org.trackedout.citadel.inventory.settingsBook
-import org.trackedout.citadel.inventory.adminBook
-import org.trackedout.citadel.inventory.tradeItems
-import org.trackedout.citadel.inventory.withTradeMeta
+import org.trackedout.citadel.inventory.toItemStack
+import org.trackedout.citadel.inventory.tradeItemSpec
+import org.trackedout.client.models.CatalogLobbyAction
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.ScoreApi
@@ -29,12 +28,14 @@ import org.trackedout.client.models.Event
 import org.trackedout.client.models.Score
 import org.trackedout.citadel.config.RunType
 import org.trackedout.citadel.config.LeagueCache
-import org.trackedout.citadel.config.runTypeFromLeague
 import org.trackedout.citadel.config.getRunTypesFromCache
 import org.trackedout.data.sortedList
 
 // Name of the shard balance scoreboard. Same in every league namespace.
 const val SHARDS_SCOREBOARD = "do2.inventory.shards"
+
+// The trade id of shards, which practice players are topped up with
+private const val SHARD_TRADE_ID = "SHARD"
 
 // Advancement scores are keyed advancement-<namespace>#<path>#<criterion>.
 const val ADVANCEMENT_KEY_PREFIX = "advancement-"
@@ -63,42 +64,41 @@ class InventoryManager(
 
         plugin.async(player) {
             val playerName = player.name
-            plugin.logger.info("Fetching scores for $playerName (filtering for scoreboards: ${tradeSourceScoreboards()})")
-            var scores = scoreApi.getInventoryRelatedScores(plugin.leagueCache, playerName)
+
+            // The player only holds the items of their run mode's league, if they have one
+            val runMode = plugin.runModes.current(playerName)
+            val runTypes = effectiveRunTypes().filter { runMode == null || it == runMode }
+            val unloaded = runTypes.map { it.longId }.filter { plugin.catalogCache.get(it) == null }
+            if (unloaded.isNotEmpty()) {
+                // Syncing without a catalog would clean up the player's items, so leave them as they are
+                plugin.logger.severe("Skipping the inventory sync of $playerName, the catalogs of $unloaded have not loaded")
+                return@async
+            }
+
+            plugin.logger.info("Fetching scores for $playerName (filtering for scoreboards: ${catalogs.inventoryScoreboards()})")
+            var scores = scoreApi.getInventoryRelatedScores(plugin.leagueCache, catalogs, playerName)
 
             if (ensurePlayerHasPracticeShards(playerName, scores)) {
                 // Update scores again to reflect new shard count
-                scores = scoreApi.getInventoryRelatedScores(plugin.leagueCache, playerName)
+                scores = scoreApi.getInventoryRelatedScores(plugin.leagueCache, catalogs, playerName)
             }
 
-            scores = scores.filter { isInventoryRelatedScore(it) }
-            val inventoryFilterRunType = plugin.runModes.current(playerName)
-            if (inventoryFilterRunType != null) {
-                scores = scores.map { score: Score ->
-                    // If the run type is valid, but the score is not for that run type, set it to zero
-                    if (score.slug != inventoryFilterRunType.longId) {
-                        return@map score.copy(value = 0.toBigDecimal())
-                    }
-
-                    return@map score
-                }
-            }
-
+            scores = scores.filter { isInventoryRelatedScore(catalogs, it) }
             val scoreValues = scores.associate { ScoreRef(it.slug!!, it.key!!) to it.value!!.toInt() }
-            scores
-                .forEach { score ->
-                    updatePlayerInventoryForState(
-                        player,
-                        knownItemTracker,
-                        desiredItems,
-                        inventoryFilterRunType,
-                        scoreValues,
-                        ScoreRef(score.slug!!, score.key!!),
-                        score.value!!.toInt()
-                    )
-                }
+            scores.forEach { plugin.logger.info("Player $playerName has inventory score ${it.slug}/${it.key}=${it.value}") }
 
-            ensurePlayerInventoryReflectsItemsOutsideOfDeck(player, knownItemTracker, desiredItems, inventoryFilterRunType)
+            runTypes.forEach { runType ->
+                val catalog = catalogs.require(runType.longId)
+                want(knownItemTracker, desiredItems, lobbyItems(player, catalog, scoreValues))
+                want(knownItemTracker, desiredItems, scoredTradeItems(catalog, scoreValues))
+            }
+
+            want(knownItemTracker, desiredItems, listOf(menuBook(), settingsBook()))
+            if (player.hasPermission("decked-out.book.admin")) {
+                want(knownItemTracker, desiredItems, listOf(adminBook()))
+            }
+
+            ensurePlayerInventoryReflectsItemsOutsideOfDeck(player, knownItemTracker, desiredItems, runTypes)
             syncAdvancements(player)
 
             // Clear old items FIRST so their slots are freed, then place the desired items
@@ -108,76 +108,90 @@ class InventoryManager(
         }
     }
 
+    private val catalogs: CatalogCache get() = plugin.catalogCache
+
+    // A league's lobby is vended once the player is seeded for it: they have every score its entries count.
+    // A league whose lobby counts no score, like a minigame's, needs no seeding
+    private fun lobbyItems(player: Player, catalog: CatalogData, scores: Map<ScoreRef, Int>): List<ItemStack> {
+        val missingScores = catalog.lobbyCountScoreboards().filter { ScoreRef(catalog.slug, it) !in scores }
+        if (missingScores.isNotEmpty()) {
+            plugin.logger.info("${player.name} is not seeded for ${catalog.slug} yet (no score for $missingScores), not vending its lobby")
+            return emptyList()
+        }
+
+        return catalog.lobby.mapIndexed { index, entry ->
+            val count = lobbyEntryCount(entry) { scores.getValue(ScoreRef(catalog.slug, it)) }
+            lobbyEntrySpec(catalog.slug, index, entry, catalog.tradeItemOf(entry), count, materialOverrideOf(player, entry.action)).toItemStack()
+        }
+    }
+
+    // The player's own choice of material for an entry, when the entry lets them choose
+    private fun materialOverrideOf(player: Player, action: CatalogLobbyAction): String? = when (action.playerColour) {
+        CatalogLobbyAction.PlayerColour.shulkerMinusStyle -> shulkerStyleOverride(player)
+        null -> null
+    }
+
+    // Items shown by how much the player has earned of them, except those a lobby entry already vends
+    private fun scoredTradeItems(catalog: CatalogData, scores: Map<ScoreRef, Int>): List<ItemStack> =
+        catalog.scoredTradeItems
+            .filter { catalog.lobbyEntryFor(it) == null }
+            .map { item ->
+                val count = item.heldCount { scores[ScoreRef(catalog.slug, it)] }
+                tradeItemSpec(catalog.slug, item, count).toItemStack()
+            }
+
     private fun ensurePlayerInventoryReflectsItemsOutsideOfDeck(
         player: Player,
         knownItemTracker: MutableSet<ItemStack>,
         desiredItems: MutableList<ItemStack>,
-        inventoryFilterRunType: RunType?
+        runTypes: List<RunType>,
     ) {
         // For each card in the player's inventory, ensure they only have the correct amount
         val deckItems = inventoryApi.inventoryCardsGet(player = player.name, limit = 1000).results!!
 
-        effectiveRunTypes().forEach { runType ->
+        runTypes.forEach { runType ->
+            val catalog = catalogs.require(runType.longId)
+            fun inDeck(name: String) = deckItems.count {
+                it.name == name && it.deckType == runType.deckType() && it.hiddenInDecks?.isNotEmpty() == true
+            }
 
             // Check cards against contents of player's deck
-            cardConfig.sortedList().forEach { card ->
-                var maxCardsThatShouldBeInInventory = deckItems.count {
-                    it.name == card.shorthand && it.deckType == runType.deckType() && it.hiddenInDecks?.isNotEmpty() == true
-                }
+            catalog.cards.sortedList().forEach { card ->
+                val cardsThatShouldBeInInventory = inDeck(card.shorthand)
+                plugin.logger.fine("${player.name} should have ${cardsThatShouldBeInInventory}x${card.shorthand} in their inventory (runType: ${runType.longId})")
 
-                if (inventoryFilterRunType != null && inventoryFilterRunType != runType) {
-                    maxCardsThatShouldBeInInventory = 0
-                }
-
-                plugin.logger.fine("${player.name} should have ${maxCardsThatShouldBeInInventory}x${card.shorthand} in their inventory (runType: ${runType.longId})")
-                val itemStack = createCard(plugin, null, card.shorthand, 1, runType.deckType())
-
-                itemStack?.let {
-                    want(
-                        knownItemTracker,
-                        desiredItems,
-                        it.clone().apply { amount = zeroSupportedItemCount(maxCardsThatShouldBeInInventory) }
-                    )
-                }
+                val itemStack = createCard(catalog, card.shorthand, 1, runType.deckType())
+                want(knownItemTracker, desiredItems, listOf(itemStack.apply { amount = zeroSupportedItemCount(cardsThatShouldBeInInventory) }))
             }
 
             // Check items against contents of player's deck
-            intoDungeonItems.entries.forEach { (itemKey, scoreboardDescriber) ->
-                var maxItemsThatShouldBeInInventory = deckItems.count {
-                    it.name == itemKey && it.deckType == runType.deckType() && it.hiddenInDecks?.isNotEmpty() == true
-                }
+            catalog.intoDungeonItems.forEach { item ->
+                val itemsThatShouldBeInInventory = inDeck(item.tradeId)
+                plugin.logger.fine("${player.name} should have ${itemsThatShouldBeInInventory}x${item.tradeId} in their inventory (runType: ${runType.longId})")
 
-                if (inventoryFilterRunType != null && inventoryFilterRunType != runType) {
-                    maxItemsThatShouldBeInInventory = 0
-                }
-
-                plugin.logger.fine("${player.name} should have ${maxItemsThatShouldBeInInventory}x${itemKey} in their inventory (runType: ${runType.longId})")
-                val itemStack = scoreboardDescriber.itemStack(runType.longId, 1)
-
-                itemStack.let {
-                    want(
-                        knownItemTracker,
-                        desiredItems,
-                        it.withTradeMeta(runType.longId, itemKey).clone()
-                            .apply { amount = zeroSupportedItemCount(maxItemsThatShouldBeInInventory) }
-                    )
-                }
+                want(knownItemTracker, desiredItems, listOf(tradeItemSpec(runType.longId, item, itemsThatShouldBeInInventory).toItemStack()))
             }
         }
-
     }
 
     private fun ensurePlayerHasPracticeShards(playerName: String, scores: List<Score>): Boolean {
         val practiceSlug = plugin.serverSettings.leagues()?.practice ?: return false
-        tradeItems["SHARD"]?.let { tradeItem ->
-            scores.find { score -> score.slug == practiceSlug && score.key == tradeItem.sourceScoreboardName() }?.let { score ->
+        val catalog = catalogs.get(practiceSlug)
+        if (catalog == null) {
+            plugin.logger.severe("Not topping up $playerName's practice shards, the $practiceSlug catalog has not loaded")
+            return false
+        }
+
+        catalog.tradeItems[SHARD_TRADE_ID]?.let { tradeItem ->
+            scores.find { score -> score.slug == practiceSlug && score.key == tradeItem.sourceScoreboard }?.let { score ->
                 if (score.value!!.toInt() <= 10) {
                     val trade = Trade(
                         runType = practiceSlug,
                         sourceType = "dummy",
                         sourceItemCount = 0,
-                        targetType = "SHARD",
+                        targetType = SHARD_TRADE_ID,
                         targetItemCount = 64 - score.value!!.toInt(),
+                        catalog = catalog,
                     )
 
                     eventsApi.eventsPost(
@@ -209,83 +223,28 @@ class InventoryManager(
         return false
     }
 
-    private fun zeroSupportedItemCount(count: Int) = if (count <= 0) 999 else count
-
-    private fun updatePlayerInventoryForState(
-        player: Player,
-        knownItemTracker: MutableSet<ItemStack>,
-        desiredItems: MutableList<ItemStack>,
-        inventoryFilterRunType: RunType?,
-        scores: Map<ScoreRef, Int>,
-        score: ScoreRef,
-        value: Int
-    ) {
-        val (slug, key) = score
-        plugin.logger.info("Player ${player.name} has inventory score $slug/$key=$value")
-
-        val runType = effectiveRunTypes().find { it.longId == slug }
-        if (runType == null) {
-            plugin.logger.warning("Ignoring score $slug/$key for ${player.name}: no league with that slug")
-            return
-        }
-
-        baseTradeItems.forEach { it: Map.Entry<String, ScoreboardDescriber> ->
-            val sb = it.value
-            val sourceScoreKey = sb.sourceScoreboardName()
-            if (sourceScoreKey == key) {
-                plugin.logger.info("Score $slug/$key matches ${it.key}")
-
-                var itemCount = value
-                val inversionScoreKey = sb.sourceInversionScoreboardName()
-                if (sourceScoreKey != inversionScoreKey) {
-                    itemCount -= scores.getOrDefault(ScoreRef(slug, inversionScoreKey), 0)
-                }
-
-                want(
-                    knownItemTracker,
-                    desiredItems,
-                    sb.itemStack(slug, itemCount).withTradeMeta(slug, it.key)
-                )
-            }
-        }
-
-        if (key == SHARDS_SCOREBOARD) {
-            var itemCount = 1
-            if (inventoryFilterRunType != null && inventoryFilterRunType != runType) {
-                itemCount = 0
-            }
-            val materialOverride = if (runType.isCompetitive()) shulkerStyleOverride(player) else null
-            want(knownItemTracker, desiredItems, dungeonDeck(runType, itemCount, materialOverride))
-            want(knownItemTracker, desiredItems, dungeonArtifacts(runType, itemCount))
-        }
-
-        want(knownItemTracker, desiredItems, menuBook())
-        want(knownItemTracker, desiredItems, settingsBook())
-        if (player.hasPermission("decked-out.book.admin")) {
-            want(knownItemTracker, desiredItems, adminBook())
-        }
-    }
+    private fun zeroSupportedItemCount(count: Int) = if (count <= 0) ABSENT_ITEM_AMOUNT else count
 
     // The player's chosen competitive shulker colour, null when they haven't picked one
-    private fun shulkerStyleOverride(player: Player): Material? =
+    private fun shulkerStyleOverride(player: Player): String? =
         try {
             configApi.configsGet(player.name, "shulker-style").value
                 ?.uppercase()
-                ?.let { Material.valueOf("${it}_SHULKER_BOX") }
+                ?.let { "${it}_SHULKER_BOX" }
         } catch (e: ClientException) {
             null
         }
 
-    // Record an item the player should end up with. Populates the cleanup-matching set
+    // Record the items the player should end up with. Populates the cleanup-matching set
     // (knownItemTracker) and the ordered apply list (desiredItems). No inventory mutation
-    // happens here — that is deferred to the apply phase so cleared slots can be reused.
+    // happens here, that is deferred to the apply phase so cleared slots can be reused.
     private fun want(
         knownItemTracker: MutableSet<ItemStack>,
         desiredItems: MutableList<ItemStack>,
-        itemStack: ItemStack
+        itemStacks: List<ItemStack>,
     ) {
-        knownItemTracker.add(itemStack)
-        desiredItems.add(itemStack)
+        knownItemTracker.addAll(itemStacks)
+        desiredItems.addAll(itemStacks)
     }
 
     private fun cleanUpOldItems(player: Player, knownItemTracker: MutableSet<ItemStack>) {
@@ -305,7 +264,7 @@ class InventoryManager(
     }
 
     private fun Player.ensureInventoryContains(itemStack: ItemStack) {
-        val targetAmount = if (itemStack.amount == 999) 0 else itemStack.amount
+        val targetAmount = if (itemStack.amount == ABSENT_ITEM_AMOUNT) 0 else itemStack.amount
         plugin.logger.fine("Ensuring ${this.name} has ${targetAmount}x ${itemStack.type.name} (name: ${itemStack.name()})")
 
         var attempts = 0
@@ -426,25 +385,16 @@ class InventoryManager(
     }
 }
 
-// The scoreboards that drive the player's inventory. Their names are the same in
-// every league: a league's scores live in its own namespace (the score's slug).
-fun tradeSourceScoreboards() = baseTradeItems.values.flatMap {
-    listOf(
-        it.sourceScoreboardName(),
-        it.sourceInversionScoreboardName(),
-    )
-}.filterNot { it.isBlank() }.distinct()
-
 // Fetches the inventory scoreboards across all of the player's leagues. Each
 // score carries the slug of the league it belongs to. Scores without a slug
 // predate namespacing and belong to no league, so they are dropped here.
-fun ScoreApi.getInventoryRelatedScores(leagueCache: LeagueCache, playerName: String): List<Score> {
+fun ScoreApi.getInventoryRelatedScores(leagueCache: LeagueCache, catalogs: CatalogCache, playerName: String): List<Score> {
     val knownSlugs = getRunTypesFromCache(leagueCache).map { it.longId }.toSet()
-    return tradeSourceScoreboards().flatMap {
+    return catalogs.inventoryScoreboards().flatMap {
         this.scoresGet(playerName, prefixFilter = it).results!!
     }.filter { it.slug in knownSlugs }
 }
 
-fun isInventoryRelatedScore(score: Score): Boolean {
-    return tradeSourceScoreboards().contains(score.key!!)
+fun isInventoryRelatedScore(catalogs: CatalogCache, score: Score): Boolean {
+    return catalogs.inventoryScoreboards().contains(score.key!!)
 }

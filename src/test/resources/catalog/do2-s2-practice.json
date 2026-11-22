@@ -1,0 +1,560 @@
+{
+ "artifacts": {
+  "do2:HAY": {
+   "emberValue": 6,
+   "id": "minecraft:iron_nugget",
+   "tag": {
+    "CustomModelData": 42,
+    "display": {
+     "Lore": [
+      "{\"text\":\"Wearing this hood may cause\"}",
+      "{\"text\":\"uncontrollable giggling.\"}"
+     ],
+     "Name": "{\"bold\":true,\"color\":\"gold\",\"text\":\"Hood of Aw'Yah (6)\"}"
+    }
+   },
+   "tracking": {
+    "scoreboard": "do2.artifakes.HAY"
+   }
+  }
+ },
+ "cards": {
+  "do2:adrenaline_rush": {
+   "emberValue": 32,
+   "ethereal": false,
+   "id": "minecraft:iron_nugget",
+   "lore": [
+    "{\"bold\":true,\"italic\":false,\"color\":\"#F9FFFE\",\"text\":\"-----\"}",
+    "{\"color\":\"#80C71F\",\"text\":\"Uncommon\"}",
+    "{\"extra\":[{\"color\":\"#9D9D97\",\"text\":\"Limit: \"},{\"bold\":false,\"italic\":false,\"color\":\"#F9FFFE\",\"text\":\"3\"}],\"text\":\"\"}",
+    "{\"bold\":true,\"italic\":false,\"color\":\"#F9FFFE\",\"text\":\"-----\"}",
+    "{\"extra\":[{\"italic\":false,\"color\":\"#9D9D97\",\"text\":\"+ 1 \"},{\"bold\":false,\"italic\":false,\"color\":\"dark_red\",\"text\":\"⚠\"}],\"text\":\"\"}",
+    "{\"italic\":false,\"color\":\"#9D9D97\",\"text\":\"For 20 seconds every\"}",
+    "{\"extra\":[{\"italic\":false,\"color\":\"#9D9D97\",\"text\":\"heartbeat gives +1 \"},{\"bold\":true,\"italic\":false,\"color\":\"#FED83D\",\"text\":\"🪙\"}],\"text\":\"\"}"
+   ],
+   "maxCopies": 3,
+   "name": "✧ Adrenaline Rush ✧",
+   "shorthand": "ADR",
+   "tag": {
+    "CustomModelData": 123,
+    "CustomRoleplayData": "1b",
+    "NameFormat": {
+     "ModifiedName": "{\"color\":\"#80C71F\",\"text\":\"✧ Adrenaline Rush ✧\"}",
+     "OriginalName": "{\"color\":\"#80C71F\",\"text\":\"✧ Adrenaline Rush ✧\"}",
+     "color": "#80c71f"
+    },
+    "display": {
+     "Name": "{\"color\":\"#80C71F\",\"text\":\"✧ Adrenaline Rush ✧\"}"
+    },
+    "tracked": "0b"
+   },
+   "tracking": {
+    "bought": "do2.cards.bought.ADR",
+    "played": "do2.cards.played.ADR"
+   },
+   "unicode": ""
+  }
+ },
+ "items": {
+  "do2:BLUE_ICE": {
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 0,
+    "material": "BLUE_ICE",
+    "name": "❄☠ Blue Ice (S2 Practice) ☠❄",
+    "returnedOnWin": true,
+    "takeIntoDungeon": true,
+    "tradeId": "BLUE_ICE"
+   }
+  },
+  "do2:COPPER_BLOCK": {
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 0,
+    "material": "COPPER_BLOCK",
+    "name": "❄☠ Copper Block (S2 Practice) ☠❄",
+    "returnedOnWin": true,
+    "takeIntoDungeon": true,
+    "tradeId": "COPPER_BLOCK"
+   }
+  },
+  "do2:CROWN": {
+   "dungeon": {
+    "id": "minecraft:iron_nugget",
+    "legacyKey": "crown",
+    "tag": {
+     "CustomModelData": 2,
+     "display": {
+      "Name": "{\"text\":\"❄☠ Decked Out Crown ☠❄\"}"
+     }
+    }
+   },
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 2,
+    "material": "IRON_NUGGET",
+    "name": "❄☠ Decked Out Crown (S2 Practice) ☠❄",
+    "tradeId": "CROWN"
+   },
+   "tracking": {
+    "earned": "do2.lifetime.escaped.crowns",
+    "spent": "do2.lifetime.spent.crowns"
+   }
+  },
+  "do2:EXPOSED_COPPER": {
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 0,
+    "material": "EXPOSED_COPPER",
+    "name": "❄☠ Exposed Copper (S2 Practice) ☠❄",
+    "returnedOnWin": true,
+    "takeIntoDungeon": true,
+    "tradeId": "EXPOSED_COPPER"
+   }
+  },
+  "do2:FROST_EMBER": {
+   "dungeon": {
+    "id": "minecraft:iron_nugget",
+    "legacyKey": "frost_ember",
+    "tag": {
+     "CustomModelData": 3,
+     "display": {
+      "Name": "{\"text\":\"❄☠ Decked Out Frost Ember ☠❄\"}"
+     }
+    }
+   },
+   "tracking": {
+    "scoreboard": "do2.lifetime.escaped.embers"
+   }
+  },
+  "do2:GAUNTLET_TROPHY": {
+   "lobby": {
+    "colour": "#55ffff",
+    "customModelData": 93,
+    "material": "CARVED_PUMPKIN",
+    "name": "❄☠ I survived the Decked Out Gauntlet! ☠❄",
+    "tradeId": "GAUNTLET_TROPHY"
+   },
+   "tracking": {
+    "scoreboard": "do2.lifetime.gauntlet_survival"
+   }
+  },
+  "do2:HEALTH_POTION": {
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": -1,
+    "material": "POTION",
+    "name": "Potion of Healing (S2 Practice)",
+    "potion": {
+     "extended": false,
+     "type": "INSTANT_HEAL",
+     "upgraded": true
+    },
+    "returnedOnWin": true,
+    "takeIntoDungeon": true,
+    "tradeId": "HEALTH_POTION"
+   }
+  },
+  "do2:ICE": {
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 0,
+    "material": "ICE",
+    "name": "❄☠ Ice (S2 Practice) ☠❄",
+    "returnedOnWin": true,
+    "takeIntoDungeon": true,
+    "tradeId": "ICE"
+   }
+  },
+  "do2:OXIDIZED_COPPER": {
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 0,
+    "material": "OXIDIZED_COPPER",
+    "name": "❄☠ Oxidized Copper (S2 Practice) ☠❄",
+    "returnedOnWin": true,
+    "takeIntoDungeon": true,
+    "tradeId": "OXIDIZED_COPPER"
+   }
+  },
+  "do2:PACKED_ICE": {
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 0,
+    "material": "PACKED_ICE",
+    "name": "❄☠ Packed Ice (S2 Practice) ☠❄",
+    "returnedOnWin": true,
+    "takeIntoDungeon": true,
+    "tradeId": "PACKED_ICE"
+   }
+  },
+  "do2:RED_DYE": {
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 0,
+    "material": "RED_DYE",
+    "name": "❄☠ Red Dye (S2 Practice) ☠❄",
+    "returnedOnWin": true,
+    "takeIntoDungeon": true,
+    "tradeId": "RED_DYE"
+   }
+  },
+  "do2:RUNS": {
+   "tracking": {
+    "scoreboard": "do2.runs"
+   }
+  },
+  "do2:RUSTY_REPAIRS": {
+   "tracking": {
+    "scoreboard": "do2.rustyrepairs"
+   }
+  },
+  "do2:SHARD": {
+   "dungeon": {
+    "id": "minecraft:iron_nugget",
+    "legacyKey": "frozen_shard",
+    "tag": {
+     "CustomModelData": 7,
+     "CustomRoleplayData": "1b",
+     "NameFormat": {
+      "ModifiedName": "{\"color\":\"#3AB3DA\",\"text\":\"❄☠ Frozen Shard ☠❄\"}",
+      "OriginalName": "{\"color\":\"#3AB3DA\",\"text\":\"❄☠ Frozen Shard ☠❄\"}",
+      "color": "#3ab3da"
+     },
+     "display": {
+      "Name": "{\"color\":\"#3AB3DA\",\"text\":\"❄☠ Frozen Shard ☠❄\"}"
+     }
+    }
+   },
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 7,
+    "material": "IRON_NUGGET",
+    "name": "S2 Practice runs",
+    "tradeId": "SHARD"
+   },
+   "tracking": {
+    "scoreboard": "do2.inventory.shards",
+    "startingAmount": 32
+   }
+  },
+  "do2:SHARD_FRAGMENT": {
+   "dungeon": {
+    "id": "minecraft:amethyst_shard",
+    "legacyKey": "shard_fragment",
+    "tag": {
+     "CustomModelData": 1,
+     "CustomRoleplayData": "1b",
+     "NameFormat": {
+      "ModifiedName": "{\"color\":\"#3AB3DA\",\"text\":\"❄☠ Frozen Shard Fragment ☠❄\"}",
+      "OriginalName": "{\"color\":\"#3AB3DA\",\"text\":\"❄☠ Frozen Shard Fragment ☠❄\"}",
+      "color": "#3ab3da"
+     },
+     "display": {
+      "Name": "{\"color\":\"#3AB3DA\",\"text\":\"❄☠ Frozen Shard Fragment ☠❄\"}"
+     }
+    }
+   },
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 1,
+    "material": "AMETHYST_SHARD",
+    "name": "❄☠ Shard Fragment (S2 Practice) ☠❄",
+    "tradeId": "SHARD_FRAGMENT"
+   },
+   "tracking": {
+    "earned": "do2.lifetime.escaped.shard_fragments",
+    "spent": "do2.lifetime.spent.shard_fragments"
+   }
+  },
+  "do2:SLOWNESS_POTION": {
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": -1,
+    "material": "SPLASH_POTION",
+    "name": "Splash Potion of Slowness (S2 Practice)",
+    "potion": {
+     "extended": false,
+     "type": "SLOWNESS",
+     "upgraded": true
+    },
+    "returnedOnWin": true,
+    "takeIntoDungeon": true,
+    "tradeId": "SLOWNESS_POTION"
+   }
+  },
+  "do2:SWIFTNESS_POTION": {
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": -1,
+    "material": "SPLASH_POTION",
+    "name": "Splash Potion of Swiftness (S2 Practice)",
+    "potion": {
+     "extended": false,
+     "type": "SPEED",
+     "upgraded": true
+    },
+    "returnedOnWin": true,
+    "takeIntoDungeon": true,
+    "tradeId": "SWIFTNESS_POTION"
+   }
+  },
+  "do2:TOME": {
+   "dungeon": {
+    "id": "minecraft:iron_nugget",
+    "legacyKey": "victory_tome",
+    "tag": {
+     "CustomModelData": 6,
+     "CustomRoleplayData": "1b",
+     "NameFormat": {
+      "ModifiedName": "{\"bold\":false,\"italic\":true,\"text\":\"❄☠ Victory Tome ☠❄\"}",
+      "OriginalName": "{\"bold\":false,\"italic\":true,\"text\":\"❄☠ Victory Tome ☠❄\"}",
+      "bold": 0,
+      "italic": 1
+     },
+     "display": {
+      "Name": "{\"bold\":false,\"italic\":true,\"text\":\"❄☠ Victory Tome ☠❄\"}"
+     }
+    }
+   },
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 6,
+    "material": "IRON_NUGGET",
+    "name": "❄☠ Victory Tome (S2 Practice) ☠❄",
+    "tradeId": "TOME"
+   },
+   "tracking": {
+    "earned": "do2.lifetime.escaped.tomes",
+    "spent": "do2.lifetime.spent.tomes"
+   }
+  },
+  "do2:WEAKNESS_POTION": {
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": -1,
+    "material": "SPLASH_POTION",
+    "name": "Splash Potion of Weakness (S2 Practice)",
+    "potion": {
+     "extended": false,
+     "type": "WEAKNESS",
+     "upgraded": false
+    },
+    "returnedOnWin": true,
+    "takeIntoDungeon": true,
+    "tradeId": "WEAKNESS_POTION"
+   }
+  },
+  "do2:WEATHERED_COPPER": {
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 0,
+    "material": "WEATHERED_COPPER",
+    "name": "❄☠ Weathered Copper (S2 Practice) ☠❄",
+    "returnedOnWin": true,
+    "takeIntoDungeon": true,
+    "tradeId": "WEATHERED_COPPER"
+   }
+  },
+  "do2:WINS": {
+   "tracking": {
+    "scoreboard": "do2.wins"
+   }
+  },
+  "do2:bomb": {
+   "dungeon": {
+    "id": "minecraft:iron_nugget",
+    "tag": {
+     "CustomModelData": 208,
+     "NameFormat": {
+      "ModifiedName": "{\"bold\":true,\"color\":\"dark_aqua\",\"text\":\"❄☠ The Bomb ☠❄\"}",
+      "OriginalName": "{\"text\":\"❄☠ The Bomb ☠❄\"}",
+      "bold": 1,
+      "color": "dark_aqua"
+     },
+     "display": {
+      "Name": "{\"bold\":true,\"color\":\"dark_aqua\",\"text\":\"❄☠ The Bomb ☠❄\"}"
+     }
+    }
+   }
+  },
+  "do2:coin": {
+   "dungeon": {
+    "id": "minecraft:iron_nugget",
+    "tag": {
+     "CustomModelData": 1,
+     "display": {
+      "Name": "{\"text\":\"❄☠ Decked Out Coin ☠❄\"}"
+     }
+    }
+   },
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 1,
+    "material": "IRON_NUGGET",
+    "name": "❄☠ Decked Out Coin (S2 Practice) ☠❄",
+    "takeIntoDungeon": true,
+    "tradeId": "COIN"
+   }
+  },
+  "do2:dm_lackey_coupon": {
+   "dungeon": {
+    "id": "minecraft:carved_pumpkin",
+    "tag": {
+     "CustomModelData": 46,
+     "display": {
+      "Lore": [
+       "{\"text\":\"Enthrall the DM to do your bidding for one run!\"}"
+      ],
+      "Name": "{\"text\":\"✲ Dungeon Master Lackey Coupon ✲\"}"
+     }
+    }
+   }
+  },
+  "do2:halloween_pumpkin": {
+   "dungeon": {
+    "id": "minecraft:pumpkin",
+    "tag": {
+     "NameFormat": {
+      "ModifiedName": "{\"color\":\"dark_purple\",\"text\":\"❄☠ Halloween Pumpkin ☠❄\"}",
+      "OriginalName": "{\"text\":\"❄☠ Halloween Pumpkin ☠❄\"}",
+      "color": "dark_purple"
+     },
+     "display": {
+      "Name": "{\"color\":\"dark_purple\",\"text\":\"❄☠ Halloween Pumpkin ☠❄\"}"
+     }
+    }
+   }
+  },
+  "do2:level_2_key": {
+   "dungeon": {
+    "id": "minecraft:iron_nugget",
+    "tag": {
+     "CustomModelData": 201,
+     "display": {
+      "Name": "{\"text\":\"❄☠ The Caves of Carnage Key ☠❄\"}"
+     }
+    }
+   },
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 201,
+    "material": "IRON_NUGGET",
+    "name": "❄☠ The Caves of Carnage Key (S2 Practice) ☠❄",
+    "takeIntoDungeon": true,
+    "tradeId": "CAVES_OF_CARNAGE_KEY"
+   }
+  },
+  "do2:level_3_key": {
+   "dungeon": {
+    "id": "minecraft:iron_nugget",
+    "tag": {
+     "CustomModelData": 203,
+     "display": {
+      "Name": "{\"text\":\"❄☠ The Black Mines Key ☠❄\"}"
+     }
+    }
+   },
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 203,
+    "material": "IRON_NUGGET",
+    "name": "❄☠ The Black Mines Key (S2 Practice) ☠❄",
+    "takeIntoDungeon": true,
+    "tradeId": "BLACK_MINES_KEY"
+   }
+  },
+  "do2:level_4_key": {
+   "dungeon": {
+    "id": "minecraft:iron_nugget",
+    "tag": {
+     "CustomModelData": 209,
+     "display": {
+      "Name": "{\"text\":\"❄☠ The Burning Dark Key ☠❄\"}"
+     }
+    }
+   },
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 209,
+    "material": "IRON_NUGGET",
+    "name": "❄☠ The Burning Dark Key (S2 Practice) ☠❄",
+    "takeIntoDungeon": true,
+    "tradeId": "BURNING_DARK_KEY"
+   }
+  },
+  "do2:porkchop": {
+   "dungeon": {
+    "id": "minecraft:cooked_porkchop",
+    "tag": {}
+   }
+  },
+  "do2:rusty_repair_kit": {
+   "dungeon": {
+    "id": "minecraft:iron_ingot",
+    "tag": {
+     "CustomModelData": 2,
+     "display": {
+      "Name": "{\"text\":\"❄☠ Rusty Repair Kit ☠❄\"}"
+     }
+    }
+   },
+   "lobby": {
+    "colour": "#55ff55",
+    "customModelData": 2,
+    "material": "IRON_INGOT",
+    "name": "❄☠ Rusty Repair Kit (S2 Practice) ☠❄",
+    "takeIntoDungeon": true,
+    "tradeId": "RUSTY_REPAIR_KIT"
+   }
+  }
+ },
+ "lobby": [
+  {
+   "action": {
+    "type": "queue"
+   },
+   "colour": "#55ff55",
+   "count": {
+    "scoreboard": "do2.inventory.shards"
+   },
+   "customModelData": 7,
+   "item": "do2:SHARD",
+   "material": "IRON_NUGGET",
+   "name": "S2 Practice runs"
+  },
+  {
+   "action": {
+    "type": "open-deck"
+   },
+   "colour": "#55ff55",
+   "count": 1,
+   "customModelData": 7,
+   "material": "LIME_SHULKER_BOX",
+   "name": "❄☠ Frozen Assets (S2 Practice Deck) ☠❄"
+  },
+  {
+   "action": {
+    "kind": "artifact",
+    "missing": {
+     "lore": [
+      "You have yet to acquire this artifake"
+     ],
+     "material": "SNOWBALL",
+     "name": "Some Artifake",
+     "obfuscated": true
+    },
+    "rows": 4,
+    "sortBy": "emberValue",
+    "title": "{owner} S2 Practice Artifakes",
+    "type": "show-collection"
+   },
+   "colour": "#55ff55",
+   "count": 1,
+   "customModelData": 36,
+   "material": "IRON_NUGGET",
+   "name": "❄☠ Collected Artifakes (S2 Practice) ☠❄"
+  }
+ ],
+ "slug": "do2-s2-practice"
+}

@@ -13,13 +13,7 @@ data class RunType(
     fun deckType(): String {
         return longId
     }
-
-    // Every competitive season shares the datapack's competitive mode
-    fun isCompetitive(): Boolean = runTypeId == COMPETITIVE_RUN_TYPE_ID
 }
-
-// The datapack "mode of code to run" for competitive leagues (backend RUN_MODE_TYPE_IDS c)
-const val COMPETITIVE_RUN_TYPE_ID = 2
 
 val unknownRunType = RunType("unknown", "Unknown", 99, "GRAY_SHULKER_BOX", 0x555555)
 

@@ -3,40 +3,23 @@ package org.trackedout.citadel.commands
 import com.saicone.rtag.RtagItem
 import com.saicone.rtag.tag.TagCompound
 import org.bukkit.Material
-import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-import org.trackedout.citadel.Citadel
-import org.trackedout.citadel.config.cardConfig
-import org.trackedout.citadel.sendRedMessage
+import org.trackedout.citadel.config.CatalogData
+import org.trackedout.citadel.inventory.SLUG_TAG
 import org.trackedout.data.find
 
-fun createCard(plugin: Citadel?, player: Player?, cardKey: String, count: Int, slug: String? = null): ItemStack? {
-    try {
-        val nugget = ItemStack(Material.IRON_NUGGET, count)
-        val card = cardConfig.find(cardKey)?.let {
-            return@let RtagItem.edit(nugget, fun(tag: RtagItem): ItemStack {
+private const val SHORTHAND_TAG = "shorthand"
 
-                tag.merge(TagCompound.newTag(it.tagRaw), true)
-                it.lore?.let { lore ->
-                    tag.set(lore, "display", "Lore")
-                }
-                slug?.let { slugValue -> tag.set(slugValue, "slug") }
-                tag.set(it.shorthand, "shorthand")
+// The card as the catalog of its league defines it, tagged with the league `slug` it is held in
+fun createCard(catalog: CatalogData, cardKey: String, count: Int, slug: String? = null): ItemStack {
+    val card = catalog.cards.find(cardKey) ?: throw IllegalArgumentException("Unknown card $cardKey in catalog ${catalog.slug}")
 
-                return tag.loadCopy()
-            })
-        }
+    return RtagItem.edit(ItemStack(Material.IRON_NUGGET, count), fun(tag: RtagItem): ItemStack {
+        tag.merge(TagCompound.newTag(card.tagRaw), true)
+        card.lore?.let { lore -> tag.set(lore, "display", "Lore") }
+        slug?.let { slugValue -> tag.set(slugValue, SLUG_TAG) }
+        tag.set(card.shorthand, SHORTHAND_TAG)
 
-        if (card == null) {
-            player?.sendRedMessage("Failed to add $cardKey to your shulker as it's metadata is missing")
-            plugin?.logger?.warning("Failed to add $cardKey to your shulker as card data for this card was not found")
-        }
-
-        return card
-    } catch (e: Exception) {
-        player?.sendRedMessage("Failed to add $cardKey to your shulker, error: ${e.message}")
-        plugin?.logger?.warning("Failed to add $cardKey to your shulker, error: ${e.message}")
-        e.printStackTrace()
-        return null
-    }
+        return tag.loadCopy()
+    })
 }

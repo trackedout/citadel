@@ -16,6 +16,7 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.commands.BookCommand
 import org.trackedout.citadel.commands.ConfigCommand
+import org.trackedout.citadel.config.CatalogCache
 import org.trackedout.citadel.config.LeagueCache
 import org.trackedout.citadel.config.RunModes
 import org.trackedout.citadel.commands.party.PartyCommand
@@ -41,7 +42,6 @@ import org.trackedout.citadel.commands.loadTrophySections
 import org.trackedout.citadel.commands.editableConfigs
 import org.trackedout.citadel.commands.shulkerColors
 import org.trackedout.citadel.commands.toggleableConfigs
-import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.inventory.AddACardView
 import org.trackedout.citadel.inventory.AddAnItemView
 import org.trackedout.citadel.inventory.BasicItemView
@@ -52,8 +52,6 @@ import org.trackedout.citadel.inventory.DeckManagementView
 import org.trackedout.citadel.inventory.MoveCardView
 import org.trackedout.citadel.inventory.ShopView
 import org.trackedout.citadel.inventory.SpectateSelectorView
-import org.trackedout.citadel.inventory.baseTradeItems
-import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.citadel.listeners.EchoShardListener
 import org.trackedout.citadel.listeners.FullHungerListener
 import org.trackedout.citadel.listeners.PlayedDeathListener
@@ -62,6 +60,7 @@ import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoDungeon
 import org.trackedout.citadel.mongo.MongoPlayer
 import org.trackedout.citadel.shop.ShopCommand
+import org.trackedout.client.apis.CatalogApi
 import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
@@ -92,6 +91,7 @@ class Citadel : JavaPlugin() {
     val mongoURI by lazy { getEnvOrDefault("MONGODB_URL", "") }
     lateinit var leaderboardTaskRunner: LeaderboardTaskRunner
     lateinit var leagueCache: LeagueCache
+    lateinit var catalogCache: CatalogCache
     lateinit var worldsApi: WorldsApi
         private set
     lateinit var runModes: RunModes
@@ -175,6 +175,17 @@ class Citadel : JavaPlugin() {
         )
 
         leagueCache = LeagueCache(this, leaguesApi)
+        catalogCache = CatalogCache(
+            this,
+            CatalogApi(
+                basePath = dungaAPIPath,
+                client = OkHttpClient.Builder()
+                    .connectTimeout(5.seconds.toJavaDuration())
+                    .callTimeout(30.seconds.toJavaDuration())
+                    .build()
+            ),
+            leagueCache,
+        )
         serverSettings = ServerSettings(
             this,
             SettingsApi(
@@ -276,6 +287,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(WorldCommand(this, worldsApi, worldEditor))
 
         leagueCache.startRefreshTask()
+        catalogCache.startRefreshTask()
         serverSettings.startRefreshTask()
 
         val echoShardListener = EchoShardListener(this, inventoryApi, eventsApi, scoreApi, configApi, viewFrame, inventoryManager)
@@ -309,12 +321,13 @@ class Citadel : JavaPlugin() {
             loadTrophySections().values.flatten()
         }
 
+        // The league of the command comes after the card or item, so these suggest across the leagues
         manager.commandCompletions.registerAsyncCompletion("cards") { _ ->
-            cardConfig.entries.map { it.key }
+            catalogCache.loadedCatalogs().flatMap { it.cards.keys }.distinct()
         }
 
         manager.commandCompletions.registerAsyncCompletion("items") { _ ->
-            baseTradeItems.plus(intoDungeonItems).map { it.key }
+            catalogCache.loadedCatalogs().flatMap { it.tradeItems.keys }.distinct()
         }
 
         manager.commandCompletions.registerAsyncCompletion("dbPlayers") { _ ->

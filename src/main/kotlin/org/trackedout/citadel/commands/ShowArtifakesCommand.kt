@@ -7,24 +7,17 @@ import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Description
 import co.aikar.commands.annotation.Subcommand
 import me.devnatan.inventoryframework.ViewFrame
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
-import net.kyori.adventure.text.format.TextDecoration
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
-import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
-import org.trackedout.citadel.config.itemStack
-import org.trackedout.citadel.config.itemStackNotYetAcquired
-import org.trackedout.citadel.config.loadArtifactConfig
-import org.trackedout.citadel.inventory.BasicItemView
-import org.trackedout.citadel.runOnNextTick
+import org.trackedout.citadel.config.RunType
+import org.trackedout.citadel.inventory.showCollection
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.ScoreApi
-import org.trackedout.citadel.config.RunType
-import org.trackedout.citadel.config.getRunTypeByIdFromCache
+import org.trackedout.client.models.CatalogLobbyAction
 
+// Opens the artifact collection that the league's lobby has an item for
 @CommandAlias("decked-out|do")
 class ShowArtifakesCommand(
     private val plugin: Citadel,
@@ -37,7 +30,7 @@ class ShowArtifakesCommand(
     @CommandCompletion("@runTypes @nothing")
     fun showArtifakes(source: CommandSender, runType: RunType?) {
         if (source is Player) {
-            showArtifakeUIForPlayer(this.plugin, this.viewFrame, source, source.name, this.scoreApi, runType)
+            showArtifakes(source, source.name, runType)
         } else {
             source.sendRedMessage("Cannot show your artifakes as you are not a player. Use /do artifakes <playerName>")
         }
@@ -48,65 +41,18 @@ class ShowArtifakesCommand(
     @Description("Show artifakes for target player")
     @CommandCompletion("@runTypes @dbPlayers @nothing")
     fun showArtifakesForPlayer(source: CommandSender, runType: RunType?, targetPlayer: String) {
-        showArtifakeUIForPlayer(this.plugin, this.viewFrame, source, targetPlayer, this.scoreApi, runType)
+        showArtifakes(source, targetPlayer, runType)
     }
-}
 
-private const val ARTIFAKES_SCOREBOARD_PREFIX = "do2.artifakes."
+    private fun showArtifakes(source: CommandSender, playerName: String, runType: RunType?) {
+        plugin.async(source) {
+            val league = runType ?: plugin.runModes.current(playerName)
+                ?: throw IllegalStateException("$playerName has no run mode, name a league")
+            val action = plugin.catalogCache.require(league.longId).lobby.map { it.action }.firstOrNull {
+                it.type == CatalogLobbyAction.Type.showMinusCollection && it.kind == CatalogLobbyAction.Kind.artifact
+            } ?: throw IllegalStateException("The ${league.displayName} lobby has no artifact collection")
 
-fun showArtifakeUIForPlayer(
-    plugin: Citadel,
-    viewFrame: ViewFrame,
-    source: CommandSender,
-    playerName: String,
-    scoreApi: ScoreApi,
-    runType: RunType? = null,
-) {
-    plugin.async(source) {
-        // The outer fallback covers a default league that is missing from the cache
-        val runType = runType
-            ?: plugin.runModes.current(playerName)
-            ?: getRunTypeByIdFromCache(plugin.leagueCache, "2")
-        val runTypeLongId = runType.longId
-        val scores = scoreApi.scoresGet(playerName, slug = runTypeLongId, prefixFilter = ARTIFAKES_SCOREBOARD_PREFIX).results!!
-
-        val artifactConfig = loadArtifactConfig()
-
-        if (source !is Player) {
-            source.sendMessage("Artifakes for $playerName (${runType.displayName}):")
-        }
-
-        val items = mutableMapOf<Int, ItemStack>()
-        var artifactIndex = 0
-        artifactConfig?.entries?.sortedBy { it.value.emberValue }?.forEach { (shortKey, props) ->
-            val artifakeScoreKey = "$ARTIFAKES_SCOREBOARD_PREFIX${shortKey}"
-            items[artifactIndex] = props.itemStackNotYetAcquired(1)
-//            items[artifactIndex] = props.itemStack(props.id, 1)
-            scores.find { it.key == artifakeScoreKey }?.let { score ->
-                val itemCount = score.value?.toInt() ?: 0
-                if (itemCount > 0) {
-                    items[artifactIndex] = props.itemStack(props.id, itemCount)
-
-                    if (source !is Player) {
-                        source.sendMessage("$artifakeScoreKey -> ${props.tag.display.name} = ${score.value}")
-                    }
-                }
-            }
-            artifactIndex++
-            if (artifactIndex == 27) { // use 45 for 6 rows
-                artifactIndex += 4
-            }
-        } ?: source.sendRedMessage("Failed to load artifact config from json")
-
-        if (source is Player) {
-            plugin.runOnNextTick {
-                val name = if (source.name == playerName) "Your" else "$playerName's"
-                val title = Component.text("$name ${runType.displayName} Artifakes")
-                    .color(NamedTextColor.BLUE)
-                    .decorate(TextDecoration.BOLD)
-                val context = BasicItemView.createContext(plugin, source, title, items, 4)
-                viewFrame.open(BasicItemView::class.java, source, context)
-            }
+            showCollection(plugin, viewFrame, scoreApi, source, playerName, league.longId, action)
         }
     }
 }

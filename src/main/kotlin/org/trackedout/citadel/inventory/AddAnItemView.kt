@@ -23,15 +23,12 @@ class AddAnItemView : DeckManagementView() {
                 render.openForPlayer(DeckInventoryViewWithoutBack::class.java, getContext(render))
             }
 
-        intoDungeonItems.entries.forEachIndexed { index, (itemKey, describer) ->
-            val runType = deckId[render].displayName(plugin[render].leagueCache).lowercase()
-            val itemStack = describer.itemStack(runType, 1).withTradeMeta(deckId[render], itemKey)
-
-            render.slot(index, itemStack)
+        plugin[render].catalogCache.require(deckId[render]).intoDungeonItems.forEachIndexed { index, item ->
+            render.slot(index, tradeItemSpec(deckId[render], item, 1).toItemStack())
                 .onClick { _: StateValueHost? ->
                     val newCard = Card(
                         player = playerName[render],
-                        name = itemKey,
+                        name = item.tradeId,
                         deckType = getRunType(render),
                         server = plugin[render].serverName,
                     )

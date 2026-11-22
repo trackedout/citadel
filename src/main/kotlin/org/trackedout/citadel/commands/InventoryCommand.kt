@@ -17,7 +17,6 @@ import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.SHARDS_SCOREBOARD
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
-import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.inventory.displayName
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
@@ -121,9 +120,9 @@ class InventoryCommand(
                 deckId = "1",
             ).results!!
 
-            val knownCards = cardConfig.sortedList()
-            val knownShorthands = knownCards.map { it.shorthand }.toSet()
-            cards.map { it.deckType }.distinct().forEach { deckType ->
+            cards.map { it.deckType!! }.distinct().forEach { deckType ->
+                val knownCards = plugin.catalogCache.require(deckType).cards.sortedList()
+                val knownShorthands = knownCards.map { it.shorthand }.toSet()
                 val cardsForRunType = cards.filter { it.deckType == deckType }
                 val knownCount = cardsForRunType.count { it.name in knownShorthands }
                 source.sendGreenMessage("${target}'s ${deckType?.displayName(plugin.leagueCache)} deck contains ${knownCount} cards:")
@@ -176,16 +175,17 @@ class InventoryCommand(
     @Description("List all known Decked Out 2 cards")
     @CommandCompletion("@dbPlayers @nothing")
     fun listAllKnownCards(player: Player) {
-        val knownCards = cardConfig.sortedList()
-        player.sendGreenMessage("Decked Out 2 has the following cards:")
-        knownCards.forEach {
-            var textColor = it.tag.nameFormat?.color?.let(TextColor::fromHexString)
-            if (textColor == null) {
-                textColor = TextColor.color(NamedTextColor.GRAY)
-            }
+        plugin.async(player) {
+            val league = plugin.runModes.current(player.name) ?: throw IllegalStateException("You have no run mode, pick one first")
+            player.sendGreenMessage("${league.displayName} has the following cards:")
+            plugin.catalogCache.require(league.longId).cards.sortedList().forEach {
+                var textColor = it.tag.nameFormat?.color?.let(TextColor::fromHexString)
+                if (textColor == null) {
+                    textColor = TextColor.color(NamedTextColor.GRAY)
+                }
 
-//            val content = "- ${it.name}${it.emberValue?.let { cost -> " ($cost embers)" } ?: ""}"
-            player.sendMessage(Component.text().color(textColor).content(it.name).build())
+                player.sendMessage(Component.text().color(textColor).content(it.name).build())
+            }
         }
     }
 
@@ -196,7 +196,7 @@ class InventoryCommand(
     @CommandCompletion("@dbPlayers @runTypes @nothing")
     fun addAllKnownCards(source: CommandSender, target: String, runType: RunType) {
         plugin.async(source) {
-            val knownCards = cardConfig.values.map { it.shorthand }
+            val knownCards = plugin.catalogCache.require(runType.longId).cards.values.map { it.shorthand }
             source.sendGreyMessage("Adding ${knownCards.size} cards to ${target}'s ${runType.displayName} deck...")
 
             knownCards.forEach {
@@ -218,16 +218,13 @@ class InventoryCommand(
         action: String,
         source: CommandSender,
         target: String,
-        cardName: String,
+        cardKey: String,
         runType: RunType
     ) {
-        val cardName = cardName.let {
-            try {
-                cardConfig.find(it)!!.shorthand
-            } catch (e: Exception) {
-                source.sendRedMessage("Unknown card: $it")
-                return
-            }
+        val cardName = plugin.catalogCache.require(runType.longId).cards.find(cardKey)?.shorthand
+        if (cardName == null) {
+            source.sendRedMessage("Unknown card: $cardKey")
+            return
         }
 
         try {

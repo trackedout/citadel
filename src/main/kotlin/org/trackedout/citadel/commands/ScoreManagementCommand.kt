@@ -16,7 +16,6 @@ import org.trackedout.citadel.async
 import org.trackedout.citadel.displayNamedText
 import org.trackedout.citadel.getInventoryRelatedScores
 import org.trackedout.citadel.inventory.Trade
-import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.citadel.isInventoryRelatedScore
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendMessage
@@ -46,9 +45,9 @@ class ScoreManagementCommand(
     @CommandCompletion("@dbPlayers @nothing")
     fun listScores(source: CommandSender, playerName: String) {
         plugin.async(source) {
-            val scores = scoreApi.getInventoryRelatedScores(plugin.leagueCache, playerName)
+            val scores = scoreApi.getInventoryRelatedScores(plugin.leagueCache, plugin.catalogCache, playerName)
 
-            val applicableScores = scores.filter { isInventoryRelatedScore(it) }
+            val applicableScores = scores.filter { isInventoryRelatedScore(plugin.catalogCache, it) }
             if (applicableScores.isEmpty()) {
                 source.sendRedMessage("No applicable scores found for $playerName")
                 return@async
@@ -83,12 +82,14 @@ class ScoreManagementCommand(
     @Description("Update player's score to give them more items")
     @CommandCompletion("@dbPlayers @runTypes @items @range:1-100 @nothing")
     fun giveScore(source: CommandSender, playerName: String, runType: RunType, item: String, count: Int, reason: String) {
+        val catalog = plugin.catalogCache.require(runType.longId)
         val trade = Trade(
             runType = runType.longId,
             sourceType = "dummy",
             sourceItemCount = 0,
             targetType = item,
             targetItemCount = count,
+            catalog = catalog,
         )
 
         val sourceScoreboardName = trade.sourceScoreboardName()
@@ -116,7 +117,7 @@ class ScoreManagementCommand(
                 )
             )
 
-            if (intoDungeonItems.keys.contains(item)) {
+            if (catalog.isIntoDungeonItem(item)) {
                 plugin.logger.info("Target type is an dungeon item: $item")
 
                 val targetItem = item

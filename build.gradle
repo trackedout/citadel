@@ -147,23 +147,12 @@ shadowJar {
 
 build.dependsOn shadowJar
 
-def cardsJsonPath = property('cards_json')
-def artifactsJsonPath = property('artifacts_json')
-
 processResources {
     def props = [version: version]
     inputs.properties props
     filteringCharset "UTF-8"
     filesMatching("plugin.yml") {
         expand props
-    }
-
-    // Place json files in resources/items_json/
-    from(cardsJsonPath) {
-        into('items_json')
-    }
-    from(artifactsJsonPath) {
-        into('items_json')
     }
 }
 

@@ -20,7 +20,7 @@ src/main/kotlin/org/trackedout/citadel/
 ├── inventory/                  # GUI views (deck management, shops, spectate)
 ├── shop/                       # Shop command and data
 ├── mongo/                      # MongoDB data classes (trophies, events, scores, etc.)
-└── config/                     # Config and Brilliance data loading
+└── config/                     # Config, league cache and per-league catalog cache
 ```
 
 ## Build & Deploy

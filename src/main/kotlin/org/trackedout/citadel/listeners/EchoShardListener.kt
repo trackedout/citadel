@@ -29,17 +29,21 @@ import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
 import org.trackedout.citadel.canTakeIntoDungeon
-import org.trackedout.citadel.commands.showArtifakeUIForPlayer
 import org.trackedout.citadel.commands.showBookUI
 import org.trackedout.citadel.commands.showAdminBook
 import org.trackedout.citadel.commands.showPlayerBook
 import org.trackedout.citadel.debug
 import org.trackedout.citadel.getAction
 import org.trackedout.citadel.getCard
+import org.trackedout.citadel.getLobbyEntryIndex
 import org.trackedout.citadel.getSlug
 import org.trackedout.citadel.getTradeId
 import org.trackedout.citadel.isManagedDungeonItem
+import org.trackedout.citadel.config.CatalogException
 import org.trackedout.citadel.inventory.LeagueSlug
+import org.trackedout.citadel.inventory.LobbyActionHandler
+import org.trackedout.citadel.inventory.dispatchTo
+import org.trackedout.citadel.inventory.showCollection
 import org.trackedout.citadel.inventory.DeckInventoryViewWithoutBack
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.ADD_CARD_FUNC
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.DECK_MAP
@@ -58,13 +62,13 @@ import org.trackedout.citadel.inventory.ShopView.Companion.UPDATE_INVENTORY_FUNC
 import org.trackedout.citadel.inventory.Trade
 import org.trackedout.citadel.inventory.isPractice
 import org.trackedout.citadel.isDeckedOutCard
-import org.trackedout.citadel.isDeckedOutShulker
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.citadel.shop.getShopData
 import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.ScoreApi
+import org.trackedout.client.models.CatalogLobbyAction
 import org.trackedout.client.models.Card
 import org.trackedout.client.models.Event
 import java.util.function.BiConsumer
@@ -257,14 +261,12 @@ class EchoShardListener(
         }
 
         if (event.action == Action.RIGHT_CLICK_AIR || event.action == Action.RIGHT_CLICK_BLOCK) {
-            item.getSlug()?.let {
-                if (item.isDeckedOutShulker() || item.isDeckedOutCard()) {
-                    showDeckInventory(event, player, it)
+            item.getSlug()?.let { slug ->
+                if (item.isDeckedOutCard(plugin.catalogCache)) {
+                    showDeckInventory(event, player, slug)
                 }
 
-                if (item.getAction() == "show-artifakes") {
-                    showArtifakeUIForPlayer(plugin, viewFrame, player, player.name, scoreApi)
-                }
+                item.getLobbyEntryIndex()?.let { index -> performLobbyAction(event, player, slug, index) }
             }
         }
 
@@ -288,6 +290,28 @@ class EchoShardListener(
                 event.setUseItemInHand(org.bukkit.event.Event.Result.DENY)
                 player.debug("Preventing item consumption on interact event ${event.action}")
             }
+        }
+    }
+
+    // What a lobby item does is the action of its entry in the league's catalog
+    private fun performLobbyAction(event: PlayerInteractEvent, player: Player, slug: LeagueSlug, entryIndex: Int) {
+        event.isCancelled = true
+        try {
+            plugin.catalogCache.require(slug).lobbyAction(entryIndex).dispatchTo(object : LobbyActionHandler {
+                override fun openDeck() {
+                    showDeckInventory(event, player, slug)
+                }
+
+                override fun queue() {
+                    createJoinQueueFunc(plugin, eventsApi, player).accept(slug)
+                }
+
+                override fun showCollection(action: CatalogLobbyAction) {
+                    showCollection(plugin, viewFrame, scoreApi, player, player.name, slug, action)
+                }
+            })
+        } catch (e: CatalogException) {
+            player.sendRedMessage(e.message!!)
         }
     }
 
@@ -444,7 +468,7 @@ class EchoShardListener(
 
     private fun deleteCard(player: Player, it: ItemStack) {
         val deckType = it.getSlug()
-        val card = it.getCard()
+        val card = it.getCard(plugin.catalogCache)
         val tradeId = it.getTradeId()
 
         val itemName = card?.shorthand ?: tradeId
@@ -486,7 +510,7 @@ class EchoShardListener(
 
     private fun isRestrictedItem(it: ItemStack) = it.itemMeta != null && it.isManagedDungeonItem()
 
-    private fun isPracticeCard(it: ItemStack) = isRestrictedItem(it) && it.isDeckedOutCard() && it.getSlug()?.isPractice(plugin) == true
+    private fun isPracticeCard(it: ItemStack) = isRestrictedItem(it) && it.isDeckedOutCard(plugin.catalogCache) && it.getSlug()?.isPractice(plugin) == true
 
     private fun isPracticeItem(it: ItemStack) = isRestrictedItem(it) && it.canTakeIntoDungeon() && it.getSlug()?.isPractice(plugin) == true
 }

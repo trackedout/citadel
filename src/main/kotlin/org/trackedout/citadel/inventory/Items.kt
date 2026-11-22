@@ -1,153 +1,12 @@
 package org.trackedout.citadel.inventory
 
-import org.trackedout.citadel.LEGACY_DECK_ID_TAG
 import com.saicone.rtag.RtagItem
 import net.kyori.adventure.text.Component.text
 import net.kyori.adventure.text.TextComponent
 import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
-import org.bukkit.inventory.meta.PotionMeta
-import org.bukkit.potion.PotionData
-import org.bukkit.potion.PotionType
-import org.trackedout.citadel.displayNamedText
-import org.trackedout.citadel.config.RunType
-
-
-fun dungeonShard(runType: RunType, itemCount: Int): ItemStack {
-    return dungeonShard("${runType.displayName} runs", runType.displayNamedText(), itemCount)
-}
-
-fun dungeonShard(
-    name: String,
-    textColor: NamedTextColor = NamedTextColor.AQUA,
-    itemCount: Int = 1,
-) = dungeonItem(name, 7, textColor, itemCount = itemCount)
-
-fun dungeonShardFragment(runType: RunType, itemCount: Int): ItemStack {
-    return dungeonShardFragment("❄☠ Shard Fragment (${runType.displayName}) ☠❄", runType.displayNamedText(), itemCount)
-}
-
-fun dungeonShardFragment(
-    name: String,
-    textColor: NamedTextColor = NamedTextColor.AQUA,
-    itemCount: Int = 1,
-) = dungeonItem(name, 1, textColor, Material.AMETHYST_SHARD, itemCount)
-
-fun dungeonCrown(
-    runType: RunType,
-    itemCount: Int,
-) = dungeonCrown(runType.displayName, runType.displayNamedText(), itemCount)
-
-fun dungeonCrown(
-    crownType: String,
-    textColor: NamedTextColor = NamedTextColor.AQUA,
-    itemCount: Int = 1,
-) = dungeonItem("❄☠ Decked Out Crown (${crownType}) ☠❄", 2, textColor, itemCount = itemCount)
-
-fun dungeonTome(
-    runType: RunType,
-    itemCount: Int,
-) = dungeonTome(runType.displayName, runType.displayNamedText(), itemCount)
-
-fun dungeonTome(
-    runType: String,
-    textColor: NamedTextColor = NamedTextColor.AQUA,
-    itemCount: Int = 1,
-) = dungeonItem("❄☠ Victory Tome (${runType}) ☠❄", 6, textColor, itemCount = itemCount)
-
-fun dungeonSwiftnessPotion(
-    runType: RunType,
-    itemCount: Int,
-) = dungeonPotion(runType.displayName, runType.deckType(), PotionType.SPEED, "Splash Potion of Swiftness", false, true, runType.displayNamedText(), itemCount, splash = true)
-
-fun dungeonSlownessPotion(
-    runType: RunType,
-    itemCount: Int,
-) = dungeonPotion(runType.displayName, runType.deckType(), PotionType.SLOWNESS, "Splash Potion of Slowness", false, true, runType.displayNamedText(), itemCount, splash = true)
-
-fun dungeonWeaknessPotion(
-    runType: RunType,
-    itemCount: Int,
-) = dungeonPotion(runType.displayName, runType.deckType(), PotionType.WEAKNESS, "Splash Potion of Weakness", false, false, runType.displayNamedText(), itemCount, splash = true)
-
-fun dungeonHealthPotion(
-    runType: RunType,
-    itemCount: Int,
-) = dungeonPotion(runType.displayName, runType.deckType(), PotionType.INSTANT_HEAL, "Potion of Healing", false, true, runType.displayNamedText(), itemCount)
-
-fun dungeonPotion(
-    runType: String,
-    slug: String,
-    potionType: PotionType,
-    displayName: String,
-    extended: Boolean = false,
-    upgraded: Boolean = false,
-    textColor: NamedTextColor = NamedTextColor.AQUA,
-    itemCount: Int = 1,
-    splash: Boolean = false,
-): ItemStack {
-    val material = if (splash) Material.SPLASH_POTION else Material.POTION
-    val itemStack = ItemStack(material, if (itemCount <= 0) 999 else itemCount)
-    val meta = itemStack.itemMeta as PotionMeta
-    meta.basePotionData = PotionData(potionType, extended, upgraded)
-    meta.displayName(text("${displayName} (${runType})", textColor))
-    meta.setCustomModelData(-1)
-
-    itemStack.itemMeta = meta
-
-    val metadata = mapOf(
-        "slug" to slug,
-        "tradeId" to "SLOWNESS_POTION"
-    )
-    return RtagItem.edit(itemStack, fun(tag: RtagItem): ItemStack {
-        metadata.entries.forEach { entry -> tag.set(entry.value, entry.key) }
-        return tag.loadCopy()
-    })
-}
-
-fun dungeonKeyLevel1(runType: RunType, count: Int): ItemStack {
-    return dungeonKey("❄☠ The Caves of Carnage Key (${runType.displayName}) ☠❄", 201, runType.displayNamedText(), count)
-}
-
-fun dungeonKeyLevel2(runType: RunType, count: Int): ItemStack {
-    return dungeonKey("❄☠ The Black Mines Key (${runType.displayName}) ☠❄", 203, runType.displayNamedText(), count)
-}
-
-fun dungeonKeyLevel3(runType: RunType, count: Int): ItemStack {
-    return dungeonKey("❄☠ The Burning Dark Key (${runType.displayName}) ☠❄", 209, runType.displayNamedText(), count)
-}
-
-fun dungeonCoin(runType: RunType, count: Int): ItemStack {
-    return dungeonKey("❄☠ Decked Out Coin (${runType.displayName}) ☠❄", 1, runType.displayNamedText(), count)
-}
-
-fun dungeonKey(
-    name: String,
-    customModelData: Int,
-    textColor: NamedTextColor = NamedTextColor.AQUA,
-    itemCount: Int = 1,
-) = dungeonItem(name, customModelData, textColor, itemCount = itemCount)
-
-fun repairKit(runType: RunType, count: Int): ItemStack {
-    return dungeonItem(
-        "❄☠ Rusty Repair Kit (${runType.displayName}) ☠❄",
-        2,
-        runType.displayNamedText(),
-        Material.IRON_INGOT,
-        count
-    )
-}
-
-fun basicDungeonItem(name: String, material: Material, runType: RunType, count: Int): ItemStack {
-    return dungeonItem(
-        name = "❄☠ $name (${runType.displayName}) ☠❄",
-        customModelData = 0,
-        textColor = runType.displayNamedText(),
-        material = material,
-        itemCount = count
-    )
-}
+import org.trackedout.citadel.LEGACY_DECK_ID_TAG
 
 fun dungeonItem(
     name: String,
@@ -157,7 +16,7 @@ fun dungeonItem(
     itemCount: Int = 1,
     metadata: Map<String, String> = mapOf(),
 ): ItemStack {
-    val itemStack = ItemStack(material, if (itemCount <= 0) 999 else itemCount)
+    val itemStack = ItemStack(material, amountOf(itemCount))
     val meta = itemStack.itemMeta
     meta.displayName(text(name, textColor))
     meta.setCustomModelData(customModelData)
@@ -169,23 +28,6 @@ fun dungeonItem(
         return tag.loadCopy()
     })
 }
-
-fun dungeonDeck(runType: RunType, itemCount: Int = 1, materialOverride: Material? = null): ItemStack = dungeonItem(
-    name = "❄☠ Frozen Assets (${runType.displayName} Deck) ☠❄",
-    customModelData = 7,
-    textColor = runType.displayNamedText(),
-    material = materialOverride ?: Material.valueOf(runType.deckMaterial),
-    metadata = mapOf("slug" to runType.deckType()),
-    itemCount = itemCount,
-)
-
-fun dungeonArtifacts(runType: RunType, itemCount: Int = 1): ItemStack = dungeonItem(
-    name = "❄☠ Collected Artifakes (${runType.displayName}) ☠❄",
-    customModelData = 36,
-    textColor = runType.displayNamedText(),
-    metadata = mapOf("slug" to runType.deckType(), "action" to "show-artifakes"),
-    itemCount = itemCount,
-)
 
 fun menuBook(): ItemStack = dungeonItem(
     name = "❄☠ Welcome to Tracked Out ☠❄",
@@ -214,23 +56,6 @@ fun adminBook(): ItemStack = dungeonItem(
     customModelData = 0,
 ).withLore(text("Server management tools", NamedTextColor.RED))
 
-// `runType` here is the league slug — written verbatim as the `slug` NBT tag.
-fun ItemStack.withTradeMeta(runType: String, tradeId: String): ItemStack {
-    var metadata = mapOf(
-        "slug" to runType,
-        "tradeId" to tradeId
-    )
-
-    if (intoDungeonItems.containsKey(tradeId)) {
-        metadata = metadata.plus("canTakeIntoDungeon" to "1")
-    }
-
-    return RtagItem.edit(this, fun(tag: RtagItem): ItemStack {
-        metadata.entries.forEach { entry -> tag.set(entry.value, entry.key) }
-        return tag.loadCopy()
-    })
-}
-
 fun ItemStack.withLore(vararg lore: TextComponent): ItemStack {
     return this.apply {
         val meta = this.itemMeta
@@ -240,7 +65,7 @@ fun ItemStack.withLore(vararg lore: TextComponent): ItemStack {
 }
 
 fun ItemStack.oldDungeonItem(): ItemStack {
-    this.amount = 999
+    this.amount = ABSENT_ITEM_AMOUNT
     return RtagItem.edit(this, fun(tag: RtagItem): ItemStack {
         tag.remove("slug")
         tag.remove(LEGACY_DECK_ID_TAG)
@@ -249,10 +74,3 @@ fun ItemStack.oldDungeonItem(): ItemStack {
         return tag.loadCopy()
     })
 }
-
-fun gauntletTrophy(itemCount: Int = 1): ItemStack = dungeonItem(
-    name = "❄☠ I survived the Decked Out Gauntlet! ☠❄",
-    customModelData = 93,
-    material = Material.CARVED_PUMPKIN,
-    itemCount = itemCount,
-)

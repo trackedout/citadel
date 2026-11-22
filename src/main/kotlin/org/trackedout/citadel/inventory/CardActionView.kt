@@ -34,7 +34,7 @@ class CardActionView : DeckManagementView() {
 
         // Current count item
         render.layoutSlot('#')
-            .withItem(createCard(null, null, card.name!!, count))
+            .withItem(createCard(plugin[render].catalogCache.require(deckId[render]), card.name!!, count))
 
         // Decrement button
         render.layoutSlot('-')

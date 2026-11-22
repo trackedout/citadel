@@ -9,9 +9,12 @@ import org.bukkit.Material
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.HumanEntity
 import org.bukkit.inventory.ItemStack
-import org.trackedout.citadel.config.cardConfig
+import org.trackedout.citadel.config.CatalogCache
+import org.trackedout.citadel.inventory.CAN_TAKE_INTO_DUNGEON_TAG
+import org.trackedout.citadel.inventory.LOBBY_ENTRY_TAG
 import org.trackedout.citadel.inventory.LeagueSlug
-import org.trackedout.citadel.inventory.intoDungeonItems
+import org.trackedout.citadel.inventory.SLUG_TAG
+import org.trackedout.citadel.inventory.TRADE_ID_TAG
 import org.trackedout.data.BrillianceCard
 import org.trackedout.citadel.config.RunType
 import org.trackedout.data.find
@@ -49,11 +52,7 @@ fun HumanEntity.debug(message: String, tag: String = "debug.click") {
     }
 }
 
-fun ItemStack.isDeckedOutShulker(): Boolean {
-    return this.type.name.endsWith("_SHULKER_BOX") && getSlug() != null
-}
-
-fun ItemStack.hasSlug(): Boolean = RtagItem(this).hasTag("slug")
+fun ItemStack.hasSlug(): Boolean = RtagItem(this).hasTag(SLUG_TAG)
 
 // Items handed out before league slugs carry a positional `deckId` tag (p1, c1, h1)
 // instead of `slug`. Citadel no longer creates them, so they are always out of date.
@@ -67,7 +66,7 @@ fun ItemStack.isManagedDungeonItem(): Boolean = hasSlug() || hasLegacyDeckId()
 
 // Items are tagged with their league `slug` in NBT.
 fun ItemStack.getSlug(): String? {
-    return RtagItem(this).get<String>("slug")
+    return RtagItem(this).get<String>(SLUG_TAG)
 }
 
 fun ItemStack.withSlug(slug: LeagueSlug): ItemStack {
@@ -75,6 +74,9 @@ fun ItemStack.withSlug(slug: LeagueSlug): ItemStack {
 }
 
 fun ItemStack.getAction(): String? = RtagItem(this).get<String>("action")
+
+// The position of the lobby entry of the item's league that this item was vended from
+fun ItemStack.getLobbyEntryIndex(): Int? = RtagItem(this).get<String>(LOBBY_ENTRY_TAG)?.toInt()
 
 fun ItemStack.withTags(tags: Map<String, String>): ItemStack {
     return RtagItem.edit(this) { tag ->
@@ -86,41 +88,20 @@ fun ItemStack.withTags(tags: Map<String, String>): ItemStack {
 
 fun ItemStack.preventRemoval(): Boolean = RtagItem(this).let { it.hasTag("prevent-removal") && it.get<String>("prevent-removal") == "1" }
 
-fun ItemStack.isTradeItem(): Boolean = RtagItem(this).let { it.hasTag("tradeId") && it.get<String>("tradeId").isNotEmpty() }
+fun ItemStack.isTradeItem(): Boolean = RtagItem(this).let { it.hasTag(TRADE_ID_TAG) && it.get<String>(TRADE_ID_TAG).isNotEmpty() }
 
-fun ItemStack.getTradeId(): String? = RtagItem(this).get<String>("tradeId")
+fun ItemStack.getTradeId(): String? = RtagItem(this).get<String>(TRADE_ID_TAG)
 
 fun ItemStack.getShorthand(): String? = RtagItem(this).get<String>("shorthand")
 
-fun ItemStack.canTakeIntoDungeon(): Boolean = RtagItem(this).let { it.hasTag("canTakeIntoDungeon") && it.get<String>("canTakeIntoDungeon") == "1" }
+fun ItemStack.canTakeIntoDungeon(): Boolean = RtagItem(this).let { it.hasTag(CAN_TAKE_INTO_DUNGEON_TAG) && it.get<String>(CAN_TAKE_INTO_DUNGEON_TAG) == "1" }
 
-fun ItemStack.isDeckedOutCard(): Boolean {
-    this.getShorthand()?.let {
-        return cardConfig.find(it) !== null || intoDungeonItems.keys.contains(it)
-    }
+fun ItemStack.isDeckedOutCard(catalogs: CatalogCache): Boolean = getCard(catalogs) != null
 
-    if (this.itemMeta?.displayName() is TextComponent?) {
-        val text = this.itemMeta?.displayName() as TextComponent?
-        val name = text?.content()
-        return cardConfig.find(name ?: "") !== null || intoDungeonItems.keys.contains(name ?: "")
-    }
-
-    return false
-}
-
-fun ItemStack.getCard(): BrillianceCard? {
-    this.getShorthand()?.let {
-        cardConfig.find(it)?.let { card ->
-            return card
-        }
-    }
-
-    if (this.itemMeta?.displayName() is TextComponent?) {
-        val text = this.itemMeta?.displayName() as TextComponent?
-        return text?.content()?.let { cardConfig.find(it) }
-    }
-
-    return null
+// The card this item is, by the catalog of the league the item belongs to
+fun ItemStack.getCard(catalogs: CatalogCache): BrillianceCard? {
+    val cards = getSlug()?.let { catalogs.get(it) }?.cards ?: return null
+    return getShorthand()?.let { cards.find(it) } ?: name()?.let { cards.find(it) }
 }
 
 fun ItemStack.name(): String? {

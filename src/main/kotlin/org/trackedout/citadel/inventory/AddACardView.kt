@@ -6,7 +6,6 @@ import me.devnatan.inventoryframework.state.State
 import me.devnatan.inventoryframework.state.StateValueHost
 import org.bukkit.Material
 import org.trackedout.citadel.commands.createCard
-import org.trackedout.citadel.config.cardConfig
 import org.trackedout.client.models.Card
 import org.trackedout.data.sortedList
 
@@ -29,23 +28,19 @@ class AddACardView : DeckManagementView() {
                 render.openForPlayer(DeckInventoryViewWithoutBack::class.java, getContext(render))
             }
 
-        cardConfig.sortedList().forEachIndexed { index, card ->
-            val itemStack = createCard(null, null, card.shorthand, 1)
+        val catalog = plugin[render].catalogCache.require(deckId[render])
+        catalog.cards.sortedList().forEachIndexed { index, card ->
+            render.slot(index, createCard(catalog, card.shorthand, 1))
+                .onClick { _: StateValueHost? ->
+                    val newCard = Card(
+                        player = playerName[render],
+                        name = card.shorthand,
+                        deckType = getRunType(render),
+                        server = plugin[render].serverName,
+                    )
 
-            itemStack?.let {
-                render.slot(index, it)
-                    .onClick { _: StateValueHost? ->
-                        val runType = getRunType(render)
-                        val newCard = Card(
-                            player = playerName[render],
-                            name = card.shorthand,
-                            deckType = runType,
-                            server = plugin[render].serverName,
-                        )
-
-                        addCardAndShowUpdatedDeck(render, deckId[render], newCard)
-                    }
-            }
+                    addCardAndShowUpdatedDeck(render, deckId[render], newCard)
+                }
         }
     }
 

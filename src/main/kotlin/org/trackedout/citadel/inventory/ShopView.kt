@@ -13,13 +13,12 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.Citadel
-import org.trackedout.citadel.config.LeagueItemResolver
-import org.trackedout.citadel.config.cardConfig
+import org.trackedout.citadel.config.CatalogData
+import org.trackedout.citadel.config.TradeItem
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.ADD_CARD_FUNC
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.DELETE_CARD_FUNC
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.JOIN_QUEUE_FUNC
 import org.trackedout.citadel.inventory.DeckManagementView.Companion.PLUGIN
-import org.trackedout.client.models.League
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.models.Card
@@ -32,39 +31,33 @@ import java.util.function.Consumer
 
 const val SHOP_TITLE_FORMAT = "Citadel: %s"
 
+// Trades with these types have no item behind them: DUMMY gives or takes nothing and QUEUE joins the queue
+private const val DUMMY_TRADE_TYPE = "DUMMY"
+private const val QUEUE_TRADE_TYPE = "QUEUE"
+private const val QUEUE_SCOREBOARD = "queue"
+
+// The event protocol reads a blank scoreboard as "none"
+private const val NO_SCOREBOARD = ""
+
+// The items of a trade are named by their trade id in the league's catalog
 data class Trade(
     val runType: String,
     val sourceType: String,
     val sourceItemCount: Int,
     val targetType: String,
     val targetItemCount: Int,
-    val league: League? = null,
+    val catalog: CatalogData,
 ) {
-    fun sourceScoreboardName(): String {
-        league?.let { l ->
-            LeagueItemResolver.sourceScoreboardName(l, sourceType.uppercase())?.let { return it }
-        }
-        return tradeItemsWithQueueTypes.getOrElse(sourceType.uppercase()) {
-            throw Exception("Unknown source type '$sourceType', unable to determine source scoreboard")
-        }.sourceScoreboardName()
-    }
+    fun sourceScoreboardName(): String = scoreboardOf(sourceType) { it.sourceScoreboard }
 
-    fun sourceInversionScoreboardName(): String {
-        league?.let { l ->
-            LeagueItemResolver.sourceInversionScoreboardName(l, sourceType.uppercase())?.let { return it }
-        }
-        return tradeItemsWithQueueTypes.getOrElse(sourceType.uppercase()) {
-            throw Exception("Unknown source type '$sourceType', unable to determine source inversion scoreboard")
-        }.sourceInversionScoreboardName()
-    }
+    fun sourceInversionScoreboardName(): String = scoreboardOf(sourceType) { it.inversionScoreboard }
 
-    fun targetScoreboardName(): String {
-        league?.let { l ->
-            LeagueItemResolver.targetScoreboardName(l, targetType.uppercase())?.let { return it }
-        }
-        return tradeItemsWithQueueTypes.getOrElse(targetType.uppercase()) {
-            throw Exception("Unknown target type '$targetType', unable to determine target scoreboard")
-        }.targetScoreboardName()
+    fun targetScoreboardName(): String = scoreboardOf(targetType) { it.sourceScoreboard }
+
+    private fun scoreboardOf(type: String, ofItem: (TradeItem) -> String?): String = when (val tradeId = type.uppercase()) {
+        DUMMY_TRADE_TYPE -> NO_SCOREBOARD
+        QUEUE_TRADE_TYPE -> QUEUE_SCOREBOARD
+        else -> ofItem(catalog.tradeItem(tradeId)) ?: NO_SCOREBOARD
     }
 }
 
@@ -120,7 +113,6 @@ class ShopView : View() {
                     val slug = groups["slug"]?.value ?: "u"
                     val runType = getRunTypeByIdFromCache(plugin[event].leagueCache, slug)
                     val longType = runType.longId
-                    val league = plugin[event].leagueCache.getLeagueBySlug(longType)
 
                     val sourceType = groups["sourceType"]?.value
                     val sourceCount = groups["sourceCount"]?.value
@@ -130,6 +122,13 @@ class ShopView : View() {
                     println("Rule: Convert { slug=$longType, sourceType=$sourceType, sourceCount=$sourceCount, targetTypes=$targetTypes)")
                     if (longType == unknownRunType.longId || sourceType == null || sourceCount == null || targetTypes == null) {
                         System.err.println("An expected regex group is missing from match, skipping rule: $rule")
+                        return@let
+                    }
+
+                    val catalog = plugin[event].catalogCache.get(longType)
+                    if (catalog == null) {
+                        plugin[event].logger.severe("Skipping shop rule $rule, the $longType catalog has not loaded")
+                        player.sendRedMessage("This trade is not available yet, the $longType catalog has not loaded")
                         return@let
                     }
 
@@ -160,9 +159,10 @@ class ShopView : View() {
                     var sendTradeMessage = true
                     var sendToDummy = false
                     var eventToSend: (count: Int) -> Unit = {}
-                    if (cardConfig.find(targetType) != null) {
+                    val targetCardDefinition = catalog.cards.find(targetType)
+                    if (targetCardDefinition != null) {
                         println("Target type is a card: $targetType")
-                        val card = cardConfig.find(targetType)!!
+                        val card = targetCardDefinition
                         val targetCard = card.shorthand
                         val cardsToAdd = targetCount
                         sendTradeMessage = false
@@ -191,7 +191,7 @@ class ShopView : View() {
                             println("${player.name} submitted a victory tome")
                             player.sendGreenMessage("Successfully submitted ${count}x VICTORY TOME!")
                         }
-                    } else if (intoDungeonItems.keys.contains(targetType)) {
+                    } else if (catalog.isIntoDungeonItem(targetType)) {
                         println("Target type is an dungeon item: $targetType")
 
                         val targetItem = targetType
@@ -230,7 +230,7 @@ class ShopView : View() {
                     println("Repeating trade? - $repeat")
                     val numberOfItemsToRemove = if (repeat) sourceCountInt * 100 else sourceCountInt
 
-                    itemStackForSource(longType, sourceType, numberOfItemsToRemove)?.let { itemsToRemove ->
+                    itemStackForSource(catalog, sourceType, numberOfItemsToRemove)?.let { itemsToRemove ->
                         inventory.removeIfPresent(itemsToRemove, repeat) { numberOfItemsRemoved ->
                             // Submit trade
                             println("Successfully removed ${numberOfItemsRemoved}x$sourceType from trade view, submitting trade")
@@ -242,7 +242,7 @@ class ShopView : View() {
                                     sourceItemCount = if (repeat) numberOfItemsRemoved / sourceCountInt else sourceCountInt,
                                     targetType = if (sendToDummy) "dummy" else targetType,
                                     targetItemCount = if (sendToDummy) 0 else targetCount,
-                                    league = league,
+                                    catalog = catalog,
                                 ),
                                 updateInventoryHandler, // This is fired for both success and fail
                             ) {
@@ -271,11 +271,12 @@ class ShopView : View() {
             }
     }
 
-    private fun itemStackForSource(runType: String, sourceType: String, sourceCount: Int): ItemStack? {
-        return tradeItems.getOrElse(sourceType) {
+    private fun itemStackForSource(catalog: CatalogData, sourceType: String, sourceCount: Int): ItemStack? {
+        if (sourceType !in catalog.tradeItems) {
             System.err.println("Unable to determine item stack for source type $sourceType")
-            null
-        }?.itemStack(runType, sourceCount)?.withTradeMeta(runType, sourceType)
+            return null
+        }
+        return catalog.tradeItemStack(sourceType, sourceCount)
     }
 
     private fun Inventory.removeIfPresent(itemsToRemove: ItemStack, allowLeftOvers: Boolean, success: (count: Int) -> Unit) {

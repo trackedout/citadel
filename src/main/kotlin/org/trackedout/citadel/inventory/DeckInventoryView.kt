@@ -12,7 +12,6 @@ import org.bukkit.Sound
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.canTakeIntoDungeon
 import org.trackedout.citadel.commands.createCard
-import org.trackedout.citadel.config.cardConfig
 import org.trackedout.citadel.getCard
 import org.trackedout.citadel.getSlug
 import org.trackedout.citadel.getTradeId
@@ -52,27 +51,27 @@ open class DeckInventoryView : DeckManagementView() {
             .filter { it != null && it.type != Material.AIR }
             .map { it!! }
             .filterNot { it.preventRemoval() } // Keep these items in the shulker
-            .filter { it.getSlug() != deckId || (!it.canTakeIntoDungeon() && !it.isDeckedOutCard()) }
+            .filter { it.getSlug() != deckId || (!it.canTakeIntoDungeon() && !it.isDeckedOutCard(plugin[event].catalogCache)) }
             .forEach { item: ItemStack ->
                 plugin[event].logger.info("Inventory contains: ${item.type}x${item.amount} - returning it to ${player.name}")
                 plugin[event].logger.info("Item: $item")
-                plugin[event].logger.info("LeagueSlug: ${item.getSlug()} - Can take into dungeon: ${item.canTakeIntoDungeon()} - Is Decked Out card: ${item.isDeckedOutCard()}")
+                plugin[event].logger.info("LeagueSlug: ${item.getSlug()} - Can take into dungeon: ${item.canTakeIntoDungeon()} - Is Decked Out card: ${item.isDeckedOutCard(plugin[event].catalogCache)}")
                 player.inventory.addItem(item)
             }
 
-        if (player.itemOnCursor.isDeckedOutCard()) {
+        if (player.itemOnCursor.isDeckedOutCard(plugin[event].catalogCache)) {
             player.itemOnCursor.amount = 0
         }
 
         // For each card in the player's inventory, hide it from the deck
         var cardsToHide = (0 until player.inventory.size).asSequence()
             .map(player.inventory::getItem)
-            .filter { it != null && it.isDeckedOutCard() && it.getSlug() == deckId }
+            .filter { it != null && it.isDeckedOutCard(plugin[event].catalogCache) && it.getSlug() == deckId }
             // Count the total number of cards in the player's inventory across all stacks
             .map {
-                it!!.getCard()!! to player.inventory
-                    .filter { card -> card != null && card.isDeckedOutCard() && card.getSlug() == deckId }
-                    .filter { p -> p?.getCard()?.shorthand == it.getCard()?.shorthand }.sumOf { p -> p.amount }
+                it!!.getCard(plugin[event].catalogCache)!! to player.inventory
+                    .filter { card -> card != null && card.isDeckedOutCard(plugin[event].catalogCache) && card.getSlug() == deckId }
+                    .filter { p -> p?.getCard(plugin[event].catalogCache)?.shorthand == it.getCard(plugin[event].catalogCache)?.shorthand }.sumOf { p -> p.amount }
             }
             .onEach { pair: Pair<BrillianceCard, Int> ->
                 val card = pair.first
@@ -132,40 +131,24 @@ open class DeckInventoryView : DeckManagementView() {
                 .onClick { _: StateValueHost? -> render.openForPlayer(AddAnItemView::class.java, getContext(render)) }
         }
 
-        cardConfig.sortedList().forEach { cardDefinition ->
+        val catalog = plugin[render].catalogCache.require(deckId)
+
+        catalog.cards.sortedList().forEach { cardDefinition ->
             val count = cards.count { it.name == cardDefinition.shorthand }
             if (count == 0) {
                 return@forEach
             }
 
-            val itemStack = createCard(null, null, cardDefinition.shorthand, count, deckId)
-
-            itemStack?.let {
-                val slot = render.availableSlot(it)
-
-//                if (deckId.shortRunType() == "p") {
-//                    slot.onClick { _: StateValueHost? ->
-//                        val newCard = Card(
-//                            player = playerName[render],
-//                            name = cardDefinition.key,
-//                            deckType = deckId.shortRunType(),
-//                            server = plugin[render].serverName,
-//                        )
-//
-//                        render.openForPlayer(CardActionView::class.java, getContext(render).plus(SELECTED_CARD to newCard))
-//                    }
-//                }
-            }
+            render.availableSlot(createCard(catalog, cardDefinition.shorthand, count, deckId))
         }
 
-        intoDungeonItems.entries.forEach { entry ->
-            val count = cards.count { it.name == entry.key }
+        catalog.intoDungeonItems.forEach { item ->
+            val count = cards.count { it.name == item.tradeId }
             if (count == 0) {
                 return@forEach
             }
 
-            val itemStack = entry.value.itemStack(deckId.displayName(plugin[render].leagueCache).lowercase(), count).withTradeMeta(deckId, entry.key)
-            render.availableSlot(itemStack)
+            render.availableSlot(tradeItemSpec(deckId, item, count).toItemStack())
         }
     }
 

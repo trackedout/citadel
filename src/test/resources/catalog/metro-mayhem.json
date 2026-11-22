@@ -1,0 +1,17 @@
+{
+ "artifacts": {},
+ "cards": {},
+ "items": {},
+ "lobby": [
+  {
+   "action": {
+    "type": "queue"
+   },
+   "colour": "#ff5555",
+   "count": 1,
+   "material": "STICK",
+   "name": "Metro Mayhem Queue"
+  }
+ ],
+ "slug": "metro-mayhem"
+}
