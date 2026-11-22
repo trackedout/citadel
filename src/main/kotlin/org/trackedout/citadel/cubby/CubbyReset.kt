@@ -25,7 +25,7 @@ data class CubbyResetPlan(
         add("${cubby.id}: owned by $ownerText, facing ${facing ?: "unknown"}")
         problems.forEach { add("  Cannot reset: $it") }
         differences?.let {
-            add("  ${it.total} block(s) differ from the template")
+            add("  ${it.total} block(s) will change")
             it.examples.forEach { difference -> add("    $difference") }
             if (it.total > it.examples.size) add("    ... and ${it.total - it.examples.size} more")
         }
@@ -37,21 +37,29 @@ class CubbyReset(
     private val templateStore: CubbyTemplateStore,
     private val archive: CubbyArchive,
 ) {
-    fun plan(cubbyWorld: CubbyWorld, cubby: ProtectedRegion): CubbyResetPlan {
+    /** Plans putting the saved template into the cubby. */
+    fun planReset(cubbyWorld: CubbyWorld, cubby: ProtectedRegion, releasingOwner: Player? = null): CubbyResetPlan =
+        plan(cubbyWorld, cubby, templateStore.load(), releasingOwner)
+
+    /**
+     * Plans putting [design] into the cubby, which is the template unless an archived cubby is being restored.
+     * @param releasingOwner an owner who may be online because they are the one releasing the cubby
+     */
+    fun plan(cubbyWorld: CubbyWorld, cubby: ProtectedRegion, design: CubbyTemplate?, releasingOwner: Player? = null): CubbyResetPlan {
         val world = cubbyWorld.world
         val box = cubby.toBox()
         val owners = cubby.ownerNames()
         val problems = mutableListOf<String>()
 
-        val template = templateStore.load()
-        if (template == null) problems += "no template has been saved yet (/do cubby template save)"
+        if (design == null) problems += "no template has been saved yet (/do cubby template save)"
 
-        val facing = (cubbyWorld.facingOf(cubby) as? FacingResult.Resolved)?.facing
-        if (facing == null) problems += facingProblem(cubbyWorld.facingOf(cubby))
-        problems += onlinePlayerProblems(world, cubby, box)
+        val facingResult = cubbyWorld.facingOf(cubby)
+        val facing = (facingResult as? FacingResult.Resolved)?.facing
+        if (facing == null) problems += facingProblem(facingResult)
+        problems += onlinePlayerProblems(world, cubby, box, releasingOwner)
 
-        val rotated = if (template != null && facing != null) {
-            CubbyBlocks.rotate(template.clipboard, template.facing.quarterTurnsTo(facing))
+        val rotated = if (design != null && facing != null) {
+            CubbyBlocks.rotate(design.clipboard, design.facing.quarterTurnsTo(facing))
         } else {
             null
         }
@@ -67,9 +75,9 @@ class CubbyReset(
         val box = plan.cubby.toBox()
         val blocks = CubbyBlocks(world)
 
-        archive.save(plan.owners.firstOrNull(), plan.cubby.id, checkNotNull(plan.facing), blocks.copy(box))
-        blocks.paste(checkNotNull(plan.rotatedTemplate), box.min())
+        archive.save(plan.owners.firstOrNull(), plan.cubby.id, checkNotNull(plan.facing), blocks.copyBlocksAndEntities(box))
         entitiesIn(world, box).forEach { it.remove() }
+        blocks.paste(checkNotNull(plan.rotatedTemplate), box.min())
         release(plan.cubby)
     }
 
@@ -97,12 +105,12 @@ class CubbyReset(
         return listOf("region is ${box.size} (x, y, z) but the rotated template is $expected, so the paste would not line up")
     }
 
-    private fun onlinePlayerProblems(world: World, cubby: ProtectedRegion, box: Box): List<String> {
-        val onlineOwners = cubby.members.players.mapNotNull { Bukkit.getPlayerExact(it) } +
-            cubby.members.uniqueIds.mapNotNull { Bukkit.getPlayer(it) }
+    private fun onlinePlayerProblems(world: World, cubby: ProtectedRegion, box: Box, releasingOwner: Player?): List<String> {
+        val onlineOwners = (cubby.members.players.mapNotNull { Bukkit.getPlayerExact(it) } +
+            cubby.members.uniqueIds.mapNotNull { Bukkit.getPlayer(it) }).filter { it != releasingOwner }
         val playersInside = world.players.filter { box.contains(it.location.blockX, it.location.blockY, it.location.blockZ) }
 
-        return (onlineOwners + playersInside).distinct().map { "${it.name} is online or standing inside" }
+        return onlineOwners.distinct().map { "${it.name} is online" } + playersInside.map { "${it.name} is standing inside" }
     }
 
     private fun entitiesIn(world: World, box: Box): List<Entity> {

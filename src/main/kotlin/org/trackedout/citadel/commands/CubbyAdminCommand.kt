@@ -18,15 +18,18 @@ import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.cubby.Box
 import org.trackedout.citadel.cubby.CUBBY_PREFIX
+import org.trackedout.citadel.cubby.CubbyArchive
 import org.trackedout.citadel.cubby.CubbyBlocks
 import org.trackedout.citadel.cubby.CubbyDefinitionPlanner
 import org.trackedout.citadel.cubby.CubbyFacing
 import org.trackedout.citadel.cubby.CubbyFlags
 import org.trackedout.citadel.cubby.DEFAULT_WALL_GAP
 import org.trackedout.citadel.cubby.PlannedCubby
+import org.trackedout.citadel.cubby.RestoreTargets
 import org.trackedout.citadel.cubby.max
 import org.trackedout.citadel.cubby.min
 import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion
+import org.trackedout.citadel.playerNameRegex
 import org.trackedout.citadel.regionManager
 import org.trackedout.citadel.cubby.CubbyReset
 import org.trackedout.citadel.cubby.CubbyTemplate
@@ -36,6 +39,7 @@ import org.trackedout.citadel.cubby.FacingResult
 import org.trackedout.citadel.cubby.Size
 import org.trackedout.citadel.cubby.toBox
 import org.trackedout.citadel.getCubbyForPlayer
+import org.trackedout.citadel.hasMembers
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendMessage
 import org.trackedout.citadel.sendRedMessage
@@ -51,6 +55,7 @@ class CubbyAdminCommand(
     private val plugin: Citadel,
     private val templateStore: CubbyTemplateStore,
     private val reset: CubbyReset,
+    private val archive: CubbyArchive,
 ) : BaseCommand() {
     @Subcommand("cubby template save")
     @Description("Save a cubby as the template for resets: your WorldEdit selection, or --from <cubby-id>")
@@ -72,7 +77,7 @@ class CubbyAdminCommand(
             source.sendMessage(CONFIRM_HINT, NamedTextColor.GRAY)
             return
         }
-        templateStore.save(CubbyTemplate(CubbyBlocks(cubbyWorld.world).copy(box), facing))
+        templateStore.save(CubbyTemplate(CubbyBlocks(cubbyWorld.world).copyBlocks(box), facing))
         source.sendGreenMessage("Cubby template saved")
     }
 
@@ -88,7 +93,7 @@ class CubbyAdminCommand(
             return
         }
 
-        val plan = reset.plan(cubbyWorld, cubby)
+        val plan = reset.planReset(cubbyWorld, cubby)
         plan.report().forEach { source.sendMessage(it, if (plan.isValid) NamedTextColor.WHITE else NamedTextColor.RED) }
         if (!plan.isValid) return
         if (!flags.confirmed) {
@@ -100,6 +105,57 @@ class CubbyAdminCommand(
         reset.saveRegions(cubbyWorld.world)
         plugin.logger.info("${source.name} reset ${cubby.id}, previously owned by ${plan.owners.joinToString().ifEmpty { "nobody" }}")
         source.sendGreenMessage("Reset ${cubby.id}")
+    }
+
+    @Subcommand("cubby restore")
+    @Description("Put a player's newest archived cubby into a free cubby and give it to them. Options: --cubby <cubby-id>")
+    @CommandCompletion("@dbPlayers")
+    fun restoreCubby(source: CommandSender, playerName: String, @Optional args: Array<String>?) {
+        val flags = CubbyFlags.of(args)
+        val cubbyWorld = cubbyWorldOf(source) ?: return
+        if (!playerNameRegex.matches(playerName)) {
+            source.sendRedMessage("'$playerName' is not a valid player name")
+            return
+        }
+        val entry = archive.latestFor(playerName)
+        if (entry == null) {
+            source.sendRedMessage("No archived cubby found for $playerName")
+            return
+        }
+        val existing = findCubby(cubbyWorld, playerName)
+        if (existing != null) {
+            source.sendRedMessage("$playerName already has ${existing.id}")
+            return
+        }
+
+        val design = CubbyTemplate(CubbyBlocks.read(entry.file), entry.facing)
+        val plans = restoreCandidates(cubbyWorld, entry.cubbyId, flags.value("cubby")).map { reset.plan(cubbyWorld, it, design) }
+        val plan = plans.firstOrNull { it.isValid }
+        if (plan == null) {
+            source.sendRedMessage("No free cubby can take ${entry.file.name}. Tried ${plans.size}; the first problem was: ${plans.firstOrNull()?.problems?.joinToString("; ") ?: "none are free"}")
+            return
+        }
+
+        source.sendGreenMessage("Restoring ${entry.file.name} (from ${entry.cubbyId}) for $playerName into ${plan.cubby.id}")
+        plan.report().forEach { source.sendMessage(it, NamedTextColor.WHITE) }
+        if (!flags.confirmed) {
+            source.sendMessage(CONFIRM_HINT, NamedTextColor.GRAY)
+            return
+        }
+
+        reset.execute(cubbyWorld, plan)
+        cubbyWorld.assign(plan.cubby, playerName)
+        reset.saveRegions(cubbyWorld.world)
+        plugin.logger.info("${source.name} restored ${entry.file.name} for $playerName into ${plan.cubby.id}")
+        source.sendGreenMessage("$playerName now has ${plan.cubby.id}")
+    }
+
+    private fun restoreCandidates(cubbyWorld: CubbyWorld, originalCubbyId: String, requestedCubbyId: String?): List<ProtectedRegion> {
+        val free = cubbyWorld.cubbies.filter { !it.hasMembers() }
+        if (requestedCubbyId != null) return free.filter { it.id.equals(requestedCubbyId, ignoreCase = true) }
+
+        val order = RestoreTargets.order(free.map { it.id }, originalCubbyId)
+        return order.mapNotNull { id -> free.firstOrNull { it.id == id } }
     }
 
     @Subcommand("cubby define")

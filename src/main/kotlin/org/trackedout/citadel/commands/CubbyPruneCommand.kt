@@ -112,7 +112,7 @@ class CubbyPruneCommand(
     /** Returns why the cubby was skipped, or null once it has been reset. */
     private fun resetOne(cubbyWorld: CubbyWorld, cubbyId: String): String? {
         val cubby = cubbyWorld.find(cubbyId) ?: return "$cubbyId: region no longer exists"
-        val plan = reset.plan(cubbyWorld, cubby)
+        val plan = reset.planReset(cubbyWorld, cubby)
         if (!plan.isValid) return "$cubbyId skipped: ${plan.problems.joinToString("; ")}"
 
         reset.execute(cubbyWorld, plan)

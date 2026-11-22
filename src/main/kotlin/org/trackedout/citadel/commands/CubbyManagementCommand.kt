@@ -9,10 +9,13 @@ import co.aikar.commands.annotation.Subcommand
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
+import org.trackedout.citadel.cubby.CUBBY_PREFIX
+import org.trackedout.citadel.cubby.CubbyFlags
+import org.trackedout.citadel.cubby.CubbyReset
+import org.trackedout.citadel.cubby.CubbyWorld
 import org.trackedout.citadel.getApplicableRegions
 import org.trackedout.citadel.getCenterLocation
 import org.trackedout.citadel.getCubby
-import org.trackedout.citadel.getCubbyByName
 import org.trackedout.citadel.getCubbyForPlayer
 import org.trackedout.citadel.hasMembers
 import org.trackedout.citadel.regions
@@ -20,11 +23,10 @@ import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendMiniMessage
 import org.trackedout.citadel.sendRedMessage
 
-private const val CUBBY_PREFIX = "cubby-"
-
 @CommandAlias("decked-out|do")
 class CubbyManagementCommand(
     private val plugin: Citadel,
+    private val reset: CubbyReset,
 ) : BaseCommand() {
 
     @Subcommand("cubby claim")
@@ -41,9 +43,7 @@ class CubbyManagementCommand(
                     player.sendRedMessage("Cubby already claimed by $owner")
                     return
                 }
-                cubby.parent = player.world.getCubbyByName("cubby")
-                cubby.priority = 15
-                cubby.members.addPlayer(player.name)
+                CubbyWorld(player.world).assign(cubby, player.name)
                 player.sendGreenMessage("This cubby is now yours! Step out and walk back in again to enter creative mode")
             } else {
                 player.sendRedMessage("You need to be in a cubby to claim it")
@@ -62,6 +62,35 @@ class CubbyManagementCommand(
                 }
             }
         }
+    }
+
+    @Subcommand("cubby release")
+    @Description("Give up your cubby so someone else can claim it. Add --confirm to do it")
+    fun releaseCubby(player: Player, @Optional args: Array<String>?) {
+        val cubbyWorld = CubbyWorld(player.world)
+        val cubby = player.getCubby()?.takeIf { it.id.startsWith(CUBBY_PREFIX) }
+        if (cubby == null) {
+            player.sendRedMessage("You do not have a cubby")
+            return
+        }
+
+        val plan = reset.planReset(cubbyWorld, cubby, releasingOwner = player)
+        if (!plan.isValid) {
+            player.sendRedMessage("Your cubby cannot be released right now. ${plan.problems.joinToString(". ")}")
+            return
+        }
+        if (!CubbyFlags.of(args).confirmed) {
+            player.sendMiniMessage(
+                "<yellow>Releasing ${cubby.id} removes everything you built in it. A moderator can restore it later. " +
+                    "Stand outside it and run <gold><click:suggest_command:'/do cubby release --confirm'>/do cubby release --confirm</click></gold> to continue</yellow>",
+            )
+            return
+        }
+
+        reset.execute(cubbyWorld, plan)
+        reset.saveRegions(cubbyWorld.world)
+        plugin.logger.info("${player.name} released ${cubby.id}")
+        player.sendGreenMessage("You gave up ${cubby.id}")
     }
 
     @Subcommand("cubby locate")

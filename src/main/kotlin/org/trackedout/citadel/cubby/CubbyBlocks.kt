@@ -28,13 +28,20 @@ data class BlockDifferences(val total: Int, val examples: List<BlockDifference>)
 class CubbyBlocks(private val world: World) {
     private val editWorld = BukkitAdapter.adapt(world)
 
-    fun copy(box: Box): Clipboard {
+    fun copyBlocks(box: Box): Clipboard = copy(box, copyEntities = false)
+
+    /** Also keeps item frames, armor stands and similar, which a restored cubby needs. */
+    fun copyBlocksAndEntities(box: Box): Clipboard = copy(box, copyEntities = true)
+
+    private fun copy(box: Box, copyEntities: Boolean): Clipboard {
         val region = CuboidRegion(editWorld, box.min(), box.max())
         val clipboard = BlockArrayClipboard(region)
         clipboard.origin = region.minimumPoint
 
         WorldEdit.getInstance().newEditSession(editWorld).use { session ->
-            Operations.complete(ForwardExtentCopy(session, region, region.minimumPoint, clipboard, region.minimumPoint))
+            val copy = ForwardExtentCopy(session, region, region.minimumPoint, clipboard, region.minimumPoint)
+            copy.isCopyingEntities = copyEntities
+            Operations.complete(copy)
         }
         return clipboard
     }
@@ -42,6 +49,7 @@ class CubbyBlocks(private val world: World) {
     fun paste(clipboard: Clipboard, atMin: BlockVector3) {
         WorldEdit.getInstance().newEditSession(editWorld).use { session ->
             val copy = ForwardExtentCopy(clipboard, clipboard.region, clipboard.region.minimumPoint, session, atMin)
+            copy.isCopyingEntities = true
             Operations.complete(copy)
         }
     }
@@ -86,6 +94,7 @@ class CubbyBlocks(private val world: World) {
             val turnedBlocks = BlockTransformExtent(source, transform)
             val copy = ForwardExtentCopy(turnedBlocks, source.region, source.origin, destination, destinationOfOrigin)
             copy.transform = transform
+            copy.isCopyingEntities = true
             Operations.complete(copy)
             return destination
         }

@@ -73,6 +73,23 @@ For a list of changes, see the [latest release notes](https://github.com/tracked
 | `/do cubby count` | Show counts of owned / available cubbies | - |
 | `/do cubby list` | Show all owned cubbies by all players | - |
 
+#### Cubby administration:
+Every command below only reports what it would do. Add `--confirm` to apply it.
+
+| Command | Description | Permission Required |
+|---|---|---|
+| `/do cubby template save [--from <cubby-id>]` | Save your WorldEdit selection (or an existing cubby) as the template used by resets. Warns when its size differs from most cubbies | `decked-out.cubby.admin` |
+| `/do cubby define <count> [--direction <dir>] [--gap <n>]` | Define `count` more `cubby-N` regions in a row next to your selection (one cubby). Copy the cubby itself with WorldEdit | `decked-out.cubby.admin` |
+| `/do cubby reset <cubby-id or player>` | Archive a cubby, paste the template (rotated to the cubby's facing) and release its owner | `decked-out.cubby.admin` |
+| `/do cubby prune <days>` | List owners not seen for `days` days (staff in `cubby.staff-names` are skipped), and reset their cubbies | `decked-out.cubby.admin` |
+| `/do cubby restore <player> [--cubby <cubby-id>]` | Put a player's newest archived cubby into a free cubby and give it to them | `decked-out.cubby.admin` |
+| `/do cubby release` | Give up your own cubby (archived, then reset) | - |
+
+How it works:
+- A cubby's facing comes from the ender chest just outside its front, which faces away from the cubby. Chests inside the region or inside another cubby are ignored. A cubby without such a chest cannot be reset.
+- A reset is refused when the region size, after rotating the template, differs from the template, or when the owner is online or anyone is inside. The report lists the blocks that differ.
+- Archives are kept forever in `plugins/Citadel/cubby-archive/<owner>/`, with blocks and entities (item frames, armor stands).
+
 #### Artifakes:
 | Command | Description | Permission Required |
 |---|---|---|

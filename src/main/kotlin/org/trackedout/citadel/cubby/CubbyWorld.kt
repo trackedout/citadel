@@ -6,10 +6,12 @@ import org.bukkit.Material
 import org.bukkit.World
 import org.bukkit.block.BlockFace
 import org.bukkit.block.data.Directional
+import org.trackedout.citadel.getCubbyByName
 import org.trackedout.citadel.regions
 
 const val CUBBY_PREFIX = "cubby-"
 
+private const val CLAIMED_CUBBY_PRIORITY = 15
 private const val FIRST_BLOCK_ABOVE_FLOOR = 1
 private const val BLOCKS_ABOVE_FLOOR_SEARCHED = 2
 
@@ -26,6 +28,13 @@ class CubbyWorld(val world: World) {
         world.regions().orEmpty().filter { it.id.startsWith(CUBBY_PREFIX) }.sortedBy { cubbyNumber(it.id) ?: Int.MAX_VALUE }
 
     fun find(regionId: String): ProtectedRegion? = cubbies.firstOrNull { it.id.equals(regionId, ignoreCase = true) }
+
+    /** Gives the cubby to a player exactly as claiming it does. */
+    fun assign(cubby: ProtectedRegion, playerName: String) {
+        cubby.parent = world.getCubbyByName("cubby")
+        cubby.priority = CLAIMED_CUBBY_PRIORITY
+        cubby.members.addPlayer(playerName)
+    }
 
     fun nextNumber(): Int = (cubbies.mapNotNull { cubbyNumber(it.id) }.maxOrNull() ?: 0) + 1
 
