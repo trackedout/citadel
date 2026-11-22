@@ -13,6 +13,7 @@ import org.bukkit.block.ShulkerBox
 import org.bukkit.block.TileState
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.inventory.InventoryAction
@@ -207,7 +208,8 @@ class EchoShardListener(
         viewFrame.open(ShopView::class.java, player, context)
     }
 
-    @EventHandler(ignoreCancelled = true)
+    // Runs before WorldGuard, which cancels drops in regions with item-drop denied and shows its own message
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     fun onDropItem(event: PlayerDropItemEvent) {
         val player = event.player
         player.debug(
