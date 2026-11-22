@@ -254,13 +254,7 @@ class InventoryManager(
             if (inventoryFilterRunType != null && inventoryFilterRunType != runType) {
                 itemCount = 0
             }
-            val materialOverride = try {
-                configApi.configsGet(player.name, "shulker-style").value
-                    ?.uppercase()
-                    ?.let { Material.valueOf("${it}_SHULKER_BOX") }
-            } catch (e: ClientException) {
-                null
-            }
+            val materialOverride = if (runType.isCompetitive()) shulkerStyleOverride(player) else null
             want(knownItemTracker, desiredItems, dungeonDeck(runType, itemCount, materialOverride))
             want(knownItemTracker, desiredItems, dungeonArtifacts(runType, itemCount))
         }
@@ -271,6 +265,16 @@ class InventoryManager(
             want(knownItemTracker, desiredItems, adminBook())
         }
     }
+
+    // The player's chosen competitive shulker colour, null when they haven't picked one
+    private fun shulkerStyleOverride(player: Player): Material? =
+        try {
+            configApi.configsGet(player.name, "shulker-style").value
+                ?.uppercase()
+                ?.let { Material.valueOf("${it}_SHULKER_BOX") }
+        } catch (e: ClientException) {
+            null
+        }
 
     // Record an item the player should end up with. Populates the cleanup-matching set
     // (knownItemTracker) and the ordered apply list (desiredItems). No inventory mutation
