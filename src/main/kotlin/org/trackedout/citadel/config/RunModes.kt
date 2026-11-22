@@ -1,13 +1,17 @@
 package org.trackedout.citadel.config
 
 import org.trackedout.client.apis.ConfigApi
+import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Config
+import org.trackedout.client.models.Event
 import org.trackedout.client.models.League
 import java.util.logging.Logger
 
 // Per-player config key holding the league slug the player selected as their run mode
 const val FILTER_MODE_SLUG_CONFIG = "filter-mode-slug"
+
+private const val DRAFT_LEAGUE_SELECTED_EVENT = "draft-league-selected"
 
 // Which leagues a player can pick as their run mode, and which one they are on.
 // Calls the backend, so use it off the main thread.
@@ -16,13 +20,19 @@ class RunModes(
     private val serverSettings: ServerSettings,
     private val configApi: ConfigApi,
     private val inventoryApi: InventoryApi,
+    private val eventsApi: EventsApi,
+    private val serverName: String,
     private val logger: Logger,
+    private val canQueueDrafts: (playerName: String) -> Boolean,
 ) {
     fun selectableLeagues(playerName: String): List<League> =
         leagueCache.getLeagues().filter { isSelectable(it, playerName) }
 
     fun isSelectable(league: League, playerName: String): Boolean =
-        league.isSelectableRunMode(playerHasDeck = league.slug?.let { hasDeckIn(playerName, it) } ?: false)
+        league.isSelectableRunMode(
+            playerHasDeck = league.slug?.let { hasDeckIn(playerName, it) } ?: false,
+            canQueueDrafts = canQueueDrafts(playerName),
+        )
 
     // The player's chosen run mode, or the default when they have none or their
     // choice is no longer offered to them (e.g. a finished league they never played)
@@ -57,8 +67,23 @@ class RunModes(
     }
 
     // Store the player's run mode. Callers check isSelectable first and refresh the
-    // player's inventory afterwards.
+    // player's inventory afterwards. A draft has no deck or shards for the player
+    // yet, so the backend seeds them before the run mode is stored.
     fun choose(playerName: String, slug: String) {
+        if (leagueCache.getLeagueBySlug(slug)?.isDraft() == true) {
+            eventsApi.eventsPost(
+                Event(
+                    name = DRAFT_LEAGUE_SELECTED_EVENT,
+                    server = serverName,
+                    player = playerName,
+                    count = 1,
+                    x = 0.0,
+                    y = 0.0,
+                    z = 0.0,
+                    metadata = mapOf("slug" to slug),
+                )
+            )
+        }
         configApi.configsAddConfigPost(Config(entity = playerName, key = FILTER_MODE_SLUG_CONFIG, value = slug))
     }
 
