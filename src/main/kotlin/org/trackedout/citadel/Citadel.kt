@@ -20,6 +20,8 @@ import org.trackedout.citadel.config.CatalogCache
 import org.trackedout.citadel.config.LeagueCache
 import org.trackedout.citadel.config.RunModes
 import org.trackedout.citadel.commands.party.PartyCommand
+import org.trackedout.citadel.commands.CubbyAdminCommand
+import org.trackedout.citadel.cubby.CubbyWorld
 import org.trackedout.citadel.commands.CubbyManagementCommand
 import org.trackedout.citadel.commands.InventoryCommand
 import org.trackedout.citadel.commands.LeaderboardCommand
@@ -275,6 +277,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(ShulkerStyleCommand(configApi, inventoryManager))
         manager.registerCommand(ShowArtifakesCommand(this, scoreApi, viewFrame))
         manager.registerCommand(CubbyManagementCommand(this))
+        manager.registerCommand(CubbyAdminCommand(this))
         manager.registerCommand(LeaderboardCommand(this, configApi))
         manager.registerCommand(UnstuckCommand(this))
         manager.registerCommand(TrophyCommand(this))
@@ -336,6 +339,10 @@ class Citadel : JavaPlugin() {
 
             val players = playerCollection.find().map { it.playerName }.toList()
             players
+        }
+
+        manager.commandCompletions.registerCompletion("cubbies") { context ->
+            CubbyWorld(context.player.world).cubbies.map { it.id }
         }
 
         manager.commandCompletions.registerAsyncCompletion("dungeonNames") { _ ->
