@@ -38,4 +38,16 @@ class SelectableLeaguesTest {
 
     @Test
     fun `league with unknown state is not selectable`() = assertFalse(leagueIn(null).isSelectableRunMode(playerHasDeck = true, canQueueDrafts = false))
+
+    @Test
+    fun `active league is queueable`() = assertTrue(leagueIn("active").isQueueable(canQueueDrafts = false))
+
+    @Test
+    fun `draft league is not queueable without the draft permission`() = assertFalse(leagueIn("draft").isQueueable(canQueueDrafts = false))
+
+    @Test
+    fun `draft league is queueable with the draft permission`() = assertTrue(leagueIn("draft").isQueueable(canQueueDrafts = true))
+
+    @Test
+    fun `completed league is not queueable`() = assertFalse(leagueIn("completed").isQueueable(canQueueDrafts = true))
 }

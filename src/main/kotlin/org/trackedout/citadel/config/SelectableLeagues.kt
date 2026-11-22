@@ -12,6 +12,9 @@ const val DRAFT_QUEUE_PERMISSION = "decked-out.queue.draft"
 
 fun League.isDraft(): Boolean = state == STATE_DRAFT
 
+// Whether a player may queue into a league: running leagues, plus drafts for players who may queue drafts
+fun League.isQueueable(canQueueDrafts: Boolean): Boolean = state == STATE_ACTIVE || (isDraft() && canQueueDrafts)
+
 // Whether a player may pick a league as their run mode. A running league is
 // always offered. A finished one is offered only to players who have a deck in
 // it, so they can look back at it; everyone else would just see an empty deck.

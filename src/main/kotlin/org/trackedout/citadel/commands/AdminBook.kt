@@ -7,12 +7,12 @@ import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
+import org.trackedout.citadel.config.DRAFT_QUEUE_PERMISSION
+import org.trackedout.citadel.config.isQueueable
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoDungeon
 import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.infrastructure.ClientException
-
-private const val ACTIVE_LEAGUE_STATE = "active"
 
 fun showAdminBook(plugin: Citadel, player: Player, configApi: ConfigApi) {
     plugin.async(player) {
@@ -20,8 +20,10 @@ fun showAdminBook(plugin: Citadel, player: Player, configApi: ConfigApi) {
             .map { AdminWorld(it.slug, it.buildServer?.value) }
             .sortedBy { it.slug }
 
-        val activeWorldSlugs = plugin.leagueCache.getLeagues()
-            .filter { it.state == ACTIVE_LEAGUE_STATE }
+        // Worlds of leagues the viewer can queue, so staff can warm a dungeon for a draft they test
+        val canQueueDrafts = player.hasPermission(DRAFT_QUEUE_PERMISSION)
+        val queueableWorldSlugs = plugin.leagueCache.getLeagues()
+            .filter { it.isQueueable(canQueueDrafts) }
             .mapNotNull { it.world }
             .toSet()
 
@@ -33,7 +35,7 @@ fun showAdminBook(plugin: Citadel, player: Player, configApi: ConfigApi) {
 
         val pages = buildAdminBookPages(
             dungeons = dungeons,
-            assignableWorlds = knownWorlds.filter { it.slug in activeWorldSlugs },
+            assignableWorlds = knownWorlds.filter { it.slug in queueableWorldSlugs },
             knownWorlds = knownWorlds,
             toggles = AdminToggles(
                 details = player.scoreboardTags.contains("details"),
