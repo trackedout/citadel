@@ -21,6 +21,10 @@ import org.trackedout.citadel.config.LeagueCache
 import org.trackedout.citadel.config.RunModes
 import org.trackedout.citadel.commands.party.PartyCommand
 import org.trackedout.citadel.commands.CubbyAdminCommand
+import org.trackedout.citadel.commands.CubbyPruneCommand
+import org.trackedout.citadel.cubby.CubbyArchive
+import org.trackedout.citadel.cubby.CubbyReset
+import org.trackedout.citadel.cubby.CubbyTemplateStore
 import org.trackedout.citadel.cubby.CubbyWorld
 import org.trackedout.citadel.commands.CubbyManagementCommand
 import org.trackedout.citadel.commands.InventoryCommand
@@ -277,7 +281,10 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(ShulkerStyleCommand(configApi, inventoryManager))
         manager.registerCommand(ShowArtifakesCommand(this, scoreApi, viewFrame))
         manager.registerCommand(CubbyManagementCommand(this))
-        manager.registerCommand(CubbyAdminCommand(this))
+        val cubbyTemplateStore = CubbyTemplateStore(dataFolder)
+        val cubbyReset = CubbyReset(cubbyTemplateStore, CubbyArchive(dataFolder))
+        manager.registerCommand(CubbyAdminCommand(this, cubbyTemplateStore, cubbyReset))
+        manager.registerCommand(CubbyPruneCommand(this, cubbyReset))
         manager.registerCommand(LeaderboardCommand(this, configApi))
         manager.registerCommand(UnstuckCommand(this))
         manager.registerCommand(TrophyCommand(this))

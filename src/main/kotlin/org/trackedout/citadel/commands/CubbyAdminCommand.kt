@@ -18,7 +18,6 @@ import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.cubby.Box
 import org.trackedout.citadel.cubby.CUBBY_PREFIX
-import org.trackedout.citadel.cubby.CubbyArchive
 import org.trackedout.citadel.cubby.CubbyBlocks
 import org.trackedout.citadel.cubby.CubbyDefinitionPlanner
 import org.trackedout.citadel.cubby.CubbyFacing
@@ -50,10 +49,9 @@ private const val CONFIRM_HINT = "Nothing was changed. Add --confirm to apply."
 @CommandPermission(ADMIN_PERMISSION)
 class CubbyAdminCommand(
     private val plugin: Citadel,
+    private val templateStore: CubbyTemplateStore,
+    private val reset: CubbyReset,
 ) : BaseCommand() {
-    private val templateStore = CubbyTemplateStore(plugin.dataFolder)
-    private val reset = CubbyReset(templateStore, CubbyArchive(plugin.dataFolder))
-
     @Subcommand("cubby template save")
     @Description("Save a cubby as the template for resets: your WorldEdit selection, or --from <cubby-id>")
     fun saveTemplate(source: CommandSender, @Optional args: Array<String>?) {

@@ -5,3 +5,41 @@ config-version: 0
 
 # Debug mode
 debug: false
+
+cubby:
+  # Owners of these cubbies are never reset by /do cubby prune
+  staff-names:
+    # Current team
+    - 4Ply
+    - jaek95
+    - softshadows
+    - FrustratedCPU
+    - Tomzitiger
+    - VioletMaze
+    - FinnyMarigold58
+    - CrazyEyedOldMan
+    - Rawrdardian
+    - TheRedBladess
+    # Past contributors
+    - Noxitu
+    - MrBanana
+    - Hixx27
+    - Theta_Line
+    - bavadn
+    - AftDawn
+    - piplup7575
+    - songtronix
+    - Xane256
+    - Abalue
+    - Soikles
+    - aytimothy
+    - Rent
+    - MrLego
+    - NOOOOOO_
+    - Kaileh57
+    - Leethelemur
+    - XenoTM
+    - RSNFreud
+    - NinjaHobbit3
+    - Oosuhkoi
+    - Sleepy_Auri
