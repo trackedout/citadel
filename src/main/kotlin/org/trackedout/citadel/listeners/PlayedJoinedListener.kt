@@ -15,7 +15,6 @@ import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.LeaderboardState
 import org.trackedout.citadel.async
 import org.trackedout.citadel.getBool
-import org.trackedout.citadel.getEnvOrDefault
 import org.trackedout.citadel.config.activePhaseSchedule
 import org.trackedout.citadel.config.leaderboardScope
 import org.trackedout.citadel.getFutureRelativeTime
@@ -35,17 +34,17 @@ class PlayedJoinedListener(
     private val configApi: ConfigApi,
     private val inventoryManager: InventoryManager,
 ) : Listener {
-    val modernResourcePackUrl by lazy {
-        getEnvOrDefault(
-            "RESOURCE_PACK_MODERN",
-            "https://mc.trackedout.org/brilliance-pack-1.21.4.zip"
-        )
-    }
-    val modernResourcePackChecksum by lazy {
-        getEnvOrDefault(
-            "RESOURCE_PACK_MODERN_SHA1",
-            ""
-        )
+    // The pack for newer clients comes from the world's server spec, which lobby-entrypoint.sh exports.
+    // There is no fallback: an unpinned pack could be any version of the pack, or none of it
+    private val modernResourcePack: ModernResourcePack? by lazy {
+        val url = System.getenv("RESOURCE_PACK_MODERN").orEmpty()
+        val sha1 = System.getenv("RESOURCE_PACK_MODERN_SHA1").orEmpty()
+        if (url.isEmpty() || sha1.isEmpty()) {
+            plugin.logger.warning("RESOURCE_PACK_MODERN or RESOURCE_PACK_MODERN_SHA1 is not set (the world has no pack, or lobby-entrypoint.sh did not run), not sending a modern resource pack")
+            null
+        } else {
+            ModernResourcePack(url, sha1)
+        }
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -73,12 +72,11 @@ class PlayedJoinedListener(
         // https://minecraft.wiki/w/Minecraft_Wiki:Projects/wiki.vg_merge/Protocol_version_numbers
         // 769 = 1.21.4
         if (proxyProtocol != null && proxyProtocol > 769) {
-            plugin.logger.info("Player client version is using 1.21.4 or higher, sending the newer datapack")
-            plugin.async(player) {
-                event.getPlayer().setResourcePack(
-                    modernResourcePackUrl,
-                    modernResourcePackChecksum
-                )
+            modernResourcePack?.let { pack ->
+                plugin.logger.info("Player client version is using 1.21.4 or higher, sending the newer resource pack")
+                plugin.async(player) {
+                    event.getPlayer().setResourcePack(pack.url, pack.sha1)
+                }
             }
         }
 
@@ -179,3 +177,5 @@ class PlayedJoinedListener(
         }
     }
 }
+
+private data class ModernResourcePack(val url: String, val sha1: String)
