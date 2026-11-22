@@ -171,7 +171,7 @@ fun dungeonItem(
 }
 
 fun dungeonDeck(runType: RunType, itemCount: Int = 1, materialOverride: Material? = null): ItemStack = dungeonItem(
-    name = "❄☠ Frozen Assets (${runType.displayName} Deck #1) ☠❄",
+    name = "❄☠ Frozen Assets (${runType.displayName} Deck) ☠❄",
     customModelData = 7,
     textColor = runType.displayNamedText(),
     material = materialOverride ?: Material.valueOf(runType.deckMaterial),
