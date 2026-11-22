@@ -1,5 +1,6 @@
 package org.trackedout.citadel
 
+import com.mongodb.client.model.Filters
 import de.oliver.fancyholograms.api.FancyHologramsPlugin
 import de.oliver.fancyholograms.api.data.TextHologramData
 import de.oliver.fancyholograms.api.hologram.Hologram
@@ -32,6 +33,9 @@ import org.bukkit.potion.PotionEffectType
 import org.bukkit.scheduler.BukkitRunnable
 import org.joml.Vector3f
 import org.trackedout.citadel.mongo.MongoDBManager
+import org.trackedout.citadel.config.LeaderboardScope
+import org.trackedout.citadel.config.leaderboardScope
+import org.trackedout.citadel.mongo.LEAGUE_PHASE_STATS_COLLECTION
 import org.trackedout.citadel.mongo.MongoPlayerStats
 import org.trackedout.citadel.mongo.Stats
 import java.time.Duration
@@ -96,8 +100,8 @@ class LeaderboardTaskRunner(
             var maxPhase = 0
             val pointsForPosition = arrayOf(25, 21, 18, 16, 14, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
 
-            plugin.competitivePhases.current()?.leaderboardPhase?.let { currentPhase ->
-                maxPhase = parsePhaseDataForAllPlayers(currentPhase, activePlayers, pointsForPosition)
+            plugin.competitivePhases.current()?.leaderboardScope()?.let { scope ->
+                maxPhase = parsePhaseDataForAllPlayers(scope, activePlayers, pointsForPosition)
                 currentMaxPhase = maxPhase
             }
 
@@ -755,16 +759,23 @@ class LeaderboardTaskRunner(
     }
 
     private fun parsePhaseDataForAllPlayers(
-        currentPhase: Int,
+        scope: LeaderboardScope,
         activePlayers: MutableMap<String, PlayerWithPoints>,
         pointsForPosition: Array<Int>,
     ): Int {
         val database = MongoDBManager.getDatabase("dunga-dunga")
-        var maxPhase = 0
-        (1..currentPhase).forEach { phase ->
-            val playerStatsCollection = database.getCollection("playerStatsPhase${phase}", MongoPlayerStats::class.java)
+        val statsCollection = database.getCollection(LEAGUE_PHASE_STATS_COLLECTION, MongoPlayerStats::class.java)
+        val statsByPhase = statsCollection.find(
+            Filters.and(
+                Filters.eq("leagueSlug", scope.leagueSlug),
+                Filters.gte("phase", 1),
+                Filters.lte("phase", scope.phase),
+            )
+        ).toList().groupBy { it.phase }
 
-            val activePlayersInPhase = playerStatsCollection.find().toList().filter { it.stats.tomesSubmitted > 0 }.sortedBy { it.player }
+        var maxPhase = 0
+        (1..scope.phase).forEach { phase ->
+            val activePlayersInPhase = statsByPhase[phase].orEmpty().filter { it.stats.tomesSubmitted > 0 }.sortedBy { it.player }
             val tomesSubmitted = activePlayersInPhase.map { it.stats.tomesSubmitted }.distinct().sortedWith(
                 compareByDescending { it }
             )

@@ -7,15 +7,10 @@ import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Description
 import co.aikar.commands.annotation.Optional
 import co.aikar.commands.annotation.Subcommand
-import com.mongodb.client.model.Filters
-import com.mongodb.client.model.Filters.eq
-import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
-import org.trackedout.citadel.mongo.MongoDBManager
-import org.trackedout.citadel.mongo.MongoPlayerStats
 import org.trackedout.citadel.sendMiniMessage
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.ConfigApi
@@ -143,49 +138,6 @@ class ConfigCommand(
         )
 
         source.sendMiniMessage("<aqua>Config <gold>$configKey</gold> is now set to ${colouredValue(newValue)}</aqua>")
-    }
-
-    fun getConfigsForPlayer(source: CommandSender, playerName: String) {
-        val mm = MiniMessage.miniMessage()
-        plugin.async(source) {
-            val database = MongoDBManager.getDatabase()
-            val playerStatsCollection = database.getCollection("playerStats", MongoPlayerStats::class.java)
-
-            /*
-              {
-                _id: ObjectId('674f5e20dc8b1753eb673c6b'),
-                player: 'InaByt',
-                key: 'do2.inventory.shards.competitive',
-                value: 0,
-                createdAt: ISODate('2024-12-03T19:38:08.433Z'),
-                updatedAt: ISODate('2024-12-14T18:10:27.760Z'),
-                __v: 0
-              },
-             */
-
-            val scores = playerStatsCollection.find(
-                Filters.and(
-                    eq("player", playerName),
-                    Filters.or(
-                        editableConfigs.map {
-                            eq("key", it)
-                        }
-                    )
-                ),
-            ).toList()
-
-            if (scores.isEmpty()) {
-                source.sendRedMessage("Unable to find any configs for player $playerName")
-                return@async
-            }
-
-            val message = """
-                Scores for <orange>${playerName}</orange>:
-            """.trimIndent()
-            scores.map { "- ${it.player} = ${it.stats.total}" }
-
-            source.sendMessage(mm.deserialize(message))
-        }
     }
 }
 

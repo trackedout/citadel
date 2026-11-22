@@ -12,6 +12,7 @@ import org.trackedout.citadel.FirstRun
 import org.trackedout.citadel.runOnNextTick
 
 import org.trackedout.citadel.async
+import org.trackedout.citadel.config.leaderboardScope
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoScore
 import org.trackedout.citadel.sendGreenMessage
@@ -43,8 +44,8 @@ class LeaderboardCommand(
     @Description("Show the leaderboard and optionally animate")
     fun showLeaderboard(source: CommandSender, animate: Boolean) {
         plugin.async(source) {
-            val currentPhase = plugin.competitivePhases.current()?.leaderboardPhase
-            if (currentPhase == null) {
+            val scope = plugin.competitivePhases.current()?.leaderboardScope()
+            if (scope == null) {
                 source.sendRedMessage("Cannot show leaderboard: no competitive league has a completed phase")
                 return@async
             }
@@ -52,9 +53,8 @@ class LeaderboardCommand(
             FirstRun.showLeaderboard = true
             source.sendGreenMessage("Showing leaderboard ${if (animate) "with" else "without"} animation")
             if (animate) {
-                val seenKey = "leaderboard-seen-phase-$currentPhase"
                 plugin.server.onlinePlayers.forEach { p ->
-                    configApi.configsAddConfigPost(Config(entity = p.name, key = seenKey, value = "true"))
+                    configApi.configsAddConfigPost(Config(entity = p.name, key = scope.seenKey, value = "true"))
                 }
                 plugin.leaderboardTaskRunner.runWithAnimation()
             } else {

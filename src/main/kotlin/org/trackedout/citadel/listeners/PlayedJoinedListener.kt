@@ -17,6 +17,7 @@ import org.trackedout.citadel.async
 import org.trackedout.citadel.getBool
 import org.trackedout.citadel.getEnvOrDefault
 import org.trackedout.citadel.config.activePhaseSchedule
+import org.trackedout.citadel.config.leaderboardScope
 import org.trackedout.citadel.getFutureRelativeTime
 import org.trackedout.citadel.regions
 import org.trackedout.citadel.runLaterOnATick
@@ -143,12 +144,11 @@ class PlayedJoinedListener(
         leaderboardAnimationPending.add(player.uniqueId)
         plugin.async(player) {
             try {
-                val currentPhase = plugin.competitivePhases.current()?.leaderboardPhase ?: return@async
+                val scope = plugin.competitivePhases.current()?.leaderboardScope() ?: return@async
                 if (!plugin.serverSettings.showLeaderboard()) return@async
-                val seenKey = "leaderboard-seen-phase-$currentPhase"
-                if (configApi.getBool(player.name, seenKey, default = false)) return@async
+                if (configApi.getBool(player.name, scope.seenKey, default = false)) return@async
 
-                configApi.configsAddConfigPost(Config(entity = player.name, key = seenKey, value = "true"))
+                configApi.configsAddConfigPost(Config(entity = player.name, key = scope.seenKey, value = "true"))
                 if (!LeaderboardState.animating && !LeaderboardState.running) {
                     plugin.leaderboardTaskRunner.runWithAnimation(setOf(player.uniqueId))
                 }

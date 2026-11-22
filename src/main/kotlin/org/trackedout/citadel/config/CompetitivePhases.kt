@@ -30,3 +30,15 @@ class CompetitivePhases(
 
 fun LeaguePhases.activePhaseSchedule(): LeaguePhase? =
     activePhase?.let { number -> phases?.find { it.phase == number } }
+
+// The league and highest completed phase the leaderboard covers
+data class LeaderboardScope(val leagueSlug: String, val phase: Int) {
+    val seenKey = "leaderboard-seen-$leagueSlug-phase-$phase"
+}
+
+// Null when the league has no slug or no completed phase yet
+fun LeaguePhases.leaderboardScope(): LeaderboardScope? {
+    val slug = leagueSlug ?: return null
+    val phase = leaderboardPhase ?: return null
+    return LeaderboardScope(slug, phase)
+}
