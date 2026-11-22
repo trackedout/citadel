@@ -55,6 +55,7 @@ import org.trackedout.citadel.inventory.SpectateSelectorView
 import org.trackedout.citadel.inventory.baseTradeItems
 import org.trackedout.citadel.inventory.intoDungeonItems
 import org.trackedout.citadel.listeners.EchoShardListener
+import org.trackedout.citadel.listeners.FullHungerListener
 import org.trackedout.citadel.listeners.PlayedDeathListener
 import org.trackedout.citadel.listeners.PlayedJoinedListener
 import org.trackedout.citadel.mongo.MongoDBManager
@@ -225,6 +226,7 @@ class Citadel : JavaPlugin() {
         server.pluginManager.registerEvents(PlayedJoinedListener(this, eventsApi, configApi, inventoryManager), this)
         server.pluginManager.registerEvents(PlayedDeathListener(this, eventsApi, scoreApi, configApi), this)
         server.pluginManager.registerEvents(org.trackedout.citadel.listeners.LeaderboardSignListener(this), this)
+        server.pluginManager.registerEvents(FullHungerListener(), this)
 
         val viewFrame: ViewFrame = ViewFrame.create(this)
             .with(
