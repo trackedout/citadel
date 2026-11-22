@@ -16,7 +16,6 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.commands.BookCommand
 import org.trackedout.citadel.commands.ConfigCommand
-import org.trackedout.citadel.config.DRAFT_QUEUE_PERMISSION
 import org.trackedout.citadel.config.LeagueCache
 import org.trackedout.citadel.config.RunModes
 import org.trackedout.citadel.commands.party.PartyCommand
@@ -186,9 +185,7 @@ class Citadel : JavaPlugin() {
                     .build()
             )
         )
-        runModes = RunModes(leagueCache, serverSettings, configApi, inventoryApi, eventsApi, serverName, logger) { playerName ->
-            server.getPlayerExact(playerName)?.hasPermission(DRAFT_QUEUE_PERMISSION) ?: false
-        }
+        runModes = RunModes(leagueCache, serverSettings, configApi, inventoryApi, eventsApi, worldsApi, serverName, logger)
         competitivePhases = CompetitivePhases(leaguesApi, logger)
 
         val inventoryManager = InventoryManager(this, inventoryApi, scoreApi, eventsApi, configApi)

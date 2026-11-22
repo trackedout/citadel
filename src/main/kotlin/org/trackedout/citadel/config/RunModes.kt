@@ -3,6 +3,7 @@ package org.trackedout.citadel.config
 import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
+import org.trackedout.client.apis.WorldsApi
 import org.trackedout.client.models.Config
 import org.trackedout.client.models.Event
 import org.trackedout.client.models.League
@@ -21,9 +22,9 @@ class RunModes(
     private val configApi: ConfigApi,
     private val inventoryApi: InventoryApi,
     private val eventsApi: EventsApi,
+    private val worldsApi: WorldsApi,
     private val serverName: String,
     private val logger: Logger,
-    private val canQueueDrafts: (playerName: String) -> Boolean,
 ) {
     fun selectableLeagues(playerName: String): List<League> =
         leagueCache.getLeagues().filter { isSelectable(it, playerName) }
@@ -31,7 +32,7 @@ class RunModes(
     fun isSelectable(league: League, playerName: String): Boolean =
         league.isSelectableRunMode(
             playerHasDeck = league.slug?.let { hasDeckIn(playerName, it) } ?: false,
-            canQueueDrafts = canQueueDrafts(playerName),
+            isWorldBuilder = isBuilderOfDraftWorld(league, playerName),
         )
 
     // The player's chosen run mode, or the default when they have none or their
@@ -85,6 +86,12 @@ class RunModes(
             )
         }
         configApi.configsAddConfigPost(Config(entity = playerName, key = FILTER_MODE_SLUG_CONFIG, value = slug))
+    }
+
+    // Only drafts are gated on world builders, so only they cost a world lookup
+    private fun isBuilderOfDraftWorld(league: League, playerName: String): Boolean {
+        val worldSlug = league.world?.takeIf { league.isDraft() } ?: return false
+        return isWorldBuilder(worldsApi.worldsSlugGet(worldSlug).builders, playerName)
     }
 
     private fun hasDeckIn(playerName: String, slug: String): Boolean =

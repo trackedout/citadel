@@ -7,8 +7,8 @@ import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
-import org.trackedout.citadel.config.DRAFT_QUEUE_PERMISSION
 import org.trackedout.citadel.config.isQueueable
+import org.trackedout.citadel.config.isWorldBuilder
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoDungeon
 import org.trackedout.client.apis.ConfigApi
@@ -16,14 +16,15 @@ import org.trackedout.client.infrastructure.ClientException
 
 fun showAdminBook(plugin: Citadel, player: Player, configApi: ConfigApi) {
     plugin.async(player) {
-        val knownWorlds = plugin.worldsApi.worldsGet().results.orEmpty()
+        val worlds = plugin.worldsApi.worldsGet().results.orEmpty()
+        val knownWorlds = worlds
             .map { AdminWorld(it.slug, it.buildServer?.value) }
             .sortedBy { it.slug }
 
-        // Worlds of leagues the viewer can queue, so staff can warm a dungeon for a draft they test
-        val canQueueDrafts = player.hasPermission(DRAFT_QUEUE_PERMISSION)
+        // Worlds of leagues the viewer can queue, so builders can warm a dungeon for a draft they test
+        val buildersByWorldSlug = worlds.associate { it.slug to it.builders }
         val queueableWorldSlugs = plugin.leagueCache.getLeagues()
-            .filter { it.isQueueable(canQueueDrafts) }
+            .filter { it.isQueueable(isWorldBuilder(buildersByWorldSlug[it.world], player.name)) }
             .mapNotNull { it.world }
             .toSet()
 

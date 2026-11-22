@@ -10,7 +10,6 @@ import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
 import org.trackedout.citadel.config.LeagueCache
-import org.trackedout.citadel.config.allowDraftMetadata
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.citadel.sendMiniMessage
@@ -127,7 +126,7 @@ class LeagueCommand(
                         metadata = mapOf(
                             "deck-id" to deckId,
                             "slug" to slug,
-                        ) + player.allowDraftMetadata(league),
+                        ),
                     )
                 )
                 player.sendGreenMessage("Queuing you into '${league.displayName ?: slug}'...")

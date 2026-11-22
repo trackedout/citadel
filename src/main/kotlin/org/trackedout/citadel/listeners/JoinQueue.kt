@@ -3,7 +3,6 @@ package org.trackedout.citadel.listeners
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
-import org.trackedout.citadel.config.allowDraftMetadata
 import org.trackedout.citadel.inventory.LeagueSlug
 import org.trackedout.citadel.inventory.displayName
 import org.trackedout.citadel.sendGreenMessage
@@ -29,7 +28,6 @@ fun createJoinQueueFunc(citadel: Citadel, eventsApi: EventsApi, player: Player):
                 if (clientProtocol != null) {
                     put("mc-protocol", clientProtocol)
                 }
-                putAll(player.allowDraftMetadata(citadel.leagueCache.getLeagueBySlug(deckId)))
             }
 
             eventsApi.eventsPost(
