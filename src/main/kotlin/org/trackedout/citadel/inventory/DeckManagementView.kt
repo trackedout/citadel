@@ -13,7 +13,6 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.trackedout.citadel.Citadel
-import org.trackedout.citadel.config.PRACTICE_SLUG
 import org.trackedout.citadel.withTags
 import org.trackedout.client.models.Card
 import org.trackedout.citadel.config.LeagueCache
@@ -53,7 +52,7 @@ open class DeckManagementView : View() {
             // slug, which is the LeagueSlug itself.
             val deckId: LeagueSlug = entry.key
             val allCards = entry.value
-            var i = if (deckId.isPractice(plugin[render].leagueCache)) 0 else 18
+            var i = if (deckId.isPractice(plugin[render])) 0 else 18
 
             i += 4 // center decks (only works if we have 1 deck)
 
@@ -228,8 +227,8 @@ fun LeagueSlug.displayName(leagueCache: LeagueCache): String {
 
 fun LeagueSlug.isValidRunType(leagueCache: LeagueCache): Boolean = findRunTypeByIdFromCache(leagueCache, this) != null
 
-fun LeagueSlug.isPractice(leagueCache: LeagueCache): Boolean =
-    findRunTypeByIdFromCache(leagueCache, this)?.longId == PRACTICE_SLUG
+fun LeagueSlug.isPractice(plugin: Citadel): Boolean =
+    findRunTypeByIdFromCache(plugin.leagueCache, this)?.longId.let { it != null && it == plugin.serverSettings.leagues()?.practice }
 
 fun LeagueSlug.runType(leagueCache: LeagueCache): RunType = getRunTypeByIdFromCache(leagueCache, this)
 

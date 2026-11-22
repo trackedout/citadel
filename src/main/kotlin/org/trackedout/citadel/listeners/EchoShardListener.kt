@@ -486,7 +486,7 @@ class EchoShardListener(
 
     private fun isRestrictedItem(it: ItemStack) = it.itemMeta != null && it.isManagedDungeonItem()
 
-    private fun isPracticeCard(it: ItemStack) = isRestrictedItem(it) && it.isDeckedOutCard() && it.getSlug()?.isPractice(plugin.leagueCache) == true
+    private fun isPracticeCard(it: ItemStack) = isRestrictedItem(it) && it.isDeckedOutCard() && it.getSlug()?.isPractice(plugin) == true
 
-    private fun isPracticeItem(it: ItemStack) = isRestrictedItem(it) && it.canTakeIntoDungeon() && it.getSlug()?.isPractice(plugin.leagueCache) == true
+    private fun isPracticeItem(it: ItemStack) = isRestrictedItem(it) && it.canTakeIntoDungeon() && it.getSlug()?.isPractice(plugin) == true
 }

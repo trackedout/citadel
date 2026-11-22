@@ -133,9 +133,14 @@ class ShopCommand(
     @CommandPermission("decked-out.shop.admin")
     @Description("Shop management - rewrite legacy and previous-slug trades to the current slugs")
     fun rewriteTrades(player: Player) {
+        val leagues = plugin.serverSettings.leagues() ?: run {
+            player.sendRedMessage("Settings are not loaded, cannot tell which leagues legacy trades name")
+            return
+        }
+        val rewriter = ShopRuleRewriter(leagues)
         executeOnValidShop(player) { tileState, shopData ->
             val rewritten = shopData.trades.map { rule ->
-                ShopRuleRewriter.rewrite(rule) ?: rule
+                rewriter.rewrite(rule) ?: rule
             }
 
             val changed = rewritten.filterIndexed { i, r -> r != shopData.trades[i] }

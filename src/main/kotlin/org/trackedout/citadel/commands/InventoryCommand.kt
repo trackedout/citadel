@@ -15,7 +15,6 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.SHARDS_SCOREBOARD
-import org.trackedout.citadel.config.HARDCORE_SLUG
 import org.trackedout.citadel.InventoryManager
 import org.trackedout.citadel.async
 import org.trackedout.citadel.config.cardConfig
@@ -72,10 +71,11 @@ class InventoryCommand(
                 return@async
             }
 
-            if (runType.longId == HARDCORE_SLUG) {
+            val hardcoreSlug = plugin.serverSettings.leagues()?.hardcore
+            if (hardcoreSlug != null && runType.longId == hardcoreSlug) {
                 val hardcoreShards = scoreApi.scoresGet(
                     source.name,
-                    slug = HARDCORE_SLUG,
+                    slug = hardcoreSlug,
                     prefixFilter = SHARDS_SCOREBOARD
                 ).results!!.firstOrNull()
 

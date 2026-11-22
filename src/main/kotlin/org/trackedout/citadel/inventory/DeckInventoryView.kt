@@ -120,7 +120,7 @@ open class DeckInventoryView : DeckManagementView() {
                 }
         }
 
-        if (deckId.isPractice(plugin[render].leagueCache)) {
+        if (deckId.isPractice(plugin[render])) {
             render.slot(rowCount(cards), 9)
                 .cancelOnClick()
                 .withItem(namedItem(Material.SLIME_BLOCK, "Add a card"))

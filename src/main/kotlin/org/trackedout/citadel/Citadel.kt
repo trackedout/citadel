@@ -67,11 +67,14 @@ import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.apis.LeaguesApi
 import org.trackedout.client.apis.PartiesApi
+import org.trackedout.client.apis.SettingsApi
 import org.trackedout.client.apis.ScoreApi
 import org.trackedout.client.apis.StatusApi
 import org.trackedout.client.apis.TasksApi
 import org.trackedout.client.apis.WorldsApi
 import org.trackedout.client.infrastructure.ClientException
+import org.trackedout.citadel.config.CompetitivePhases
+import org.trackedout.citadel.config.ServerSettings
 import org.trackedout.citadel.config.RunType
 import org.trackedout.citadel.config.findRunTypeByIdFromCache
 import org.trackedout.citadel.config.getRunTypesFromCache
@@ -92,6 +95,8 @@ class Citadel : JavaPlugin() {
     lateinit var worldsApi: WorldsApi
         private set
     lateinit var runModes: RunModes
+    lateinit var competitivePhases: CompetitivePhases
+    lateinit var serverSettings: ServerSettings
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -170,7 +175,18 @@ class Citadel : JavaPlugin() {
         )
 
         leagueCache = LeagueCache(this, leaguesApi)
-        runModes = RunModes(leagueCache, configApi, inventoryApi, logger)
+        serverSettings = ServerSettings(
+            this,
+            SettingsApi(
+                basePath = dungaAPIPath,
+                client = OkHttpClient.Builder()
+                    .connectTimeout(5.seconds.toJavaDuration())
+                    .callTimeout(30.seconds.toJavaDuration())
+                    .build()
+            )
+        )
+        runModes = RunModes(leagueCache, serverSettings, configApi, inventoryApi, logger)
+        competitivePhases = CompetitivePhases(leaguesApi, logger)
 
         val inventoryManager = InventoryManager(this, inventoryApi, scoreApi, eventsApi, configApi)
 
@@ -217,10 +233,10 @@ class Citadel : JavaPlugin() {
         val statusTaskRunner = StatusTaskRunner(this, statusApi, sidebar, sidebar2)
         statusTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 60) // Repeat every 60 ticks (3 seconds)
 
-        leaderboardTaskRunner = LeaderboardTaskRunner(this, configApi)
+        leaderboardTaskRunner = LeaderboardTaskRunner(this)
         leaderboardTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 20 * 15) // Repeat every 300 ticks (15 seconds)
 
-        val trophyTaskRunner = TrophyTaskRunner(this, configApi)
+        val trophyTaskRunner = TrophyTaskRunner(this)
         trophyTaskRunner.runTaskTimerAsynchronously(this, 20 * 5, 20 * 60) // Repeat every 1200 ticks (1 minute)
 
         server.pluginManager.registerEvents(PlayedJoinedListener(this, eventsApi, configApi, inventoryManager), this)
@@ -250,7 +266,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(CubbyManagementCommand(this))
         manager.registerCommand(LeaderboardCommand(this, configApi))
         manager.registerCommand(UnstuckCommand(this))
-        manager.registerCommand(TrophyCommand(this, configApi))
+        manager.registerCommand(TrophyCommand(this))
         manager.registerCommand(BookCommand(this, configApi, scoreApi))
         val partyCommand = PartyCommand(this, partiesApi, inventoryManager)
         partyCommand.registerCompletions(manager)
@@ -260,6 +276,7 @@ class Citadel : JavaPlugin() {
         manager.registerCommand(WorldCommand(this, worldsApi, worldEditor))
 
         leagueCache.startRefreshTask()
+        serverSettings.startRefreshTask()
 
         val echoShardListener = EchoShardListener(this, inventoryApi, eventsApi, scoreApi, configApi, viewFrame, inventoryManager)
         server.pluginManager.registerEvents(echoShardListener, this)

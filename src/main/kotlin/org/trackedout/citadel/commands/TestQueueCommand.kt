@@ -16,11 +16,11 @@ import org.bukkit.command.BlockCommandSender
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
-import org.trackedout.citadel.config.PRACTICE_SLUG
 import org.trackedout.citadel.async
 import org.trackedout.citadel.inventory.displayName
 import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.citadel.sendGreenMessage
+import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.EventsApi
 import org.trackedout.client.models.Event
 import java.time.LocalDateTime
@@ -67,7 +67,10 @@ class TestQueueCommand(
             val eventName = "joined-queue"
             val count = 1
 
-            val deckId = deckId ?: PRACTICE_SLUG
+            val deckId = deckId ?: plugin.serverSettings.leagues()?.practice ?: run {
+                sender.sendRedMessage("Settings are not loaded, pass a deck id")
+                return@async
+            }
 
             eventsApi.eventsPost(
                 Event(

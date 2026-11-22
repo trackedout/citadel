@@ -17,7 +17,6 @@ import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.applyTOTs
 import org.trackedout.citadel.async
-import org.trackedout.citadel.getBool
 import com.mongodb.client.model.Sorts
 import org.trackedout.citadel.hideTOTs
 import org.trackedout.citadel.mongo.MongoDBManager
@@ -28,8 +27,6 @@ import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
 import org.trackedout.citadel.sendMiniMessage
 import org.trackedout.citadel.sendRedMessage
-import org.trackedout.client.apis.ConfigApi
-import org.trackedout.client.models.Config
 
 fun loadTrophySections(): LinkedHashMap<String, List<String>> {
     val database = MongoDBManager.getDatabase("dunga-dunga")
@@ -43,7 +40,6 @@ fun loadTrophySections(): LinkedHashMap<String, List<String>> {
 @CommandAlias("tots")
 class TrophyCommand(
     private val plugin: Citadel,
-    private val configApi: ConfigApi,
 ) : BaseCommand() {
 
     @HelpCommand
@@ -63,7 +59,7 @@ class TrophyCommand(
     @Description("Teleport to a trophy")
     fun teleportToTrophy(player: Player, name: String) {
         plugin.async(player) {
-            if (!configApi.getBool("lobby", "show-tots", default = true)) {
+            if (!plugin.serverSettings.showTots()) {
                 player.sendRedMessage("ToTs are currently hidden")
                 return@async
             }
@@ -117,7 +113,7 @@ class TrophyCommand(
     fun listSection(source: CommandSender, section: String) {
         plugin.async(source) {
             val trophies = getTrophies()
-            val hidden = !configApi.getBool("lobby", "show-tots", default = true)
+            val hidden = !plugin.serverSettings.showTots()
             val sections = loadTrophySections()
             val sectionEntry = sections.entries.find { it.key.equals(section, ignoreCase = true) }
             if (sectionEntry == null) {
@@ -145,7 +141,7 @@ class TrophyCommand(
     fun search(source: CommandSender, query: String) {
         plugin.async(source) {
             val trophies = getTrophies()
-            val hidden = !configApi.getBool("lobby", "show-tots", default = true)
+            val hidden = !plugin.serverSettings.showTots()
             val q = query.lowercase()
 
             val sections = loadTrophySections()
@@ -202,7 +198,7 @@ class TrophyCommand(
             }
 
             val section = loadTrophySections().entries.find { it.value.contains(nearest.totKey) }?.key ?: "Unknown"
-            val hidden = !configApi.getBool("lobby", "show-tots", default = true)
+            val hidden = !plugin.serverSettings.showTots()
             player.sendMiniMessage("<gold>--- Trophy Info ---</gold>")
             player.sendMiniMessage("<yellow>Name:</yellow> ${nearest.totKey}")
             player.sendMiniMessage("<yellow>Section:</yellow> $section")
@@ -218,7 +214,7 @@ class TrophyCommand(
     @Description("Show all ToT displays")
     fun show(source: CommandSender) {
         plugin.async(source) {
-            configApi.configsAddConfigPost(Config(entity = "lobby", key = "show-tots", value = "true"))
+            plugin.serverSettings.updateLobby { it.copy(showTots = true) }
             applyTOTs(plugin)
             source.sendGreenMessage("All ToTs are now visible")
         }
@@ -229,7 +225,7 @@ class TrophyCommand(
     @Description("Hide all ToT displays")
     fun hide(source: CommandSender) {
         plugin.async(source) {
-            configApi.configsAddConfigPost(Config(entity = "lobby", key = "show-tots", value = "false"))
+            plugin.serverSettings.updateLobby { it.copy(showTots = false) }
             hideTOTs(plugin)
             source.sendGreyMessage("All ToTs are now hidden")
         }

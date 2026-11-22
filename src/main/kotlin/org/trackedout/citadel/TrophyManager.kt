@@ -13,16 +13,14 @@ import org.bukkit.scheduler.BukkitRunnable
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoTrophy
 
-import org.trackedout.client.apis.ConfigApi
 
 // WARNING: This task is processed *asynchronously*, and thus most interactions with the main Minecraft thread
 // must go through a sync task scheduler.
 class TrophyTaskRunner(
     private val plugin: Citadel,
-    private val configApi: ConfigApi,
 ) : BukkitRunnable() {
     override fun run() {
-        if (!configApi.getBool("lobby", "show-tots", default = true)) {
+        if (!plugin.serverSettings.showTots()) {
             plugin.debug("TOTs are hidden, skipping sign updater")
             return
         }

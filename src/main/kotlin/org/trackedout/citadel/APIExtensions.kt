@@ -31,33 +31,11 @@ fun ClientException.userMessage(): String {
     return this.message ?: "Unknown error"
 }
 
-fun ConfigApi.getInt(entity: String, key: String): Int? {
-    return try {
-        this.configsGet(entity, key).let { Integer.parseInt(it.value) }
-    } catch (e: ClientException) {
-        System.err.println("Error fetching config for $entity and key $key: ${e.message}")
-        e.printStackTrace()
-        null // default
-    }
-}
-
 fun ConfigApi.getBool(entity: String, key: String, default: Boolean = false): Boolean {
     return try {
         this.configsGet(entity, key).value == "true"
     } catch (e: ClientException) {
         default
-    }
-}
-
-fun ConfigApi.getRelativeFutureDate(entity: String, key: String): String? {
-    return try {
-        this.configsGet(entity, key).value?.let {
-            getFutureRelativeTime(it)
-        }
-    } catch (e: ClientException) {
-        System.err.println("Error fetching config for $entity and key $key: ${e.message}")
-        e.printStackTrace()
-        null // default
     }
 }
 

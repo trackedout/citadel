@@ -34,7 +34,6 @@ import org.joml.Vector3f
 import org.trackedout.citadel.mongo.MongoDBManager
 import org.trackedout.citadel.mongo.MongoPlayerStats
 import org.trackedout.citadel.mongo.Stats
-import org.trackedout.client.apis.ConfigApi
 import java.time.Duration
 import java.util.AbstractMap
 import java.util.UUID
@@ -45,7 +44,6 @@ import kotlin.math.min
 // must go through a sync task scheduler. The Scoreboard lib is thread-safe, so it doesn't require a sync task.
 class LeaderboardTaskRunner(
     private val plugin: Citadel,
-    private val configApi: ConfigApi,
 ) : BukkitRunnable() {
 
     companion object {
@@ -89,7 +87,7 @@ class LeaderboardTaskRunner(
         try {
             plugin.logger.info("[Async task ${this.taskId}] Fetching leaderboard from MongoDB")
 
-            FirstRun.showLeaderboard = configApi.getBool("lobby", "show-leaderboard", default = false)
+            FirstRun.showLeaderboard = plugin.serverSettings.showLeaderboard()
             if (!FirstRun.showLeaderboard) return
 
             val world = plugin.server.worlds.find { it.name == "world" } ?: return
@@ -98,7 +96,7 @@ class LeaderboardTaskRunner(
             var maxPhase = 0
             val pointsForPosition = arrayOf(25, 21, 18, 16, 14, 12, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
 
-            configApi.getInt("comp-season", "current-phase")?.let { currentPhase ->
+            plugin.competitivePhases.current()?.leaderboardPhase?.let { currentPhase ->
                 maxPhase = parsePhaseDataForAllPlayers(currentPhase, activePlayers, pointsForPosition)
                 currentMaxPhase = maxPhase
             }

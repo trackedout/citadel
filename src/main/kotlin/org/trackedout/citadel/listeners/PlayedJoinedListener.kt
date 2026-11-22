@@ -16,8 +16,8 @@ import org.trackedout.citadel.LeaderboardState
 import org.trackedout.citadel.async
 import org.trackedout.citadel.getBool
 import org.trackedout.citadel.getEnvOrDefault
-import org.trackedout.citadel.getInt
-import org.trackedout.citadel.getRelativeFutureDate
+import org.trackedout.citadel.config.activePhaseSchedule
+import org.trackedout.citadel.getFutureRelativeTime
 import org.trackedout.citadel.regions
 import org.trackedout.citadel.runLaterOnATick
 import org.trackedout.citadel.sendMiniMessage
@@ -82,28 +82,33 @@ class PlayedJoinedListener(
         }
 
         plugin.async(player) {
-            configApi.getInt("comp-season", "current-phase")?.let { currentPhase ->
-                val formattedPhase = "Competitive Phase <gold>#${currentPhase}</gold>"
-                configApi.getRelativeFutureDate("phase-${currentPhase}", "end-time")?.let { phaseEndRelativeDate ->
-                    val message = "<aqua>$formattedPhase ends in <gold>${phaseEndRelativeDate}</gold></aqua>"
-                    player.sendMiniMessage(message)
+            val phases = plugin.competitivePhases.current() ?: return@async
+            val activePhase = phases.activePhaseSchedule()
+            if (activePhase == null) {
+                phases.leaderboardPhase?.let { player.sendMiniMessage("<aqua>Competitive Phase <gold>#$it</gold> has ended</aqua>") }
+                return@async
+            }
 
-                    plugin.runLaterOnATick(20 * 5) {
-                        player.showTitle(
-                            Title.title(
-                                MiniMessage.miniMessage().deserialize("<aqua>${formattedPhase}</aqua>"),
-                                MiniMessage.miniMessage().deserialize("<aqua>Ends in $phaseEndRelativeDate</aqua>"),
-                                Title.Times.times(
-                                    Duration.ofSeconds(1),
-                                    Duration.ofSeconds(3),
-                                    Duration.ofSeconds(2),
-                                )
-                            )
+            val formattedPhase = "Competitive Phase <gold>#${activePhase.phase}</gold>"
+            val phaseEndRelativeDate = activePhase.end?.let { getFutureRelativeTime(it) }
+            if (phaseEndRelativeDate == null) {
+                player.sendMiniMessage("<aqua>$formattedPhase has ended</aqua>")
+                return@async
+            }
+
+            player.sendMiniMessage("<aqua>$formattedPhase ends in <gold>${phaseEndRelativeDate}</gold></aqua>")
+            plugin.runLaterOnATick(20 * 5) {
+                player.showTitle(
+                    Title.title(
+                        MiniMessage.miniMessage().deserialize("<aqua>${formattedPhase}</aqua>"),
+                        MiniMessage.miniMessage().deserialize("<aqua>Ends in $phaseEndRelativeDate</aqua>"),
+                        Title.Times.times(
+                            Duration.ofSeconds(1),
+                            Duration.ofSeconds(3),
+                            Duration.ofSeconds(2),
                         )
-                    }
-                } ?: run {
-                    player.sendMiniMessage("<aqua>$formattedPhase has ended</aqua>")
-                }
+                    )
+                )
             }
         }
     }
@@ -138,8 +143,8 @@ class PlayedJoinedListener(
         leaderboardAnimationPending.add(player.uniqueId)
         plugin.async(player) {
             try {
-                val currentPhase = configApi.getInt("comp-season", "current-phase") ?: return@async
-                if (!configApi.getBool("lobby", "show-leaderboard", default = false)) return@async
+                val currentPhase = plugin.competitivePhases.current()?.leaderboardPhase ?: return@async
+                if (!plugin.serverSettings.showLeaderboard()) return@async
                 val seenKey = "leaderboard-seen-phase-$currentPhase"
                 if (configApi.getBool(player.name, seenKey, default = false)) return@async
 

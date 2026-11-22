@@ -4,7 +4,6 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.trackedout.citadel.Citadel
-import org.trackedout.citadel.config.HARDCORE_SLUG
 import org.trackedout.citadel.config.FILTER_MODE_SLUG_CONFIG
 import org.trackedout.citadel.async
 import org.trackedout.client.apis.ConfigApi
@@ -31,8 +30,12 @@ class PlayedDeathListener(
             return
         }
 
+        val hardcoreLeague = plugin.serverSettings.leagues()?.hardcore ?: run {
+            plugin.logger.warning("$playerName died to the pit, but settings are not loaded so the hardcore league is unknown, not resetting")
+            return
+        }
         plugin.logger.info("$playerName died to the pit, resetting their hardcore deck")
-        val hardcoreSlug = getRunTypeByIdFromCache(plugin.leagueCache, HARDCORE_SLUG).deckType()
+        val hardcoreSlug = getRunTypeByIdFromCache(plugin.leagueCache, hardcoreLeague).deckType()
         plugin.async(player) {
             eventsApi.eventsPost(
                 Event(
@@ -54,7 +57,7 @@ class PlayedDeathListener(
                 Config(
                     entity = playerName,
                     key = FILTER_MODE_SLUG_CONFIG,
-                    value = HARDCORE_SLUG,
+                    value = hardcoreLeague,
                 )
             )
         }

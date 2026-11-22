@@ -9,12 +9,10 @@ import com.mongodb.client.model.Filters
 import org.bukkit.command.CommandSender
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.FirstRun
-import org.trackedout.citadel.getInt
 import org.trackedout.citadel.runOnNextTick
 
 import org.trackedout.citadel.async
 import org.trackedout.citadel.mongo.MongoDBManager
-import org.trackedout.citadel.config.HARDCORE_SLUG
 import org.trackedout.citadel.mongo.MongoScore
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendRedMessage
@@ -33,7 +31,7 @@ class LeaderboardCommand(
         FirstRun.animating = false
         FirstRun.running = false
         plugin.async(source) {
-            configApi.configsAddConfigPost(Config(entity = "lobby", key = "show-leaderboard", value = "false"))
+            plugin.serverSettings.updateLobby { it.copy(showLeaderboard = false) }
             FirstRun.showLeaderboard = false
             plugin.runOnNextTick { plugin.leaderboardTaskRunner.hideAll() }
             source.sendGreenMessage("Leaderboard hidden")
@@ -45,12 +43,12 @@ class LeaderboardCommand(
     @Description("Show the leaderboard and optionally animate")
     fun showLeaderboard(source: CommandSender, animate: Boolean) {
         plugin.async(source) {
-            val currentPhase = configApi.getInt("comp-season", "current-phase")
+            val currentPhase = plugin.competitivePhases.current()?.leaderboardPhase
             if (currentPhase == null) {
-                source.sendRedMessage("Cannot show leaderboard: current-phase is not set")
+                source.sendRedMessage("Cannot show leaderboard: no competitive league has a completed phase")
                 return@async
             }
-            configApi.configsAddConfigPost(Config(entity = "lobby", key = "show-leaderboard", value = "true"))
+            plugin.serverSettings.updateLobby { it.copy(showLeaderboard = true) }
             FirstRun.showLeaderboard = true
             source.sendGreenMessage("Showing leaderboard ${if (animate) "with" else "without"} animation")
             if (animate) {
@@ -69,13 +67,17 @@ class LeaderboardCommand(
     @Description("Show hardcore leaderboard")
     fun showHardcoreLeaderboard(source: CommandSender) {
         plugin.async(source) {
+            val hardcoreSlug = plugin.serverSettings.leagues()?.hardcore ?: run {
+                source.sendRedMessage("Settings are not loaded, cannot tell which league is hardcore")
+                return@async
+            }
 
             val database = MongoDBManager.getDatabase("dunga-dunga")
             val scoreCollection = database.getCollection("scores", MongoScore::class.java)
 
             val scores = scoreCollection.find(
                 Filters.and(
-                    Filters.eq("slug", HARDCORE_SLUG),
+                    Filters.eq("slug", hardcoreSlug),
                     Filters.eq("key", "leaderboard-do2.lifetime.escaped.tomes")
                 )
             ).toList()

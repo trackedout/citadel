@@ -27,7 +27,6 @@ import org.trackedout.client.apis.ConfigApi
 import org.trackedout.client.infrastructure.ClientException
 import org.trackedout.client.models.Event
 import org.trackedout.client.models.Score
-import org.trackedout.citadel.config.PRACTICE_SLUG
 import org.trackedout.citadel.config.RunType
 import org.trackedout.citadel.config.LeagueCache
 import org.trackedout.citadel.config.runTypeFromLeague
@@ -36,9 +35,6 @@ import org.trackedout.data.sortedList
 
 // Name of the shard balance scoreboard. Same in every league namespace.
 const val SHARDS_SCOREBOARD = "do2.inventory.shards"
-
-// Lobby advancements mirror what the player earned in the season 2 competitive league.
-const val ADVANCEMENT_SOURCE_SLUG = "do2-s2-comp"
 
 // Advancement scores are keyed advancement-<namespace>#<path>#<criterion>.
 const val ADVANCEMENT_KEY_PREFIX = "advancement-"
@@ -172,11 +168,12 @@ class InventoryManager(
     }
 
     private fun ensurePlayerHasPracticeShards(playerName: String, scores: List<Score>): Boolean {
+        val practiceSlug = plugin.serverSettings.leagues()?.practice ?: return false
         tradeItems["SHARD"]?.let { tradeItem ->
-            scores.find { score -> score.slug == PRACTICE_SLUG && score.key == tradeItem.sourceScoreboardName() }?.let { score ->
+            scores.find { score -> score.slug == practiceSlug && score.key == tradeItem.sourceScoreboardName() }?.let { score ->
                 if (score.value!!.toInt() <= 10) {
                     val trade = Trade(
-                        runType = PRACTICE_SLUG,
+                        runType = practiceSlug,
                         sourceType = "dummy",
                         sourceItemCount = 0,
                         targetType = "SHARD",
@@ -345,11 +342,16 @@ class InventoryManager(
         val server = player.server
         val playerName = player.name
 
+        // Lobby advancements mirror what the player earned in the settings' advancements league
+        val advancementSlug = plugin.serverSettings.leagues()?.advancements ?: run {
+            plugin.logger.warning("Settings are not loaded, skipping advancements of $playerName")
+            return
+        }
         try {
-            plugin.logger.info("Fetching advancement scores for $playerName from namespace '$ADVANCEMENT_SOURCE_SLUG'")
+            plugin.logger.info("Fetching advancement scores for $playerName from namespace '$advancementSlug'")
             val scores = scoreApi.scoresGet(
                 player = playerName,
-                slug = ADVANCEMENT_SOURCE_SLUG,
+                slug = advancementSlug,
                 prefixFilter = ADVANCEMENT_KEY_PREFIX,
                 limit = 10000,
             )

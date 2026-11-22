@@ -9,13 +9,11 @@ import java.util.logging.Logger
 // Per-player config key holding the league slug the player selected as their run mode
 const val FILTER_MODE_SLUG_CONFIG = "filter-mode-slug"
 
-// Run mode for players who have not picked one, or whose pick is no longer offered
-const val DEFAULT_RUN_MODE_SLUG = PRACTICE_SLUG
-
 // Which leagues a player can pick as their run mode, and which one they are on.
 // Calls the backend, so use it off the main thread.
 class RunModes(
     private val leagueCache: LeagueCache,
+    private val serverSettings: ServerSettings,
     private val configApi: ConfigApi,
     private val inventoryApi: InventoryApi,
     private val logger: Logger,
@@ -40,10 +38,22 @@ class RunModes(
             return runTypeFromLeague(chosen)
         }
 
+        val default = defaultLeague()
         if (chosenSlug != null) {
-            logger.info("Run mode '$chosenSlug' is not available to $playerName, using '$DEFAULT_RUN_MODE_SLUG'")
+            logger.info("Run mode '$chosenSlug' is not available to $playerName, using '${default?.slug}'")
         }
-        return leagueCache.getLeagueBySlug(DEFAULT_RUN_MODE_SLUG)?.let { runTypeFromLeague(it) }
+        return default?.let { runTypeFromLeague(it) }
+    }
+
+    // The run mode of players who have not picked one, or whose pick is no longer
+    // offered: the settings' defaultRunMode
+    private fun defaultLeague(): League? {
+        val slug = serverSettings.current()?.defaultRunMode
+        val default = slug?.let { leagueCache.getLeagueBySlug(it) }
+        if (default == null) {
+            logger.warning("Settings name no known default run mode (defaultRunMode '$slug'), players without a run mode get none")
+        }
+        return default
     }
 
     // Store the player's run mode. Callers check isSelectable first and refresh the
