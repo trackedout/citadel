@@ -84,6 +84,8 @@ import org.trackedout.citadel.config.CompetitivePhases
 import org.trackedout.citadel.config.ServerSettings
 import org.trackedout.citadel.config.RunType
 import org.trackedout.citadel.config.findRunTypeByIdFromCache
+import org.trackedout.citadel.config.copySourceSlugs
+import org.trackedout.citadel.config.copyTargetSlugs
 import org.trackedout.citadel.config.getRunTypesFromCache
 import java.net.InetAddress
 import kotlin.time.Duration.Companion.seconds
@@ -317,6 +319,13 @@ class Citadel : JavaPlugin() {
     private fun registerCommandCompletions() {
         manager.commandCompletions.registerAsyncCompletion("runTypes") { _ ->
             getRunTypesFromCache(leagueCache).map { it.longId }
+        }
+        manager.commandCompletions.registerAsyncCompletion("copySources") { _ ->
+            leagueCache.getLeagues().copySourceSlugs()
+        }
+        manager.commandCompletions.registerAsyncCompletion("copyTargets") { context ->
+            val source = context.getContextValue(RunType::class.java, 1)
+            leagueCache.getLeagues().copyTargetSlugs(source.longId)
         }
         manager.commandCompletions.registerAsyncCompletion("leagueSlugs") { _ ->
             val leagues = leagueCache.getLeagues()

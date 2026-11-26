@@ -12,6 +12,9 @@ import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.async
 import org.trackedout.citadel.config.RunType
+import org.trackedout.citadel.config.acceptsDeckCopyFrom
+import org.trackedout.citadel.config.copySources
+import org.trackedout.citadel.config.getRunTypeByIdFromCache
 import org.trackedout.citadel.inventory.DeckCopyPlan
 import org.trackedout.citadel.sendGreenMessage
 import org.trackedout.citadel.sendGreyMessage
@@ -19,6 +22,7 @@ import org.trackedout.citadel.sendMiniMessage
 import org.trackedout.citadel.sendRedMessage
 import org.trackedout.client.apis.InventoryApi
 import org.trackedout.client.models.Card
+import org.trackedout.client.models.League
 
 private const val CONFIRM_FLAG = "--confirm"
 
@@ -28,58 +32,62 @@ class CopyDeckCommand(
     private val inventoryApi: InventoryApi,
 ) : BaseCommand() {
     @Subcommand("copy-deck")
-    @Syntax("<sourceDeck> [--confirm]")
+    @Syntax("<sourceDeck> <targetDeck> [--confirm]")
     @CommandPermission("decked-out.inventory.edit")
-    @Description("Replace your practice deck with a copy of another deck. Add --confirm to do it")
-    @CommandCompletion("@runTypes @nothing")
-    fun copyDeck(player: Player, source: RunType, @Optional args: Array<String>?) {
-        val practiceSlug = plugin.serverSettings.leagues()?.practice
-        if (practiceSlug == null) {
-            player.sendRedMessage("Settings are not loaded, try again in a moment")
-            return
-        }
-
-        if (source.longId == practiceSlug) {
-            player.sendRedMessage("Pick a deck other than your practice deck to copy from")
+    @Description("Replace one of your decks with a copy of another, where the league allows it. Add --confirm to do it")
+    @CommandCompletion("@copySources @copyTargets @nothing")
+    fun copyDeck(player: Player, source: RunType, target: RunType, @Optional args: Array<String>?) {
+        val targetLeague = plugin.leagueCache.getLeagueBySlug(target.longId)
+        if (targetLeague == null || !targetLeague.acceptsDeckCopyFrom(source.longId)) {
+            player.sendRedMessage(refusal(source, target, targetLeague))
             return
         }
 
         val confirmed = args.orEmpty().contains(CONFIRM_FLAG)
-        plugin.async(player) { copyIntoPractice(player, source, practiceSlug, confirmed) }
+        plugin.async(player) { copyDeck(player, source, target, confirmed) }
     }
 
-    private fun copyIntoPractice(player: Player, source: RunType, practiceSlug: String, confirmed: Boolean) {
-        val practice = plugin.leagueCache.getLeagueBySlug(practiceSlug)?.displayName ?: practiceSlug
-        val catalog = plugin.catalogCache.require(practiceSlug)
+    private fun refusal(source: RunType, target: RunType, targetLeague: League?): String {
+        val sources = targetLeague?.copySources().orEmpty()
+        if (sources.isEmpty()) {
+            return "You cannot copy a deck into ${target.displayName}"
+        }
+        val names = sources.joinToString { getRunTypeByIdFromCache(plugin.leagueCache, it).displayName }
+        return "You cannot copy ${source.displayName} into ${target.displayName}. It accepts copies of: $names"
+    }
+
+    private fun copyDeck(player: Player, source: RunType, target: RunType, confirmed: Boolean) {
+        val catalog = plugin.catalogCache.require(target.longId)
         val validEntries = catalog.cards.values.map { it.shorthand }.toSet() + catalog.tradeItems.keys
 
         val sourceCards = cardsOf(player, source.longId)
-        val practiceCards = cardsOf(player, practiceSlug)
-        val plan = DeckCopyPlan.of(sourceCards.map { it.name!! }, practiceCards.map { it.name!! }, validEntries)
+        val targetCards = cardsOf(player, target.longId)
+        val plan = DeckCopyPlan.of(sourceCards.map { it.name!! }, targetCards.map { it.name!! }, validEntries)
 
         if (plan.notInTargetCatalog.isNotEmpty()) {
-            player.sendGreyMessage("Skipping ${plan.notInTargetCatalog.values.sum()} entries that do not exist in $practice: ${plan.notInTargetCatalog.keys.joinToString()}")
+            player.sendGreyMessage("Skipping ${plan.notInTargetCatalog.values.sum()} entries that do not exist in ${target.displayName}: ${plan.notInTargetCatalog.keys.joinToString()}")
         }
 
         if (plan.isNoop) {
-            player.sendGreenMessage("Your $practice deck already matches your ${source.displayName} deck")
+            player.sendGreenMessage("Your ${target.displayName} deck already matches your ${source.displayName} deck")
             return
         }
 
         val summary = "${plan.toAdd.values.sum()} to add, ${plan.toRemove.values.sum()} to remove"
         if (!confirmed) {
+            val command = "/do copy-deck ${source.longId} ${target.longId} $CONFIRM_FLAG"
             player.sendMiniMessage(
-                "<yellow>This replaces your $practice deck with your ${source.displayName} deck ($summary). " +
-                    "Run <gold><click:suggest_command:'/do copy-deck ${source.longId} $CONFIRM_FLAG'>/do copy-deck ${source.longId} $CONFIRM_FLAG</click></gold> to continue</yellow>",
+                "<yellow>This replaces your ${target.displayName} deck with your ${source.displayName} deck ($summary). " +
+                    "Run <gold><click:suggest_command:'$command'>$command</click></gold> to continue</yellow>",
             )
             return
         }
 
-        plan.toRemove.forEach { (name, count) -> repeat(count) { inventoryApi.inventoryDeleteCardPost(card(player, name, practiceSlug)) } }
-        plan.toAdd.forEach { (name, count) -> repeat(count) { inventoryApi.inventoryAddCardPost(card(player, name, practiceSlug)) } }
+        plan.toRemove.forEach { (name, count) -> repeat(count) { inventoryApi.inventoryDeleteCardPost(card(player, name, target.longId)) } }
+        plan.toAdd.forEach { (name, count) -> repeat(count) { inventoryApi.inventoryAddCardPost(card(player, name, target.longId)) } }
 
-        plugin.logger.info("${player.name} copied their ${source.longId} deck to $practiceSlug ($summary)")
-        player.sendGreenMessage("Copied your ${source.displayName} deck to your $practice deck ($summary). Reopen /do edit to see it")
+        plugin.logger.info("${player.name} copied their ${source.longId} deck to ${target.longId} ($summary)")
+        player.sendGreenMessage("Copied your ${source.displayName} deck to your ${target.displayName} deck ($summary)")
     }
 
     private fun cardsOf(player: Player, deckType: String): List<Card> =

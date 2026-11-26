@@ -34,7 +34,7 @@ For a list of changes, see the [latest release notes](https://github.com/tracked
 | Command | Description | Permission Required |
 |---|---|---|
 | `/do edit` | Open the deck editor GUI | `decked-out.inventory.edit` |
-| `/do copy-deck <deck> [--confirm]` | Replace your practice deck with a copy of another deck. Without `--confirm` it only reports what would change | `decked-out.inventory.edit` |
+| `/do copy-deck <source> <target> [--confirm]` | Replace your `target` deck with a copy of your `source` deck, when the target league's `deck.copyFrom` lists the source. Without `--confirm` it only reports what would change | `decked-out.inventory.edit` |
 | `/do run-mode <runType>` | Set run mode for inventory filtering | `decked-out.inventory.set-run-mode` |
 | `/do shulker-style <color>` | Set the colour of your competitive shulker box | `decked-out.config.shulker-style` |
 
