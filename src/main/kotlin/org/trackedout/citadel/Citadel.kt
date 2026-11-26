@@ -33,6 +33,7 @@ import org.trackedout.citadel.commands.LeagueCommand
 import org.trackedout.citadel.commands.WorldCommand
 import org.trackedout.citadel.commands.WorldEditor
 import org.trackedout.citadel.commands.LogEventCommand
+import org.trackedout.citadel.commands.CopyDeckCommand
 import org.trackedout.citadel.commands.ManageDeckCommand
 import org.trackedout.citadel.commands.ScheduleJobCommand
 import org.trackedout.citadel.commands.ScoreManagementCommand
@@ -276,6 +277,7 @@ class Citadel : JavaPlugin() {
             )
             .register()
         manager.registerCommand(ManageDeckCommand(this, inventoryApi, eventsApi, viewFrame))
+        manager.registerCommand(CopyDeckCommand(this, inventoryApi))
         manager.registerCommand(SpectateCommand(this, eventsApi, configApi, viewFrame))
         manager.registerCommand(ConfigCommand(this, configApi))
         manager.registerCommand(ShulkerStyleCommand(configApi, inventoryManager))
