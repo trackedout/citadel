@@ -44,8 +44,15 @@ class CubbyReset(
     /**
      * Plans putting [design] into the cubby, which is the template unless an archived cubby is being restored.
      * @param releasingOwner an owner who may be online because they are the one releasing the cubby
+     * @param operator the admin running the command, who may be online and standing inside the cubby
      */
-    fun plan(cubbyWorld: CubbyWorld, cubby: ProtectedRegion, design: CubbyTemplate?, releasingOwner: Player? = null): CubbyResetPlan {
+    fun plan(
+        cubbyWorld: CubbyWorld,
+        cubby: ProtectedRegion,
+        design: CubbyTemplate?,
+        releasingOwner: Player? = null,
+        operator: Player? = null,
+    ): CubbyResetPlan {
         val world = cubbyWorld.world
         val box = cubby.toBox()
         val owners = cubby.ownerNames()
@@ -56,7 +63,7 @@ class CubbyReset(
         val facingResult = cubbyWorld.facingOf(cubby)
         val facing = (facingResult as? FacingResult.Resolved)?.facing
         if (facing == null) problems += facingProblem(facingResult)
-        problems += onlinePlayerProblems(world, cubby, box, releasingOwner)
+        problems += onlinePlayerProblems(world, cubby, box, releasingOwner, operator)
 
         val rotated = if (design != null && facing != null) {
             CubbyBlocks.rotate(design.clipboard, design.facing.quarterTurnsTo(facing))
@@ -105,10 +112,10 @@ class CubbyReset(
         return listOf("region is ${box.size} (x, y, z) but the rotated template is $expected, so the paste would not line up")
     }
 
-    private fun onlinePlayerProblems(world: World, cubby: ProtectedRegion, box: Box, releasingOwner: Player?): List<String> {
+    private fun onlinePlayerProblems(world: World, cubby: ProtectedRegion, box: Box, releasingOwner: Player?, operator: Player?): List<String> {
         val onlineOwners = (cubby.members.players.mapNotNull { Bukkit.getPlayerExact(it) } +
-            cubby.members.uniqueIds.mapNotNull { Bukkit.getPlayer(it) }).filter { it != releasingOwner }
-        val playersInside = world.players.filter { box.contains(it.location.blockX, it.location.blockY, it.location.blockZ) }
+            cubby.members.uniqueIds.mapNotNull { Bukkit.getPlayer(it) }).filter { it != releasingOwner && it != operator }
+        val playersInside = world.players.filter { it != operator }.filter { box.contains(it.location.blockX, it.location.blockY, it.location.blockZ) }
 
         return onlineOwners.distinct().map { "${it.name} is online" } + playersInside.map { "${it.name} is standing inside" }
     }

@@ -12,7 +12,7 @@ private val SAFE_DIRECTORY_NAME = Regex("^[a-zA-Z0-9_-]{1,36}$")
 private val TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC)
 
 /** A cubby saved before it was reset. */
-data class CubbyArchiveEntry(val file: File, val cubbyId: String, val facing: CubbyFacing)
+data class CubbyArchiveEntry(val file: File, val timestamp: String, val cubbyId: String, val facing: CubbyFacing)
 
 /**
  * Keeps every reset cubby forever as `<owner>/<timestamp>_<cubby-id>_<FACING>.schem`.
@@ -28,16 +28,23 @@ class CubbyArchive(dataFolder: File) {
         return file
     }
 
-    fun latestFor(owner: String): CubbyArchiveEntry? {
+    fun latestFor(owner: String): CubbyArchiveEntry? = entriesFor(owner).firstOrNull()
+
+    fun find(owner: String, timestamp: String): CubbyArchiveEntry? =
+        entriesFor(owner).firstOrNull { it.timestamp.equals(timestamp, ignoreCase = true) }
+
+    /** Every archived cubby of the owner, newest first. */
+    fun entriesFor(owner: String): List<CubbyArchiveEntry> {
+        if (!SAFE_DIRECTORY_NAME.matches(owner)) return emptyList()
         val files = File(root, ownerDirectory(owner)).listFiles { file -> file.extension == "schem" }.orEmpty()
-        return files.maxByOrNull { it.name }?.let { parse(it) }
+        return files.sortedByDescending { it.name }.mapNotNull { parse(it) }
     }
 
     private fun parse(file: File): CubbyArchiveEntry? {
         val fields = file.nameWithoutExtension.split(FIELD_SEPARATOR)
         val facing = CubbyFacing.entries.firstOrNull { it.name == fields.last() } ?: return null
         val cubbyId = fields.drop(1).dropLast(1).joinToString(FIELD_SEPARATOR)
-        return CubbyArchiveEntry(file, cubbyId, facing)
+        return CubbyArchiveEntry(file, fields.first(), cubbyId, facing)
     }
 
     private fun ownerDirectory(owner: String?): String {

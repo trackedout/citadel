@@ -23,6 +23,7 @@ import org.trackedout.citadel.commands.party.PartyCommand
 import org.trackedout.citadel.commands.CubbyAdminCommand
 import org.trackedout.citadel.commands.CubbyPruneCommand
 import org.trackedout.citadel.cubby.CubbyArchive
+import org.trackedout.citadel.cubby.RestoreFlagCompletions
 import org.trackedout.citadel.cubby.CubbyReset
 import org.trackedout.citadel.cubby.CubbyTemplateStore
 import org.trackedout.citadel.cubby.CubbyWorld
@@ -285,6 +286,10 @@ class Citadel : JavaPlugin() {
         val cubbyTemplateStore = CubbyTemplateStore(dataFolder)
         val cubbyArchive = CubbyArchive(dataFolder)
         val cubbyReset = CubbyReset(cubbyTemplateStore, cubbyArchive)
+        manager.commandCompletions.registerCompletion("cubbyRestoreFlags") { context ->
+            val freeCubbyIds = context.player?.world?.let { CubbyWorld(it).cubbies.filter { cubby -> !cubby.hasMembers() }.map { cubby -> cubby.id } }.orEmpty()
+            RestoreFlagCompletions.suggest(context.args, freeCubbyIds) { player -> cubbyArchive.entriesFor(player).map { it.timestamp } }
+        }
         manager.registerCommand(CubbyManagementCommand(this, cubbyReset))
         manager.registerCommand(CubbyAdminCommand(this, cubbyTemplateStore, cubbyReset, cubbyArchive))
         manager.registerCommand(CubbyPruneCommand(this, cubbyReset))

@@ -6,6 +6,7 @@ import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Description
 import co.aikar.commands.annotation.Optional
 import co.aikar.commands.annotation.Subcommand
+import co.aikar.commands.annotation.Syntax
 import java.time.Duration
 import java.time.Instant
 import net.kyori.adventure.text.format.NamedTextColor
@@ -39,6 +40,7 @@ class CubbyPruneCommand(
 
     @Subcommand("cubby prune")
     @Description("List cubbies whose owners were last seen over <days> days ago, and reset them with --confirm")
+    @Syntax("<days> [--confirm]")
     fun pruneCubbies(source: CommandSender, days: Int, @Optional args: Array<String>?) {
         val flags = CubbyFlags.of(args)
         val cubbyWorld = (if (source is Player) source.world else plugin.server.worlds.find { it.name == "world" })

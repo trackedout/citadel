@@ -6,6 +6,7 @@ import co.aikar.commands.annotation.CommandCompletion
 import co.aikar.commands.annotation.Description
 import co.aikar.commands.annotation.Optional
 import co.aikar.commands.annotation.Subcommand
+import co.aikar.commands.annotation.Syntax
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.trackedout.citadel.Citadel
@@ -66,6 +67,7 @@ class CubbyManagementCommand(
 
     @Subcommand("cubby release")
     @Description("Give up your cubby so someone else can claim it. Add --confirm to do it")
+    @Syntax("[--confirm]")
     fun releaseCubby(player: Player, @Optional args: Array<String>?) {
         val cubbyWorld = CubbyWorld(player.world)
         val cubby = player.getCubby()?.takeIf { it.id.startsWith(CUBBY_PREFIX) }

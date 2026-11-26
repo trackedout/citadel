@@ -7,6 +7,7 @@ import co.aikar.commands.annotation.CommandPermission
 import co.aikar.commands.annotation.Description
 import co.aikar.commands.annotation.Optional
 import co.aikar.commands.annotation.Subcommand
+import co.aikar.commands.annotation.Syntax
 import com.sk89q.worldedit.IncompleteRegionException
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.bukkit.BukkitAdapter
@@ -19,6 +20,7 @@ import org.trackedout.citadel.Citadel
 import org.trackedout.citadel.cubby.Box
 import org.trackedout.citadel.cubby.CUBBY_PREFIX
 import org.trackedout.citadel.cubby.CubbyArchive
+import org.trackedout.citadel.cubby.CubbyArchiveEntry
 import org.trackedout.citadel.cubby.CubbyBlocks
 import org.trackedout.citadel.cubby.CubbyDefinitionPlanner
 import org.trackedout.citadel.cubby.CubbyFacing
@@ -59,6 +61,7 @@ class CubbyAdminCommand(
 ) : BaseCommand() {
     @Subcommand("cubby template save")
     @Description("Save a cubby as the template for resets: your WorldEdit selection, or --from <cubby-id>")
+    @Syntax("[--from <cubby-id>] [--confirm]")
     fun saveTemplate(source: CommandSender, @Optional args: Array<String>?) {
         val flags = CubbyFlags.of(args)
         val cubbyWorld = cubbyWorldOf(source) ?: return
@@ -84,6 +87,7 @@ class CubbyAdminCommand(
     @Subcommand("cubby reset")
     @Description("Archive a cubby, restore the template and release its owner")
     @CommandCompletion("@cubbies")
+    @Syntax("<cubby-id|player> [--confirm]")
     fun resetCubby(source: CommandSender, target: String, @Optional args: Array<String>?) {
         val flags = CubbyFlags.of(args)
         val cubbyWorld = cubbyWorldOf(source) ?: return
@@ -108,8 +112,9 @@ class CubbyAdminCommand(
     }
 
     @Subcommand("cubby restore")
-    @Description("Put a player's newest archived cubby into a free cubby and give it to them. Options: --cubby <cubby-id>")
-    @CommandCompletion("@dbPlayers")
+    @Description("Put a player's archived cubby (the newest, or --archive <timestamp>) into their current cubby, or else a free one, and give it to them. Without --cubby, uses the free cubby you stand in")
+    @CommandCompletion("@dbPlayers @cubbyRestoreFlags")
+    @Syntax("<player> [--archive <timestamp>] [--cubby <cubby-id>] [--confirm]")
     fun restoreCubby(source: CommandSender, playerName: String, @Optional args: Array<String>?) {
         val flags = CubbyFlags.of(args)
         val cubbyWorld = cubbyWorldOf(source) ?: return
@@ -117,26 +122,18 @@ class CubbyAdminCommand(
             source.sendRedMessage("'$playerName' is not a valid player name")
             return
         }
-        val entry = archive.latestFor(playerName)
-        if (entry == null) {
-            source.sendRedMessage("No archived cubby found for $playerName")
-            return
-        }
-        val existing = findCubby(cubbyWorld, playerName)
-        if (existing != null) {
-            source.sendRedMessage("$playerName already has ${existing.id}")
-            return
-        }
-
+        val entry = findArchived(source, playerName, flags.value("archive")) ?: return
         val design = CubbyTemplate(CubbyBlocks.read(entry.file), entry.facing)
-        val plans = restoreCandidates(cubbyWorld, entry.cubbyId, flags.value("cubby")).map { reset.plan(cubbyWorld, it, design) }
+        val candidates = restoreTargetsFor(source, cubbyWorld, playerName, entry, flags.value("cubby")) ?: return
+        val operator = source as? Player
+        val plans = candidates.map { reset.plan(cubbyWorld, it, design, operator = operator) }
         val plan = plans.firstOrNull { it.isValid }
         if (plan == null) {
-            source.sendRedMessage("No free cubby can take ${entry.file.name}. Tried ${plans.size}; the first problem was: ${plans.firstOrNull()?.problems?.joinToString("; ") ?: "none are free"}")
+            source.sendRedMessage("No cubby can take ${entry.file.name}. Tried ${plans.size}; the first problem was: ${plans.firstOrNull()?.problems?.joinToString("; ") ?: "none are free"}")
             return
         }
 
-        source.sendGreenMessage("Restoring ${entry.file.name} (from ${entry.cubbyId}) for $playerName into ${plan.cubby.id}")
+        source.sendGreenMessage("Restoring ${entry.file.name} (from ${entry.cubbyId}) for $playerName into ${plan.cubby.id}${if (plan.owners.isEmpty()) "" else ", replacing its current contents"}")
         plan.report().forEach { source.sendMessage(it, NamedTextColor.WHITE) }
         if (!flags.confirmed) {
             source.sendMessage(CONFIRM_HINT, NamedTextColor.GRAY)
@@ -150,6 +147,59 @@ class CubbyAdminCommand(
         source.sendGreenMessage("$playerName now has ${plan.cubby.id}")
     }
 
+    /** The player's own cubby when they have one, else the free cubbies to try. Tells the sender and returns null when there are none. */
+    private fun restoreTargetsFor(source: CommandSender, cubbyWorld: CubbyWorld, playerName: String, entry: CubbyArchiveEntry, requestedCubbyId: String?): List<ProtectedRegion>? {
+        val owned = findCubby(cubbyWorld, playerName)
+        if (owned != null) {
+            if (requestedCubbyId == null || owned.id.equals(requestedCubbyId, ignoreCase = true)) return listOf(owned)
+            source.sendRedMessage("$playerName already has ${owned.id}. Leave out --cubby to restore into it")
+            return null
+        }
+
+        val standingCubbyId = (source as? Player)?.let { cubbyAt(cubbyWorld, it)?.id }
+        val wantedCubbyId = requestedCubbyId ?: standingCubbyId
+        val candidates = restoreCandidates(cubbyWorld, entry.cubbyId, wantedCubbyId)
+        if (candidates.isEmpty()) {
+            source.sendRedMessage(if (wantedCubbyId == null) "There are no free cubbies" else "$wantedCubbyId is not a free cubby. Stand in a free cubby or pass --cubby <cubby-id>")
+            return null
+        }
+        return candidates
+    }
+
+    @Subcommand("cubby archives")
+    @Description("List the archived cubbies of a player, newest first. Restore one with /do cubby restore <player> --archive <timestamp>")
+    @CommandCompletion("@dbPlayers")
+    @Syntax("<player>")
+    fun listArchives(source: CommandSender, playerName: String) {
+        if (!playerNameRegex.matches(playerName)) {
+            source.sendRedMessage("'$playerName' is not a valid player name")
+            return
+        }
+        val entries = archive.entriesFor(playerName)
+        if (entries.isEmpty()) {
+            source.sendRedMessage("No archived cubby found for $playerName")
+            return
+        }
+        source.sendGreenMessage("${entries.size} archived cubby(ies) for $playerName, newest first")
+        entries.forEach { source.sendMessage("${it.timestamp} from ${it.cubbyId}, facing ${it.facing}", NamedTextColor.WHITE) }
+    }
+
+    private fun findArchived(source: CommandSender, playerName: String, timestamp: String?): CubbyArchiveEntry? {
+        val entry = if (timestamp == null) archive.latestFor(playerName) else archive.find(playerName, timestamp)
+        if (entry == null) {
+            source.sendRedMessage(
+                if (timestamp == null) "No archived cubby found for $playerName"
+                else "$playerName has no archived cubby '$timestamp'. List them with /do cubby archives $playerName"
+            )
+        }
+        return entry
+    }
+
+    private fun cubbyAt(cubbyWorld: CubbyWorld, player: Player): ProtectedRegion? {
+        val location = player.location
+        return cubbyWorld.cubbies.firstOrNull { it.toBox().contains(location.blockX, location.blockY, location.blockZ) }
+    }
+
     private fun restoreCandidates(cubbyWorld: CubbyWorld, originalCubbyId: String, requestedCubbyId: String?): List<ProtectedRegion> {
         val free = cubbyWorld.cubbies.filter { !it.hasMembers() }
         if (requestedCubbyId != null) return free.filter { it.id.equals(requestedCubbyId, ignoreCase = true) }
@@ -160,6 +210,7 @@ class CubbyAdminCommand(
 
     @Subcommand("cubby define")
     @Description("Define <count> more cubby regions in a row next to your WorldEdit selection (one cubby). Options: --direction <north|east|south|west>, --gap <blocks>")
+    @Syntax("<count> [--direction <north|east|south|west>] [--gap <blocks>] [--confirm]")
     fun defineCubbies(player: Player, count: Int, @Optional args: Array<String>?) {
         val flags = CubbyFlags.of(args)
         val cubbyWorld = CubbyWorld(player.world)

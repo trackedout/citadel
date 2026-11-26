@@ -83,7 +83,8 @@ Every command below only reports what it would do. Add `--confirm` to apply it.
 | `/do cubby define <count> [--direction <dir>] [--gap <n>]` | Define `count` more `cubby-N` regions in a row next to your selection (one cubby). Copy the cubby itself with WorldEdit | `decked-out.cubby.admin` |
 | `/do cubby reset <cubby-id or player>` | Archive a cubby, paste the template (rotated to the cubby's facing) and release its owner | `decked-out.cubby.admin` |
 | `/do cubby prune <days>` | List owners not seen for `days` days (staff in `cubby.staff-names` are skipped), and reset their cubbies | `decked-out.cubby.admin` |
-| `/do cubby restore <player> [--cubby <cubby-id>]` | Put a player's newest archived cubby into a free cubby and give it to them | `decked-out.cubby.admin` |
+| `/do cubby archives <player>` | List a player's archived cubbies, newest first | `decked-out.cubby.admin` |
+| `/do cubby restore <player> [--archive <timestamp>] [--cubby <cubby-id>] [--confirm]` | Put a player's newest archived cubby back and give it to them. Replaces the contents of the cubby the player already has (the current blocks are archived first). Otherwise uses `--cubby`, else the free cubby you stand in, else the original or lowest free one. `--archive <timestamp>` picks an older archive | `decked-out.cubby.admin` |
 | `/do cubby release` | Give up your own cubby (archived, then reset) | - |
 
 How it works:
