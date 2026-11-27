@@ -297,17 +297,20 @@ class EchoShardListener(
 
     // What a lobby item does is the action of its entry in the league's catalog
     private fun performLobbyAction(event: PlayerInteractEvent, player: Player, slug: LeagueSlug, entryIndex: Int) {
-        event.isCancelled = true
         try {
             plugin.catalogCache.require(slug).lobbyAction(entryIndex).dispatchTo(object : LobbyActionHandler {
                 override fun openDeck() {
                     showDeckInventory(event, player, slug)
                 }
 
-                // A queue item only queues once it is placed in a shop trade, never on its own
-                override fun queue() = Unit
+                // A queue item only queues once it is placed in a shop trade, never on its own.
+                // Only the item use is denied, so the player can still open the queue barrel while holding it
+                override fun queue() {
+                    event.setUseItemInHand(org.bukkit.event.Event.Result.DENY)
+                }
 
                 override fun showCollection(action: CatalogLobbyAction) {
+                    event.isCancelled = true
                     showCollection(plugin, viewFrame, scoreApi, player, player.name, slug, action)
                 }
             })
